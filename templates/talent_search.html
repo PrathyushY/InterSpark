@@ -17,25 +17,33 @@
             <div class="flex flex-col sm:flex-row gap-4">
                 <div class="flex-1">
                     <label for="search" class="block text-sm font-medium text-gray-700 mb-2">Search</label>
-                    <input type="text" id="search" name="search" placeholder="Search by name, interests, or skills..."
+                    <input type="text" id="search" name="search" value="{{ search_query or '' }}"
+                        placeholder="Search by name, interests, or skills..."
                         class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
                 </div>
                 <div class="sm:w-40">
-                    <label for="grade" class="block text-sm font-medium text-gray-700 mb-2">Grade Level</label>
+                    <label for="skills" class="block text-sm font-medium text-gray-700 mb-2">Skills</label>
+                    <input type="text" id="skills" name="skills" value="{{ selected_skills or '' }}"
+                        placeholder="e.g., Python, Design"
+                        class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                <div class="sm:w-48">
+                    <label for="school" class="block text-sm font-medium text-gray-700 mb-2">School</label>
+                    <input type="text" id="school" name="school" value="{{ selected_school or '' }}"
+                        placeholder="School name"
+                        class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                <div class="sm:w-40">
+                    <label for="grade" class="block text-sm font-medium text-gray-700 mb-2">Grade</label>
                     <select id="grade" name="grade"
                         class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
                         <option value="">All Grades</option>
-                        <option value="9th">9th Grade</option>
-                        <option value="10th">10th Grade</option>
-                        <option value="11th">11th Grade</option>
-                        <option value="12th">12th Grade</option>
-                        <option value="college">College</option>
+                        <option value="9th" {% if selected_grade=='9th' %}selected{% endif %}>9th Grade</option>
+                        <option value="10th" {% if selected_grade=='10th' %}selected{% endif %}>10th Grade</option>
+                        <option value="11th" {% if selected_grade=='11th' %}selected{% endif %}>11th Grade</option>
+                        <option value="12th" {% if selected_grade=='12th' %}selected{% endif %}>12th Grade</option>
+                        <option value="college" {% if selected_grade=='college' %}selected{% endif %}>College</option>
                     </select>
-                </div>
-                <div class="sm:w-48">
-                    <label for="location" class="block text-sm font-medium text-gray-700 mb-2">Location</label>
-                    <input type="text" id="location" name="location" placeholder="City, State"
-                        class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
                 </div>
                 <div class="flex items-end">
                     <button type="submit"
@@ -185,6 +193,7 @@
     .line-clamp-3 {
         display: -webkit-box;
         -webkit-line-clamp: 3;
+        line-clamp: 3;
         -webkit-box-orient: vertical;
         overflow: hidden;
     }

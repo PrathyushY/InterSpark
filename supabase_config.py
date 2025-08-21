@@ -364,8 +364,8 @@ class SupabaseService:
         self,
         search_query: str = "",
         skills: str = "",
-        university: str = "",
-        major: str = "",
+        school: str = "",
+        grade: str = "",
     ) -> List[Dict[str, Any]]:
         """
         Search for student profiles with filters.
@@ -373,8 +373,8 @@ class SupabaseService:
         Args:
             search_query: Text to search in name and bio
             skills: Filter by skills
-            university: Filter by university
-            major: Filter by major
+            school: Filter by school
+            grade: Filter by grade
 
         Returns:
             List of matching student profiles
@@ -392,13 +392,13 @@ class SupabaseService:
             if skills:
                 query = query.ilike("skills", f"%{skills}%")
 
-            # Apply university filter
-            if university:
-                query = query.ilike("university", f"%{university}%")
+            # Apply school filter
+            if school:
+                query = query.ilike("school", f"%{school}%")
 
-            # Apply major filter
-            if major:
-                query = query.ilike("major", f"%{major}%")
+            # Apply grade filter
+            if grade:
+                query = query.ilike("grade", f"%{grade}%")
 
             # Order by creation date, newest first
             query = query.order("created_at", desc=True)
@@ -422,12 +422,12 @@ class SupabaseService:
             limit: Optional limit on number of results
 
         Returns:
-            List of opportunity records with company profile info
+            List of opportunity records with organization profile info
         """
         try:
-            # Select opportunities with company profile information
+            # Select opportunities with organization profile information
             query = self.client.table("opportunities").select(
-                "*, profiles!company_id(name, company_name, email)"
+                "*, profiles!company_id(name, organization_name, email)"
             )
 
             # Apply filters if provided
@@ -468,9 +468,9 @@ class SupabaseService:
             List of matching opportunity records
         """
         try:
-            # Select opportunities with company profile information
+            # Select opportunities with organization profile information
             query = self.client.table("opportunities").select(
-                "*, profiles!company_id(name, company_name, email)"
+                "*, profiles!company_id(name, organization_name, email)"
             )
 
             # Apply text search if provided
@@ -502,13 +502,13 @@ class SupabaseService:
 
     def get_opportunity_by_id(self, opportunity_id: int) -> Optional[Dict[str, Any]]:
         """
-        Get a specific opportunity by ID with company profile.
+        Get a specific opportunity by ID with organization profile.
 
         Args:
             opportunity_id: The opportunity's ID
 
         Returns:
-            Opportunity data with company info or None if not found
+            Opportunity data with organization info or None if not found
         """
         try:
             response = (
@@ -579,12 +579,14 @@ class SupabaseService:
             logger.error(f"Error creating opportunity: {str(e)}")
             return {"success": False, "error": str(e)}
 
-    def get_company_opportunities(self, company_id: str) -> List[Dict[str, Any]]:
+    def get_organization_opportunities(
+        self, organization_id: str
+    ) -> List[Dict[str, Any]]:
         """
-        Get all opportunities for a specific company.
+        Get all opportunities for a specific organization.
 
         Args:
-            company_id: The company's user ID
+            organization_id: The organization's user ID
 
         Returns:
             List of opportunity records
@@ -593,7 +595,7 @@ class SupabaseService:
             response = (
                 self.client.table("opportunities")
                 .select("*")
-                .eq("company_id", company_id)
+                .eq("company_id", organization_id)
                 .order("created_at", desc=True)
                 .execute()
             )
@@ -601,17 +603,16 @@ class SupabaseService:
             return response.data if response.data else []
 
         except Exception as e:
-            logger.error(f"Error getting company opportunities: {str(e)}")
-            return []
+            logger.error(f"Error getting organization opportunities: {str(e)}")
+            return []  # Application Management Methods (for future use)
 
-    # Application Management Methods (for future use)
     def get_applications(self, user_id: str, user_type: str) -> List[Dict[str, Any]]:
         """
         Get applications - for students: their applications, for companies: applications to their opportunities.
 
         Args:
             user_id: The user's ID
-            user_type: 'student' or 'company'
+            user_type: 'student' or 'organization'
 
         Returns:
             List of application records
@@ -625,7 +626,7 @@ class SupabaseService:
                     .order("applied_at", desc=True)
                     .execute()
                 )
-            else:  # company
+            else:  # organization
                 response = (
                     self.client.table("applications")
                     .select("*, opportunities(*), profiles(*)")

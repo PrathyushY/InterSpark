@@ -3,7 +3,7 @@
 {% block title %}Profile - InterSpark{% endblock %}
 
 {% block content %}
-<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
     <div class="mb-8">
         <h1 class="text-2xl font-bold text-gray-900">My Profile</h1>
         <p class="mt-1 text-gray-500">Manage your account information and preferences</p>
@@ -28,7 +28,7 @@
                         <h3 class="text-lg leading-6 font-medium text-gray-900">{{ profile.name or session.user_name or
                             'User' }}</h3>
                         <p class="mt-1 max-w-2xl text-sm text-gray-500">
-                            {% if user_type == 'student' %}Student Profile{% else %}Company Profile{% endif %}
+                            {% if user_type == 'student' %}Student Profile{% else %}Organization Profile{% endif %}
                         </p>
                     </div>
                 </div>
@@ -40,7 +40,7 @@
                 <div class="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
                     <div class="sm:col-span-3">
                         <label for="full_name" class="block text-sm font-medium text-gray-700">
-                            {% if user_type == 'student' %}Full Name{% else %}Company Name{% endif %}
+                            {% if user_type == 'student' %}Full Name{% else %}Organization Name{% endif %}
                         </label>
                         <div class="mt-1">
                             <input type="text" name="full_name" id="full_name" value="{{ profile.name or '' }}" required
@@ -82,37 +82,28 @@
                 <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">Student Information</h3>
                 <div class="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
                     <div class="sm:col-span-3">
-                        <label for="university" class="block text-sm font-medium text-gray-700">University</label>
+                        <label for="school" class="block text-sm font-medium text-gray-700">School</label>
                         <div class="mt-1">
-                            <input type="text" name="university" id="university" value="{{ profile.university or '' }}"
+                            <input type="text" name="school" id="school" value="{{ profile.school or '' }}"
+                                placeholder="e.g., Lincoln High School"
                                 class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">
                         </div>
                     </div>
 
                     <div class="sm:col-span-3">
-                        <label for="major" class="block text-sm font-medium text-gray-700">Major</label>
+                        <label for="grade" class="block text-sm font-medium text-gray-700">Grade</label>
                         <div class="mt-1">
-                            <input type="text" name="major" id="major" value="{{ profile.major or '' }}"
+                            <select name="grade" id="grade"
                                 class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">
-                        </div>
-                    </div>
-
-                    <div class="sm:col-span-3">
-                        <label for="year_of_study" class="block text-sm font-medium text-gray-700">Year of Study</label>
-                        <div class="mt-1">
-                            <select name="year_of_study" id="year_of_study"
-                                class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">
-                                <option value="">Select Year</option>
-                                <option value="Freshman" {% if profile.year_of_study=='Freshman' %}selected{% endif %}>
-                                    Freshman</option>
-                                <option value="Sophomore" {% if profile.year_of_study=='Sophomore' %}selected{% endif
-                                    %}>Sophomore</option>
-                                <option value="Junior" {% if profile.year_of_study=='Junior' %}selected{% endif %}>
-                                    Junior</option>
-                                <option value="Senior" {% if profile.year_of_study=='Senior' %}selected{% endif %}>
-                                    Senior</option>
-                                <option value="Graduate" {% if profile.year_of_study=='Graduate' %}selected{% endif %}>
-                                    Graduate</option>
+                                <option value="">Select Grade</option>
+                                <option value="9th Grade" {% if profile.grade=='9th Grade' %}selected{% endif %}>9th
+                                    Grade</option>
+                                <option value="10th Grade" {% if profile.grade=='10th Grade' %}selected{% endif %}>10th
+                                    Grade</option>
+                                <option value="11th Grade" {% if profile.grade=='11th Grade' %}selected{% endif %}>11th
+                                    Grade</option>
+                                <option value="12th Grade" {% if profile.grade=='12th Grade' %}selected{% endif %}>12th
+                                    Grade</option>
                             </select>
                         </div>
                     </div>
@@ -121,7 +112,7 @@
                         <label for="bio" class="block text-sm font-medium text-gray-700">Bio</label>
                         <div class="mt-1">
                             <textarea name="bio" id="bio" rows="4"
-                                placeholder="Tell us about yourself, your goals, and what you're looking for in an opportunity..."
+                                placeholder="Tell us about yourself, your interests, and what kind of opportunities you're looking for..."
                                 class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">{{ profile.bio or '' }}</textarea>
                         </div>
                     </div>
@@ -138,7 +129,8 @@
                     </div>
 
                     <div class="sm:col-span-2">
-                        <label for="github_url" class="block text-sm font-medium text-gray-700">GitHub URL</label>
+                        <label for="github_url" class="block text-sm font-medium text-gray-700">GitHub URL
+                            (Optional)</label>
                         <div class="mt-1">
                             <input type="url" name="github_url" id="github_url" value="{{ profile.github_url or '' }}"
                                 placeholder="https://github.com/yourusername"
@@ -147,7 +139,8 @@
                     </div>
 
                     <div class="sm:col-span-2">
-                        <label for="linkedin_url" class="block text-sm font-medium text-gray-700">LinkedIn URL</label>
+                        <label for="linkedin_url" class="block text-sm font-medium text-gray-700">LinkedIn URL
+                            (Optional)</label>
                         <div class="mt-1">
                             <input type="url" name="linkedin_url" id="linkedin_url"
                                 value="{{ profile.linkedin_url or '' }}"
@@ -157,7 +150,8 @@
                     </div>
 
                     <div class="sm:col-span-2">
-                        <label for="portfolio_url" class="block text-sm font-medium text-gray-700">Portfolio URL</label>
+                        <label for="portfolio_url" class="block text-sm font-medium text-gray-700">Portfolio URL
+                            (Optional)</label>
                         <div class="mt-1">
                             <input type="url" name="portfolio_url" id="portfolio_url"
                                 value="{{ profile.portfolio_url or '' }}" placeholder="https://yourportfolio.com"
@@ -168,53 +162,16 @@
             </div>
             {% endif %}
 
-            <!-- Company-specific fields -->
-            {% if user_type == 'company' %}
+            <!-- Organization-specific fields -->
+            {% if user_type == 'organization' %}
             <div class="px-4 py-5 sm:p-6">
-                <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">Company Information</h3>
+                <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">Organization Information</h3>
                 <div class="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
-                    <div class="sm:col-span-3">
-                        <label for="company_name" class="block text-sm font-medium text-gray-700">Company Name</label>
-                        <div class="mt-1">
-                            <input type="text" name="company_name" id="company_name"
-                                value="{{ profile.company_name or profile.name or '' }}"
-                                class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">
-                        </div>
-                    </div>
-
-                    <div class="sm:col-span-3">
-                        <label for="industry" class="block text-sm font-medium text-gray-700">Industry</label>
-                        <div class="mt-1">
-                            <input type="text" name="industry" id="industry" value="{{ profile.industry or '' }}"
-                                class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">
-                        </div>
-                    </div>
-
-                    <div class="sm:col-span-3">
-                        <label for="company_size" class="block text-sm font-medium text-gray-700">Company Size</label>
-                        <div class="mt-1">
-                            <select name="company_size" id="company_size"
-                                class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">
-                                <option value="">Select Size</option>
-                                <option value="1-10" {% if profile.company_size=='1-10' %}selected{% endif %}>1-10
-                                    employees</option>
-                                <option value="11-50" {% if profile.company_size=='11-50' %}selected{% endif %}>11-50
-                                    employees</option>
-                                <option value="51-200" {% if profile.company_size=='51-200' %}selected{% endif %}>51-200
-                                    employees</option>
-                                <option value="201-500" {% if profile.company_size=='201-500' %}selected{% endif %}>
-                                    201-500 employees</option>
-                                <option value="500+" {% if profile.company_size=='500+' %}selected{% endif %}>500+
-                                    employees</option>
-                            </select>
-                        </div>
-                    </div>
-
                     <div class="sm:col-span-6">
                         <label for="description" class="block text-sm font-medium text-gray-700">Description</label>
                         <div class="mt-1">
                             <textarea name="description" id="description" rows="4"
-                                placeholder="Describe your company's mission, values, and what you do..."
+                                placeholder="Describe your organization's mission, values, and what you do..."
                                 class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">{{ profile.description or '' }}</textarea>
                         </div>
                     </div>
@@ -278,8 +235,8 @@
             </div>
             <div class="flex items-center">
                 <i
-                    class="fas fa-{% if profile.university %}check-circle text-green-500{% else %}circle text-gray-400{% endif %} mr-2"></i>
-                <span class="text-sm text-gray-700">University information {% if not profile.university %}(optional){%
+                    class="fas fa-{% if profile.school %}check-circle text-green-500{% else %}circle text-gray-400{% endif %} mr-2"></i>
+                <span class="text-sm text-gray-700">School information {% if not profile.school %}(optional){%
                     endif
                     %}</span>
             </div>

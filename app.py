@@ -211,13 +211,15 @@ def dashboard():
                 user=user_profile,
             )
 
-    elif user_type == "company":
-        # Get company's posted opportunities and applications
+    elif user_type == "organization":
+        # Get organization's posted opportunities and applications
         try:
-            company_opportunities = supabase_service.get_company_opportunities(user_id)
+            company_opportunities = supabase_service.get_organization_opportunities(
+                user_id
+            )
             return render_template(
                 "dashboard.html",
-                user_type="company",
+                user_type="organization",
                 opportunities=company_opportunities,
                 user=user_profile,
             )
@@ -225,7 +227,7 @@ def dashboard():
             flash(f"Error loading dashboard: {str(e)}", "error")
             return render_template(
                 "dashboard.html",
-                user_type="company",
+                user_type="organization",
                 opportunities=[],
                 user=user_profile,
             )
@@ -247,29 +249,40 @@ def profile():
 
         if user_type == "student":
             profile_data = {
-                "name": request.form.get("full_name"),  # Update name field
-                "university": request.form.get("university"),
-                "major": request.form.get("major"),
-                "year_of_study": request.form.get("year_of_study"),
+                "name": request.form.get("full_name"),
+                "school": request.form.get("school"),
+                "grade": request.form.get("grade"),
                 "skills": request.form.get("skills"),
                 "bio": request.form.get("bio"),
                 "github_url": request.form.get("github_url"),
                 "linkedin_url": request.form.get("linkedin_url"),
                 "portfolio_url": request.form.get("portfolio_url"),
+                "phone": request.form.get("phone"),
+                "location": request.form.get("location"),
             }
-        elif user_type == "company":
+        elif user_type == "organization":
             profile_data = {
-                "name": request.form.get("company_name"),  # Update name field
-                "company_name": request.form.get("company_name"),
-                "industry": request.form.get("industry"),
-                "company_size": request.form.get("company_size"),
+                "name": request.form.get("full_name"),
+                "organization_name": request.form.get("full_name"),
                 "description": request.form.get("description"),
                 "website": request.form.get("website"),
                 "location": request.form.get("location"),
+                "phone": request.form.get("phone"),
             }
+
+        # Remove empty values to avoid overwriting existing data with blank fields
+        profile_data = {
+            k: v for k, v in profile_data.items() if v is not None and v.strip() != ""
+        }
+
+        print(f"DEBUG - Profile update attempt:")
+        print(f"  User ID: {user_id}")
+        print(f"  User Type: {user_type}")
+        print(f"  Profile Data: {profile_data}")
 
         try:
             result = supabase_service.update_profile(user_id, profile_data)
+            print(f"  Update Result: {result}")
             if result["success"]:
                 flash("Profile updated successfully!", "success")
                 # Update session data
@@ -278,6 +291,7 @@ def profile():
             else:
                 flash(result.get("error", "Failed to update profile"), "error")
         except Exception as e:
+            print(f"  Exception during update: {str(e)}")
             flash(f"Error updating profile: {str(e)}", "error")
 
     # Get current profile data
@@ -365,12 +379,12 @@ def talent_search():
         # Get filters from query parameters
         search_query = request.args.get("search", "")
         skills = request.args.get("skills", "")
-        university = request.args.get("university", "")
-        major = request.args.get("major", "")
+        school = request.args.get("school", "")
+        grade = request.args.get("grade", "")
 
         # Search for students
         students = supabase_service.search_students(
-            search_query=search_query, skills=skills, university=university, major=major
+            search_query=search_query, skills=skills, school=school, grade=grade
         )
 
         return render_template(
@@ -378,8 +392,8 @@ def talent_search():
             students=students,
             search_query=search_query,
             selected_skills=skills,
-            selected_university=university,
-            selected_major=major,
+            selected_school=school,
+            selected_grade=grade,
         )
     except Exception as e:
         flash(f"Error searching talent: {str(e)}", "error")
@@ -388,8 +402,10 @@ def talent_search():
 
 @app.route("/create_opportunity", methods=["GET", "POST"])
 def create_opportunity():
-    if "user_id" not in session or session.get("user_type") != "company":
-        flash("You must be logged in as a company to create opportunities", "error")
+    if "user_id" not in session or session.get("user_type") != "organization":
+        flash(
+            "You must be logged in as an organization to create opportunities", "error"
+        )
         return redirect(url_for("login"))
 
     if request.method == "POST":

@@ -11,22 +11,21 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     name VARCHAR(255) NOT NULL,
     phone VARCHAR(20),
     location VARCHAR(255),
-    user_type VARCHAR(20) NOT NULL CHECK (user_type IN ('student', 'company')),
+    user_type VARCHAR(20) NOT NULL CHECK (user_type IN ('student', 'organization')),
     
     -- Student-specific fields
-    university VARCHAR(255),
-    major VARCHAR(255),
-    year_of_study VARCHAR(50),
+    school VARCHAR(255),
+    grade VARCHAR(50),
     skills TEXT,
     bio TEXT,
     github_url VARCHAR(500),
     linkedin_url VARCHAR(500),
     portfolio_url VARCHAR(500),
     
-    -- Company-specific fields
-    company_name VARCHAR(255),
+    -- Organization-specific fields
+    organization_name VARCHAR(255),
     industry VARCHAR(255),
-    company_size VARCHAR(50),
+    organization_size VARCHAR(50),
     description TEXT,
     website VARCHAR(500),
     
@@ -93,7 +92,7 @@ WITH CHECK (
     auth.uid() = company_id AND 
     EXISTS (
         SELECT 1 FROM public.profiles 
-        WHERE id = auth.uid() AND user_type = 'company'
+        WHERE id = auth.uid() AND user_type = 'organization'
     )
 );
 

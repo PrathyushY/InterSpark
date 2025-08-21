@@ -163,9 +163,10 @@
                             </div>
                             <p class="text-sm text-gray-600 mb-1">
                                 {% if opportunity.profiles %}
-                                {{ opportunity.profiles.name or opportunity.profiles.company_name or 'Company' }}
+                                {{ opportunity.profiles.name or opportunity.profiles.organization_name or 'Organization'
+                                }}
                                 {% else %}
-                                Company
+                                Organization
                                 {% endif %}
                             </p>
                             <p class="text-sm text-gray-500 mb-2">
@@ -278,14 +279,14 @@
                         </div>
                         {% endif %}
 
-                        {% if user.user_type == 'student' and user.university %}
+                        {% if user.user_type == 'student' and user.school %}
                         <div class="flex items-center">
                             <i class="fas fa-graduation-cap text-gray-400 w-4"></i>
-                            <span class="ml-2 text-gray-700">{{ user.university }}</span>
+                            <span class="ml-2 text-gray-700">{{ user.school }}</span>
                         </div>
                         {% endif %}
 
-                        {% if user.user_type == 'company' and user.website %}
+                        {% if user.user_type == 'organization' and user.website %}
                         <div class="flex items-center">
                             <i class="fas fa-globe text-gray-400 w-4"></i>
                             <span class="ml-2 text-gray-700">{{ user.website }}</span>
