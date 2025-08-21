@@ -1,0 +1,233 @@
+{% extends "base.html" %}
+
+{% block title %}Create Opportunity - InterSpark{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div class="mb-8">
+        <h1 class="text-2xl font-bold text-gray-900">Create New Opportunity</h1>
+        <p class="mt-1 text-gray-500">Post an internship or volunteer opportunity to connect with talented students</p>
+    </div>
+
+    <div class="bg-white shadow rounded-lg">
+        <form method="POST" class="divide-y divide-gray-200">
+            <!-- Basic Information -->
+            <div class="px-4 py-5 sm:p-6">
+                <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">Basic Information</h3>
+                <div class="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
+                    <div class="sm:col-span-4">
+                        <label for="title" class="block text-sm font-medium text-gray-700">Opportunity Title *</label>
+                        <div class="mt-1">
+                            <input type="text" name="title" id="title" required
+                                placeholder="e.g., Web Development Intern, Marketing Assistant"
+                                class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">
+                        </div>
+                    </div>
+
+                    <div class="sm:col-span-2">
+                        <label for="type" class="block text-sm font-medium text-gray-700">Type *</label>
+                        <div class="mt-1">
+                            <select name="type" id="type" required
+                                class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">
+                                <option value="">Select Type</option>
+                                <option value="Internship">Internship</option>
+                                <option value="Volunteer">Volunteer</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="sm:col-span-3">
+                        <label for="category" class="block text-sm font-medium text-gray-700">Category *</label>
+                        <div class="mt-1">
+                            <select name="category" id="category" required
+                                class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">
+                                <option value="">Select Category</option>
+                                <option value="Technology">Technology</option>
+                                <option value="Environment">Environment</option>
+                                <option value="Healthcare">Healthcare</option>
+                                <option value="Education">Education</option>
+                                <option value="Marketing">Marketing</option>
+                                <option value="Science">Science</option>
+                                <option value="Arts">Arts</option>
+                                <option value="Business">Business</option>
+                                <option value="Non-profit">Non-profit</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="sm:col-span-3">
+                        <label for="location" class="block text-sm font-medium text-gray-700">Location *</label>
+                        <div class="mt-1">
+                            <input type="text" name="location" id="location" required
+                                placeholder="City, State or Remote"
+                                class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Schedule & Timeline -->
+            <div class="px-4 py-5 sm:p-6">
+                <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">Schedule & Timeline</h3>
+                <div class="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
+                    <div class="sm:col-span-2">
+                        <label for="hours" class="block text-sm font-medium text-gray-700">Hours per Week *</label>
+                        <div class="mt-1">
+                            <input type="text" name="hours" id="hours" required placeholder="e.g., 15-20 hrs/week"
+                                class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">
+                        </div>
+                    </div>
+
+                    <div class="sm:col-span-2">
+                        <label for="date" class="block text-sm font-medium text-gray-700">Duration *</label>
+                        <div class="mt-1">
+                            <input type="text" name="date" id="date" required placeholder="e.g., Summer 2024, Ongoing"
+                                class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">
+                        </div>
+                    </div>
+
+                    <div class="sm:col-span-2">
+                        <label for="deadline" class="block text-sm font-medium text-gray-700">Application Deadline
+                            *</label>
+                        <div class="mt-1">
+                            <input type="date" name="deadline" id="deadline" required
+                                class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Description -->
+            <div class="px-4 py-5 sm:p-6">
+                <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">Opportunity Details</h3>
+
+                <div class="space-y-6">
+                    <div>
+                        <label for="description" class="block text-sm font-medium text-gray-700">Description *</label>
+                        <div class="mt-1">
+                            <textarea name="description" id="description" rows="4" required
+                                placeholder="Provide a detailed description of the opportunity, what the student will learn, and why they should be excited about this role..."
+                                class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"></textarea>
+                        </div>
+                        <p class="mt-2 text-sm text-gray-500">Describe the opportunity in detail. This is what students
+                            will see first.</p>
+                    </div>
+
+                    <div>
+                        <label for="responsibilities"
+                            class="block text-sm font-medium text-gray-700">Responsibilities</label>
+                        <div class="mt-1">
+                            <textarea name="responsibilities" id="responsibilities" rows="4"
+                                placeholder="List the key responsibilities and tasks the student will handle. Put each responsibility on a new line."
+                                class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"></textarea>
+                        </div>
+                        <p class="mt-2 text-sm text-gray-500">List main tasks and responsibilities. Each line will be
+                            displayed as a bullet point.</p>
+                    </div>
+
+                    <div>
+                        <label for="requirements" class="block text-sm font-medium text-gray-700">Requirements</label>
+                        <div class="mt-1">
+                            <textarea name="requirements" id="requirements" rows="4"
+                                placeholder="List the skills, qualifications, or characteristics you're looking for. Put each requirement on a new line."
+                                class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"></textarea>
+                        </div>
+                        <p class="mt-2 text-sm text-gray-500">Specify skills, experience level, and other
+                            qualifications. Each line will be displayed as a bullet point.</p>
+                    </div>
+
+                    <div>
+                        <label for="benefits" class="block text-sm font-medium text-gray-700">Benefits & Learning
+                            Opportunities</label>
+                        <div class="mt-1">
+                            <textarea name="benefits" id="benefits" rows="4"
+                                placeholder="What will the student gain from this experience? Skills, mentorship, networking, certificates, etc. Put each benefit on a new line."
+                                class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"></textarea>
+                        </div>
+                        <p class="mt-2 text-sm text-gray-500">Highlight what students will gain. This helps attract
+                            quality candidates.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Optional: Image URL -->
+            <div class="px-4 py-5 sm:p-6">
+                <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">Additional Information</h3>
+                <div>
+                    <label for="image" class="block text-sm font-medium text-gray-700">Image URL (Optional)</label>
+                    <div class="mt-1">
+                        <input type="url" name="image" id="image" placeholder="https://example.com/image.jpg"
+                            class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">
+                    </div>
+                    <p class="mt-2 text-sm text-gray-500">Add an image to make your opportunity more attractive. Use a
+                        high-quality image URL.</p>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="px-4 py-4 sm:px-6 flex justify-between">
+                <div>
+                    <a href="{{ url_for('dashboard') }}"
+                        class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-4 inline-flex justify-center text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        Cancel
+                    </a>
+                </div>
+                <div class="flex space-x-3">
+                    <button type="button"
+                        class="bg-gray-600 border border-transparent rounded-md shadow-sm py-2 px-4 inline-flex justify-center text-sm font-medium text-white hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500">
+                        Save as Draft
+                    </button>
+                    <button type="submit"
+                        class="bg-blue-600 border border-transparent rounded-md shadow-sm py-2 px-4 inline-flex justify-center text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        <i class="fas fa-plus mr-2"></i>
+                        Create Opportunity
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Tips Section -->
+    <div class="mt-8 bg-blue-50 rounded-lg p-6">
+        <h3 class="text-lg font-medium text-gray-900 mb-4">
+            <i class="fas fa-lightbulb text-blue-600 mr-2"></i>
+            Tips for Creating Great Opportunities
+        </h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-700">
+            <div>
+                <h4 class="font-semibold mb-2">Be Specific and Clear</h4>
+                <ul class="space-y-1 list-disc list-inside">
+                    <li>Use descriptive titles that clearly indicate the role</li>
+                    <li>Specify the time commitment and duration</li>
+                    <li>Be clear about remote vs. in-person work</li>
+                </ul>
+            </div>
+            <div>
+                <h4 class="font-semibold mb-2">Highlight Learning</h4>
+                <ul class="space-y-1 list-disc list-inside">
+                    <li>Emphasize skills students will develop</li>
+                    <li>Mention mentorship and guidance available</li>
+                    <li>Include any certificates or recognition offered</li>
+                </ul>
+            </div>
+            <div>
+                <h4 class="font-semibold mb-2">Set Realistic Expectations</h4>
+                <ul class="space-y-1 list-disc list-inside">
+                    <li>Match requirements to the experience level</li>
+                    <li>Be realistic about time commitments</li>
+                    <li>Clearly state if it's paid or unpaid</li>
+                </ul>
+            </div>
+            <div>
+                <h4 class="font-semibold mb-2">Make It Appealing</h4>
+                <ul class="space-y-1 list-disc list-inside">
+                    <li>Use engaging language and positive tone</li>
+                    <li>Include your organization's mission</li>
+                    <li>Add an attractive image if possible</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

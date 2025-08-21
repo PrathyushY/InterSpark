@@ -1,0 +1,233 @@
+{% extends "base.html" %}
+
+{% block title %}{{ opportunity.title }} - InterSpark{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Back Button -->
+    <div class="mb-6">
+        <a href="{{ url_for('opportunities') }}" class="inline-flex items-center text-blue-600 hover:text-blue-800">
+            <i class="fas fa-arrow-left mr-2"></i>
+            Back to Opportunities
+        </a>
+    </div>
+
+    <!-- Header -->
+    <div class="bg-white rounded-lg shadow-md overflow-hidden">
+        {% if opportunity.image %}
+        <div class="h-64 bg-gray-200 bg-cover bg-center" style="background-image: url('{{ opportunity.image }}')"></div>
+        {% else %}
+        <div class="h-64 bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+            <i class="fas fa-briefcase text-white text-6xl"></i>
+        </div>
+        {% endif %}
+
+        <div class="p-8">
+            <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center space-x-3">
+                    <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium 
+                        {% if opportunity.type == 'Internship' %}bg-blue-100 text-blue-800
+                        {% else %}bg-green-100 text-green-800{% endif %}">
+                        {{ opportunity.type }}
+                    </span>
+                    <span class="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">{{ opportunity.category
+                        }}</span>
+                </div>
+                <div class="text-sm text-gray-500">
+                    Posted {{ opportunity.created_at.strftime('%B %d, %Y') }}
+                </div>
+            </div>
+
+            <h1 class="text-3xl font-bold text-gray-900 mb-4">{{ opportunity.title }}</h1>
+
+            <!-- Organization Info -->
+            <div class="flex items-center mb-6">
+                {% if opportunity.organization.logo %}
+                <img src="{{ opportunity.organization.logo }}" alt="{{ opportunity.organization.name }}"
+                    class="w-12 h-12 rounded-full mr-4">
+                {% else %}
+                <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mr-4">
+                    <i class="fas fa-building text-blue-600"></i>
+                </div>
+                {% endif %}
+                <div>
+                    <h2 class="text-lg font-semibold text-gray-900">{{ opportunity.organization.name }}</h2>
+                    <p class="text-gray-600">{{ opportunity.organization.location }}</p>
+                </div>
+            </div>
+
+            <!-- Key Details -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                <div class="space-y-4">
+                    <div class="flex items-center">
+                        <i class="fas fa-map-marker-alt text-gray-400 w-5 mr-3"></i>
+                        <span class="text-gray-700">{{ opportunity.location }}</span>
+                    </div>
+                    <div class="flex items-center">
+                        <i class="fas fa-clock text-gray-400 w-5 mr-3"></i>
+                        <span class="text-gray-700">{{ opportunity.hours }}</span>
+                    </div>
+                    <div class="flex items-center">
+                        <i class="fas fa-calendar text-gray-400 w-5 mr-3"></i>
+                        <span class="text-gray-700">{{ opportunity.date }}</span>
+                    </div>
+                </div>
+                <div class="space-y-4">
+                    <div class="flex items-center">
+                        <i class="fas fa-exclamation-circle text-red-400 w-5 mr-3"></i>
+                        <span class="text-gray-700">Deadline: {{ opportunity.deadline }}</span>
+                    </div>
+                    {% if opportunity.organization.website %}
+                    <div class="flex items-center">
+                        <i class="fas fa-globe text-gray-400 w-5 mr-3"></i>
+                        <a href="{{ opportunity.organization.website }}" target="_blank"
+                            class="text-blue-600 hover:text-blue-800">
+                            {{ opportunity.organization.website }}
+                        </a>
+                    </div>
+                    {% endif %}
+                    {% if opportunity.organization.phone %}
+                    <div class="flex items-center">
+                        <i class="fas fa-phone text-gray-400 w-5 mr-3"></i>
+                        <span class="text-gray-700">{{ opportunity.organization.phone }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-8">
+        <!-- Left Column - Details -->
+        <div class="lg:col-span-2 space-y-6">
+            <!-- Description -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h3 class="text-xl font-semibold text-gray-900 mb-4">About This Opportunity</h3>
+                <p class="text-gray-700 leading-relaxed">{{ opportunity.description }}</p>
+            </div>
+
+            <!-- Responsibilities -->
+            {% if opportunity.responsibilities %}
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h3 class="text-xl font-semibold text-gray-900 mb-4">Responsibilities</h3>
+                <ul class="space-y-2 text-gray-700">
+                    {% for responsibility in opportunity.responsibilities.split('\n') %}
+                    {% if responsibility.strip() %}
+                    <li class="flex items-start">
+                        <i class="fas fa-check text-green-500 mr-3 mt-1 flex-shrink-0"></i>
+                        <span>{{ responsibility.strip() }}</span>
+                    </li>
+                    {% endif %}
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
+            <!-- Requirements -->
+            {% if opportunity.requirements %}
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h3 class="text-xl font-semibold text-gray-900 mb-4">Requirements</h3>
+                <ul class="space-y-2 text-gray-700">
+                    {% for requirement in opportunity.requirements.split('\n') %}
+                    {% if requirement.strip() %}
+                    <li class="flex items-start">
+                        <i class="fas fa-circle text-gray-400 mr-3 mt-2 flex-shrink-0" style="font-size: 6px;"></i>
+                        <span>{{ requirement.strip() }}</span>
+                    </li>
+                    {% endif %}
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
+            <!-- Benefits -->
+            {% if opportunity.benefits %}
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h3 class="text-xl font-semibold text-gray-900 mb-4">Benefits</h3>
+                <ul class="space-y-2 text-gray-700">
+                    {% for benefit in opportunity.benefits.split('\n') %}
+                    {% if benefit.strip() %}
+                    <li class="flex items-start">
+                        <i class="fas fa-star text-yellow-500 mr-3 mt-1 flex-shrink-0"></i>
+                        <span>{{ benefit.strip() }}</span>
+                    </li>
+                    {% endif %}
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Right Column - Actions & Organization Info -->
+        <div class="lg:col-span-1">
+            <!-- Apply Section -->
+            <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Apply Now</h3>
+                {% if session.user_id %}
+                {% if session.user_type == 'student' %}
+                <button
+                    class="w-full bg-blue-600 text-white px-4 py-3 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 mb-3">
+                    <i class="fas fa-paper-plane mr-2"></i>
+                    Apply for This Position
+                </button>
+                <button class="w-full border border-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-50">
+                    <i class="fas fa-heart mr-2"></i>
+                    Save for Later
+                </button>
+                {% else %}
+                <div class="text-center py-4 text-gray-500">
+                    <i class="fas fa-info-circle mb-2"></i>
+                    <p class="text-sm">Organizations cannot apply for opportunities.</p>
+                </div>
+                {% endif %}
+                {% else %}
+                <div class="text-center">
+                    <p class="text-gray-600 mb-4">Create an account to apply for this opportunity</p>
+                    <a href="{{ url_for('signup') }}"
+                        class="w-full inline-flex justify-center items-center px-4 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 mb-3">
+                        Sign Up to Apply
+                    </a>
+                    <a href="{{ url_for('login') }}"
+                        class="w-full inline-flex justify-center items-center px-4 py-2 border border-gray-300 text-base font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                        Already have an account?
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Organization Details -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">About {{ opportunity.organization.name }}</h3>
+                {% if opportunity.organization.description %}
+                <p class="text-gray-700 text-sm mb-4">{{ opportunity.organization.description }}</p>
+                {% endif %}
+
+                <div class="space-y-3 text-sm">
+                    <div class="flex items-center">
+                        <i class="fas fa-envelope text-gray-400 w-4 mr-3"></i>
+                        <a href="mailto:{{ opportunity.organization.email }}" class="text-blue-600 hover:text-blue-800">
+                            {{ opportunity.organization.email }}
+                        </a>
+                    </div>
+                    {% if opportunity.organization.phone %}
+                    <div class="flex items-center">
+                        <i class="fas fa-phone text-gray-400 w-4 mr-3"></i>
+                        <span class="text-gray-700">{{ opportunity.organization.phone }}</span>
+                    </div>
+                    {% endif %}
+                    {% if opportunity.organization.website %}
+                    <div class="flex items-center">
+                        <i class="fas fa-globe text-gray-400 w-4 mr-3"></i>
+                        <a href="{{ opportunity.organization.website }}" target="_blank"
+                            class="text-blue-600 hover:text-blue-800">
+                            Visit Website
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
