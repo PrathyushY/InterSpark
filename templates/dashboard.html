@@ -1,0 +1,308 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - InterSpark{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Header -->
+    <div class="mb-8">
+        <h1 class="text-2xl font-bold text-gray-900">
+            Welcome back, {{ user.name }}!
+        </h1>
+        <p class="mt-1 text-gray-500">
+            {% if user.user_type == 'student' %}
+            Find new opportunities and manage your applications
+            {% else %}
+            Manage your opportunities and find talented students
+            {% endif %}
+        </p>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 mb-8">
+        {% if user.user_type == 'student' %}
+        <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="p-5">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-search text-blue-500 text-xl"></i>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 truncate">
+                                Browse
+                            </dt>
+                            <dd class="text-lg font-medium text-gray-900">
+                                <a href="{{ url_for('opportunities') }}" class="text-blue-600 hover:text-blue-800">
+                                    Opportunities
+                                </a>
+                            </dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="p-5">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-user text-green-500 text-xl"></i>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 truncate">
+                                My
+                            </dt>
+                            <dd class="text-lg font-medium text-gray-900">
+                                <a href="{{ url_for('profile') }}" class="text-green-600 hover:text-green-800">
+                                    Profile
+                                </a>
+                            </dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="p-5">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-plus text-blue-500 text-xl"></i>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 truncate">
+                                Create
+                            </dt>
+                            <dd class="text-lg font-medium text-gray-900">
+                                <a href="{{ url_for('create_opportunity') }}" class="text-blue-600 hover:text-blue-800">
+                                    Opportunity
+                                </a>
+                            </dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="p-5">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-users text-green-500 text-xl"></i>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 truncate">
+                                Find
+                            </dt>
+                            <dd class="text-lg font-medium text-gray-900">
+                                <a href="{{ url_for('talent_search') }}" class="text-green-600 hover:text-green-800">
+                                    Talent
+                                </a>
+                            </dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="p-5">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-cog text-gray-500 text-xl"></i>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 truncate">
+                                Account
+                            </dt>
+                            <dd class="text-lg font-medium text-gray-900">
+                                <a href="{{ url_for('profile') }}" class="text-gray-600 hover:text-gray-800">
+                                    Settings
+                                </a>
+                            </dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <!-- Left Column -->
+        <div class="lg:col-span-2">
+            {% if user.user_type == 'student' %}
+            <!-- Recent Opportunities -->
+            <div class="bg-white shadow rounded-lg">
+                <div class="px-4 py-5 sm:p-6">
+                    <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">
+                        Recommended Opportunities
+                    </h3>
+                    {% if opportunities %}
+                    <div class="space-y-4">
+                        {% for opportunity in opportunities %}
+                        <div class="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors">
+                            <div class="flex items-center justify-between mb-2">
+                                <h4 class="text-base font-semibold text-gray-900">
+                                    <a href="{{ url_for('opportunity_details', id=opportunity.id) }}"
+                                        class="hover:text-blue-600">
+                                        {{ opportunity.title }}
+                                    </a>
+                                </h4>
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
+                                            {% if opportunity.type == 'Internship' %}bg-blue-100 text-blue-800
+                                            {% else %}bg-green-100 text-green-800{% endif %}">
+                                    {{ opportunity.type }}
+                                </span>
+                            </div>
+                            <p class="text-sm text-gray-600 mb-1">
+                                {% if opportunity.profiles %}
+                                {{ opportunity.profiles.name or opportunity.profiles.organization_name or 'Organization'
+                                }}
+                                {% else %}
+                                Organization
+                                {% endif %}
+                            </p>
+                            <p class="text-sm text-gray-500 mb-2">
+                                <i class="fas fa-map-marker-alt mr-1"></i>{{ opportunity.location }}
+                            </p>
+                            <p class="text-sm text-gray-700">{{ opportunity.description[:120] }}{% if
+                                opportunity.description|length > 120 %}...{% endif %}</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <div class="mt-6 text-center">
+                        <a href="{{ url_for('opportunities') }}"
+                            class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-blue-600 bg-blue-100 hover:bg-blue-200">
+                            View All Opportunities
+                        </a>
+                    </div>
+                    {% else %}
+                    <p class="text-gray-500">No opportunities available at the moment. Check back later!</p>
+                    {% endif %}
+                </div>
+            </div>
+            {% else %}
+            <!-- Organization's Opportunities -->
+            <div class="bg-white shadow rounded-lg">
+                <div class="px-4 py-5 sm:p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg leading-6 font-medium text-gray-900">
+                            Your Opportunities
+                        </h3>
+                        <a href="{{ url_for('create_opportunity') }}"
+                            class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
+                            <i class="fas fa-plus mr-2"></i>
+                            Add New
+                        </a>
+                    </div>
+                    {% if opportunities %}
+                    <div class="space-y-4">
+                        {% for opportunity in opportunities %}
+                        <div class="border border-gray-200 rounded-lg p-4">
+                            <div class="flex items-center justify-between mb-2">
+                                <h4 class="text-base font-semibold text-gray-900">
+                                    <a href="{{ url_for('opportunity_details', id=opportunity.id) }}"
+                                        class="hover:text-blue-600">
+                                        {{ opportunity.title }}
+                                    </a>
+                                </h4>
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
+                                            {% if opportunity.type == 'Internship' %}bg-blue-100 text-blue-800
+                                            {% else %}bg-green-100 text-green-800{% endif %}">
+                                    {{ opportunity.type }}
+                                </span>
+                            </div>
+                            <p class="text-sm text-gray-500 mb-2">
+                                <i class="fas fa-map-marker-alt mr-1"></i>{{ opportunity.location }}
+                                <span class="ml-4"><i class="fas fa-calendar mr-1"></i>{{ opportunity.date }}</span>
+                            </p>
+                            <p class="text-sm text-gray-700">{{ opportunity.description[:120] }}{% if
+                                opportunity.description|length > 120 %}...{% endif %}</p>
+                            <div class="mt-3 flex space-x-2">
+                                <button class="text-sm text-blue-600 hover:text-blue-800">Edit</button>
+                                <button class="text-sm text-red-600 hover:text-red-800">Delete</button>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-6">
+                        <i class="fas fa-briefcase text-gray-400 text-4xl mb-4"></i>
+                        <h3 class="text-lg font-medium text-gray-900 mb-2">No opportunities yet</h3>
+                        <p class="text-gray-500 mb-4">Create your first opportunity to start connecting with talented
+                            students.</p>
+                        <a href="{{ url_for('create_opportunity') }}"
+                            class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
+                            Create Opportunity
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Right Column - Profile Summary -->
+        <div class="lg:col-span-1">
+            <div class="bg-white shadow rounded-lg">
+                <div class="px-4 py-5 sm:p-6">
+                    <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">
+                        Profile Summary
+                    </h3>
+                    <div class="text-center mb-4">
+                        <div class="h-20 w-20 rounded-full bg-blue-100 flex items-center justify-center mx-auto mb-3">
+                            <i class="fas fa-user text-blue-600 text-2xl"></i>
+                        </div>
+                        <h4 class="text-lg font-semibold text-gray-900">{{ user.name }}</h4>
+                        <p class="text-sm text-gray-500">{{ user.email }}</p>
+                    </div>
+
+                    <div class="space-y-3 text-sm">
+                        {% if user.location %}
+                        <div class="flex items-center">
+                            <i class="fas fa-map-marker-alt text-gray-400 w-4"></i>
+                            <span class="ml-2 text-gray-700">{{ user.location }}</span>
+                        </div>
+                        {% endif %}
+
+                        {% if user.phone %}
+                        <div class="flex items-center">
+                            <i class="fas fa-phone text-gray-400 w-4"></i>
+                            <span class="ml-2 text-gray-700">{{ user.phone }}</span>
+                        </div>
+                        {% endif %}
+
+                        {% if user.user_type == 'student' and user.school %}
+                        <div class="flex items-center">
+                            <i class="fas fa-graduation-cap text-gray-400 w-4"></i>
+                            <span class="ml-2 text-gray-700">{{ user.school }}</span>
+                        </div>
+                        {% endif %}
+
+                        {% if user.user_type == 'organization' and user.website %}
+                        <div class="flex items-center">
+                            <i class="fas fa-globe text-gray-400 w-4"></i>
+                            <span class="ml-2 text-gray-700">{{ user.website }}</span>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mt-6">
+                        <a href="{{ url_for('profile') }}"
+                            class="w-full inline-flex justify-center items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                            Edit Profile
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
