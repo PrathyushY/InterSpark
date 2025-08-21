@@ -4,7 +4,6 @@ InterSpark Flask Application Setup and Runner
 This script sets up and runs the InterSpark Flask application.
 """
 
-import os
 import sys
 from app import app
 

@@ -1,16 +1,24 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, session
+from dotenv import load_dotenv
+import os
+from supabase_config import supabase_service
+
+# Load environment variables
+load_dotenv()
 
 app = Flask(__name__)
-app.config["SECRET_KEY"] = "your-secret-key-change-this-in-production"
-
-# TODO: Add Supabase configuration here
+app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "2a15f8283ab2353f15089e80d8acf104")
 
 
 @app.route("/")
 def home():
-    # TODO: Replace with Supabase query to get featured opportunities
-    opportunities = []  # Placeholder - will be replaced with Supabase data
-    return render_template("home.html", opportunities=opportunities)
+    # Get featured opportunities from Supabase
+    try:
+        opportunities = supabase_service.get_opportunities(limit=3)
+        return render_template("home.html", opportunities=opportunities)
+    except Exception as e:
+        flash(f"Error loading opportunities: {str(e)}", "error")
+        return render_template("home.html", opportunities=[])
 
 
 @app.route("/login", methods=["GET", "POST"])
@@ -20,9 +28,84 @@ def login():
         password = request.form["password"]
         user_type = request.form.get("user_type", "student")
 
-        # TODO: Replace with Supabase authentication
-        flash("Login functionality will be implemented with Supabase", "info")
-        return render_template("login.html")
+        # Authenticate with Supabase
+        try:
+            auth_result = supabase_service.authenticate_user(email, password)
+
+            if auth_result["success"]:
+                user = auth_result["user"]
+                profile = auth_result["profile"]
+
+                print(f"DEBUG - Login attempt:")
+                print(f"  Requested user_type: '{user_type}'")
+                print(f"  Profile exists: {profile is not None}")
+                if profile:
+                    print(f"  Profile user_type: '{profile.get('user_type')}'")
+                    print(f"  Profile name: '{profile.get('name')}'")
+
+                # Check if user type matches
+                if profile and profile.get("user_type") == user_type:
+                    session["user_id"] = user["id"]
+                    session["user_type"] = profile["user_type"]
+                    session["user_name"] = profile["name"]
+                    session["user_email"] = profile["email"]
+
+                    flash("Login successful!", "success")
+                    return redirect(url_for("dashboard"))
+                elif (
+                    profile
+                    and profile.get("user_type") == "student"
+                    and profile.get("name") == "User"
+                ):
+                    # This is a newly created default profile, let's update it with the selected user type
+                    try:
+                        update_result = supabase_service.update_profile(
+                            user["id"], {"user_type": user_type}
+                        )
+                        if update_result["success"]:
+                            session["user_id"] = user["id"]
+                            session["user_type"] = user_type
+                            session["user_name"] = profile["name"]
+                            session["user_email"] = profile["email"]
+
+                            flash(
+                                "Login successful! Please complete your profile.",
+                                "success",
+                            )
+                            return redirect(url_for("profile"))
+                        else:
+                            flash(
+                                "Login successful, but there was an issue updating your profile.",
+                                "warning",
+                            )
+                    except Exception as update_error:
+                        print(f"Error updating profile: {update_error}")
+                        flash(
+                            "Login successful, but there was an issue updating your profile.",
+                            "warning",
+                        )
+
+                    # Fall back to basic login even if update failed
+                    session["user_id"] = user["id"]
+                    session["user_type"] = user_type  # Use the selected type
+                    session["user_name"] = profile["name"]
+                    session["user_email"] = profile["email"]
+                    return redirect(url_for("dashboard"))
+                else:
+                    if not profile:
+                        flash(
+                            "User profile not found. Please contact support.", "error"
+                        )
+                    else:
+                        flash(
+                            f"Invalid user type selected. Your account is registered as '{profile.get('user_type')}'",
+                            "error",
+                        )
+            else:
+                flash(auth_result.get("error", "Invalid credentials"), "error")
+
+        except Exception as e:
+            flash(f"Login error: {str(e)}", "error")
 
     return render_template("login.html")
 
@@ -33,11 +116,40 @@ def signup():
         name = request.form["name"]
         email = request.form["email"]
         password = request.form["password"]
+        confirm_password = request.form.get("confirm_password", "")
         user_type = request.form["user_type"]
 
-        # TODO: Replace with Supabase user creation
-        flash("Signup functionality will be implemented with Supabase", "info")
-        return render_template("signup.html")
+        # Basic validation
+        if password != confirm_password:
+            flash("Passwords do not match", "error")
+            return render_template("signup.html")
+
+        if len(password) < 6:
+            flash("Password must be at least 6 characters long", "error")
+            return render_template("signup.html")
+
+        # Create user with Supabase
+        try:
+            user_data = {"name": name, "user_type": user_type}
+
+            result = supabase_service.create_user(email, password, user_data)
+
+            if result["success"]:
+                # Auto-login the user
+                session["user_id"] = result["user"]["id"]
+                session["user_type"] = user_type
+                session["user_name"] = name
+                session["user_email"] = email
+
+                flash(
+                    "Registration successful! Please complete your profile.", "success"
+                )
+                return redirect(url_for("profile"))
+            else:
+                flash(result.get("error", "Registration failed"), "error")
+
+        except Exception as e:
+            flash(f"Registration error: {str(e)}", "error")
 
     return render_template("signup.html")
 
@@ -45,7 +157,7 @@ def signup():
 @app.route("/logout")
 def logout():
     session.clear()
-    flash("You have been logged out", "info")
+    flash("You have been logged out successfully", "success")
     return redirect(url_for("home"))
 
 
@@ -54,17 +166,71 @@ def dashboard():
     if "user_id" not in session:
         return redirect(url_for("login"))
 
-    # TODO: Replace with Supabase queries
-    # Mock user data for now
-    user = {
-        "id": session.get("user_id"),
-        "name": session.get("user_name", "User"),
-        "user_type": session.get("user_type", "student"),
-        "email": "user@example.com",
-    }
+    user_id = session.get("user_id")
+    user_type = session.get("user_type")
 
-    opportunities = []  # Placeholder - will be replaced with Supabase data
-    return render_template("dashboard.html", user=user, opportunities=opportunities)
+    # Get user profile for dashboard display
+    try:
+        user_profile = supabase_service.get_profile(user_id)
+        if not user_profile:
+            # Create a basic profile from session data
+            user_profile = {
+                "id": user_id,
+                "name": session.get("user_name", "User"),
+                "email": session.get("user_email", ""),
+                "user_type": user_type,
+            }
+        else:
+            # Ensure user_type is in the profile
+            user_profile["user_type"] = user_type
+    except Exception as e:
+        flash(f"Error loading user profile: {str(e)}", "error")
+        user_profile = {
+            "id": user_id,
+            "name": session.get("user_name", "User"),
+            "email": session.get("user_email", ""),
+            "user_type": user_type,
+        }
+
+    if user_type == "student":
+        # Get student's applications and relevant opportunities
+        try:
+            opportunities = supabase_service.get_opportunities()
+            return render_template(
+                "dashboard.html",
+                user_type="student",
+                opportunities=opportunities,
+                user=user_profile,
+            )
+        except Exception as e:
+            flash(f"Error loading dashboard: {str(e)}", "error")
+            return render_template(
+                "dashboard.html",
+                user_type="student",
+                opportunities=[],
+                user=user_profile,
+            )
+
+    elif user_type == "company":
+        # Get company's posted opportunities and applications
+        try:
+            company_opportunities = supabase_service.get_company_opportunities(user_id)
+            return render_template(
+                "dashboard.html",
+                user_type="company",
+                opportunities=company_opportunities,
+                user=user_profile,
+            )
+        except Exception as e:
+            flash(f"Error loading dashboard: {str(e)}", "error")
+            return render_template(
+                "dashboard.html",
+                user_type="company",
+                opportunities=[],
+                user=user_profile,
+            )
+
+    return render_template("dashboard.html", user_type=user_type, user=user_profile)
 
 
 @app.route("/profile", methods=["GET", "POST"])
@@ -72,75 +238,186 @@ def profile():
     if "user_id" not in session:
         return redirect(url_for("login"))
 
-    # TODO: Replace with Supabase queries
-    # Mock user data for now
-    user = {
-        "id": session.get("user_id"),
-        "name": session.get("user_name", "User"),
-        "user_type": session.get("user_type", "student"),
-        "email": "user@example.com",
-        "phone": "",
-        "location": "",
-        "school": "",
-        "grade": "",
-        "bio": "",
-        "interests": "",
-        "description": "",
-        "website": "",
-    }
+    user_id = session.get("user_id")
+    user_type = session.get("user_type")
 
     if request.method == "POST":
-        # TODO: Replace with Supabase update
-        flash("Profile update functionality will be implemented with Supabase", "info")
+        # Update profile with form data
+        profile_data = {}
 
-    return render_template("profile.html", user=user)
+        if user_type == "student":
+            profile_data = {
+                "name": request.form.get("full_name"),  # Update name field
+                "university": request.form.get("university"),
+                "major": request.form.get("major"),
+                "year_of_study": request.form.get("year_of_study"),
+                "skills": request.form.get("skills"),
+                "bio": request.form.get("bio"),
+                "github_url": request.form.get("github_url"),
+                "linkedin_url": request.form.get("linkedin_url"),
+                "portfolio_url": request.form.get("portfolio_url"),
+            }
+        elif user_type == "company":
+            profile_data = {
+                "name": request.form.get("company_name"),  # Update name field
+                "company_name": request.form.get("company_name"),
+                "industry": request.form.get("industry"),
+                "company_size": request.form.get("company_size"),
+                "description": request.form.get("description"),
+                "website": request.form.get("website"),
+                "location": request.form.get("location"),
+            }
+
+        try:
+            result = supabase_service.update_profile(user_id, profile_data)
+            if result["success"]:
+                flash("Profile updated successfully!", "success")
+                # Update session data
+                if "name" in profile_data:
+                    session["user_name"] = profile_data["name"]
+            else:
+                flash(result.get("error", "Failed to update profile"), "error")
+        except Exception as e:
+            flash(f"Error updating profile: {str(e)}", "error")
+
+    # Get current profile data
+    try:
+        profile = supabase_service.get_profile(user_id)
+        if not profile:
+            profile = {
+                "name": session.get("user_name", ""),
+                "email": session.get("user_email", ""),
+                "user_type": user_type,
+            }
+        # Ensure user_type is in the profile data
+        profile["user_type"] = user_type
+        return render_template(
+            "profile.html", user_type=user_type, profile=profile, user=profile
+        )
+    except Exception as e:
+        flash(f"Error loading profile: {str(e)}", "error")
+        default_profile = {
+            "name": session.get("user_name", ""),
+            "email": session.get("user_email", ""),
+            "user_type": user_type,
+        }
+        return render_template(
+            "profile.html",
+            user_type=user_type,
+            profile=default_profile,
+            user=default_profile,
+        )
 
 
 @app.route("/opportunities")
 def opportunities():
-    # TODO: Replace with Supabase query
-    opportunities = []  # Placeholder - will be replaced with Supabase data
-    return render_template("opportunities.html", opportunities=opportunities)
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+
+    try:
+        # Get filters from query parameters
+        search_query = request.args.get("search", "")
+        opportunity_type = request.args.get("type", "")
+        location = request.args.get("location", "")
+
+        # Fetch opportunities with filters
+        opportunities = supabase_service.search_opportunities(
+            search_query=search_query,
+            opportunity_type=opportunity_type,
+            location=location,
+        )
+
+        return render_template(
+            "opportunities.html",
+            opportunities=opportunities,
+            search_query=search_query,
+            selected_type=opportunity_type,
+            selected_location=location,
+        )
+    except Exception as e:
+        flash(f"Error loading opportunities: {str(e)}", "error")
+        return render_template("opportunities.html", opportunities=[])
 
 
 @app.route("/opportunity/<int:id>")
 def opportunity_details(id):
-    # TODO: Replace with Supabase query
-    # Mock opportunity data for now
-    opportunity = {
-        "id": id,
-        "title": "Sample Opportunity",
-        "description": "This is a placeholder opportunity. Data will be loaded from Supabase.",
-        "organization": {"name": "Sample Organization", "email": "org@example.com"},
-    }
-    return render_template("opportunity_details.html", opportunity=opportunity)
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+
+    try:
+        opportunity = supabase_service.get_opportunity_by_id(id)
+        if not opportunity:
+            flash("Opportunity not found", "error")
+            return redirect(url_for("opportunities"))
+
+        return render_template("opportunity_details.html", opportunity=opportunity)
+    except Exception as e:
+        flash(f"Error loading opportunity: {str(e)}", "error")
+        return redirect(url_for("opportunities"))
 
 
 @app.route("/talent")
 def talent_search():
-    # TODO: Replace with Supabase query
-    students = []  # Placeholder - will be replaced with Supabase data
-    return render_template("talent_search.html", students=students)
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+
+    try:
+        # Get filters from query parameters
+        search_query = request.args.get("search", "")
+        skills = request.args.get("skills", "")
+        university = request.args.get("university", "")
+        major = request.args.get("major", "")
+
+        # Search for students
+        students = supabase_service.search_students(
+            search_query=search_query, skills=skills, university=university, major=major
+        )
+
+        return render_template(
+            "talent_search.html",
+            students=students,
+            search_query=search_query,
+            selected_skills=skills,
+            selected_university=university,
+            selected_major=major,
+        )
+    except Exception as e:
+        flash(f"Error searching talent: {str(e)}", "error")
+        return render_template("talent_search.html", students=[])
 
 
 @app.route("/create_opportunity", methods=["GET", "POST"])
 def create_opportunity():
-    if "user_id" not in session or session.get("user_type") != "organization":
-        flash(
-            "You must be logged in as an organization to create opportunities", "error"
-        )
+    if "user_id" not in session or session.get("user_type") != "company":
+        flash("You must be logged in as a company to create opportunities", "error")
         return redirect(url_for("login"))
 
     if request.method == "POST":
-        # TODO: Replace with Supabase insert
-        flash(
-            "Opportunity creation functionality will be implemented with Supabase",
-            "info",
-        )
-        return redirect(url_for("dashboard"))
+        # Get form data
+        opportunity_data = {
+            "title": request.form.get("title"),
+            "description": request.form.get("description"),
+            "type": request.form.get("type"),
+            "location": request.form.get("location"),
+            "requirements": request.form.get("requirements"),
+            "compensation": request.form.get("compensation"),
+            "duration": request.form.get("duration"),
+            "application_deadline": request.form.get("application_deadline"),
+            "company_id": session.get("user_id"),
+        }
+
+        try:
+            result = supabase_service.create_opportunity(opportunity_data)
+            if result["success"]:
+                flash("Opportunity created successfully!", "success")
+                return redirect(url_for("dashboard"))
+            else:
+                flash(result.get("error", "Failed to create opportunity"), "error")
+        except Exception as e:
+            flash(f"Error creating opportunity: {str(e)}", "error")
 
     return render_template("create_opportunity.html")
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=True, port=5000)
