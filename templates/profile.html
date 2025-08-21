@@ -1,0 +1,247 @@
+{% extends "base.html" %}
+
+{% block title %}Profile - InterSpark{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div class="mb-8">
+        <h1 class="text-2xl font-bold text-gray-900">My Profile</h1>
+        <p class="mt-1 text-gray-500">Manage your account information and preferences</p>
+    </div>
+
+    <div class="bg-white shadow rounded-lg">
+        <form method="POST" class="divide-y divide-gray-200">
+            <!-- Profile Header -->
+            <div class="px-4 py-5 sm:p-6">
+                <div class="flex items-center space-x-5">
+                    <div class="flex-shrink-0">
+                        {% if profile.profile_image %}
+                        <img src="{{ profile.profile_image }}" alt="{{ profile.name or 'User' }}"
+                            class="h-20 w-20 rounded-full">
+                        {% else %}
+                        <div class="h-20 w-20 rounded-full bg-blue-100 flex items-center justify-center">
+                            <i class="fas fa-user text-blue-600 text-2xl"></i>
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <h3 class="text-lg leading-6 font-medium text-gray-900">{{ profile.name or session.user_name or
+                            'User' }}</h3>
+                        <p class="mt-1 max-w-2xl text-sm text-gray-500">
+                            {% if user_type == 'student' %}Student Profile{% else %}Organization Profile{% endif %}
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Basic Information -->
+            <div class="px-4 py-5 sm:p-6">
+                <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">Basic Information</h3>
+                <div class="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
+                    <div class="sm:col-span-3">
+                        <label for="full_name" class="block text-sm font-medium text-gray-700">
+                            {% if user_type == 'student' %}Full Name{% else %}Organization Name{% endif %}
+                        </label>
+                        <div class="mt-1">
+                            <input type="text" name="full_name" id="full_name" value="{{ profile.name or '' }}" required
+                                class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">
+                        </div>
+                    </div>
+
+                    <div class="sm:col-span-3">
+                        <label for="email" class="block text-sm font-medium text-gray-700">Email address</label>
+                        <div class="mt-1">
+                            <input type="email" name="email" id="email" value="{{ profile.email or '' }}" readonly
+                                class="shadow-sm bg-gray-50 block w-full sm:text-sm border-gray-300 rounded-md">
+                        </div>
+                        <p class="mt-1 text-sm text-gray-500">Email cannot be changed</p>
+                    </div>
+
+                    <div class="sm:col-span-3">
+                        <label for="phone" class="block text-sm font-medium text-gray-700">Phone number</label>
+                        <div class="mt-1">
+                            <input type="tel" name="phone" id="phone" value="{{ profile.phone or '' }}"
+                                class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">
+                        </div>
+                    </div>
+
+                    <div class="sm:col-span-3">
+                        <label for="location" class="block text-sm font-medium text-gray-700">Location</label>
+                        <div class="mt-1">
+                            <input type="text" name="location" id="location" value="{{ profile.location or '' }}"
+                                placeholder="City, State"
+                                class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Student-specific fields -->
+            {% if user_type == 'student' %}
+            <div class="px-4 py-5 sm:p-6">
+                <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">Student Information</h3>
+                <div class="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
+                    <div class="sm:col-span-3">
+                        <label for="school" class="block text-sm font-medium text-gray-700">School</label>
+                        <div class="mt-1">
+                            <input type="text" name="school" id="school" value="{{ profile.school or '' }}"
+                                placeholder="e.g., Lincoln High School"
+                                class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">
+                        </div>
+                    </div>
+
+                    <div class="sm:col-span-3">
+                        <label for="grade" class="block text-sm font-medium text-gray-700">Grade</label>
+                        <div class="mt-1">
+                            <select name="grade" id="grade"
+                                class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">
+                                <option value="">Select Grade</option>
+                                <option value="9th Grade" {% if profile.grade=='9th Grade' %}selected{% endif %}>9th
+                                    Grade</option>
+                                <option value="10th Grade" {% if profile.grade=='10th Grade' %}selected{% endif %}>10th
+                                    Grade</option>
+                                <option value="11th Grade" {% if profile.grade=='11th Grade' %}selected{% endif %}>11th
+                                    Grade</option>
+                                <option value="12th Grade" {% if profile.grade=='12th Grade' %}selected{% endif %}>12th
+                                    Grade</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="sm:col-span-6">
+                        <label for="bio" class="block text-sm font-medium text-gray-700">Bio</label>
+                        <div class="mt-1">
+                            <textarea name="bio" id="bio" rows="4"
+                                placeholder="Tell us about yourself, your interests, and what kind of opportunities you're looking for..."
+                                class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">{{ profile.bio or '' }}</textarea>
+                        </div>
+                    </div>
+
+                    <div class="sm:col-span-6">
+                        <label for="skills" class="block text-sm font-medium text-gray-700">Skills</label>
+                        <div class="mt-1">
+                            <textarea name="skills" id="skills" rows="2"
+                                placeholder="List your skills separated by commas (e.g., Python, JavaScript, Data Analysis)"
+                                class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">{{ profile.skills or '' }}</textarea>
+                        </div>
+                        <p class="mt-2 text-sm text-gray-500">This helps organizations find students with relevant
+                            skills.</p>
+                    </div>
+
+                    <div class="sm:col-span-2">
+                        <label for="github_url" class="block text-sm font-medium text-gray-700">GitHub URL
+                            (Optional)</label>
+                        <div class="mt-1">
+                            <input type="url" name="github_url" id="github_url" value="{{ profile.github_url or '' }}"
+                                placeholder="https://github.com/yourusername"
+                                class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">
+                        </div>
+                    </div>
+
+                    <div class="sm:col-span-2">
+                        <label for="linkedin_url" class="block text-sm font-medium text-gray-700">LinkedIn URL
+                            (Optional)</label>
+                        <div class="mt-1">
+                            <input type="url" name="linkedin_url" id="linkedin_url"
+                                value="{{ profile.linkedin_url or '' }}"
+                                placeholder="https://linkedin.com/in/yourusername"
+                                class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">
+                        </div>
+                    </div>
+
+                    <div class="sm:col-span-2">
+                        <label for="portfolio_url" class="block text-sm font-medium text-gray-700">Portfolio URL
+                            (Optional)</label>
+                        <div class="mt-1">
+                            <input type="url" name="portfolio_url" id="portfolio_url"
+                                value="{{ profile.portfolio_url or '' }}" placeholder="https://yourportfolio.com"
+                                class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Organization-specific fields -->
+            {% if user_type == 'organization' %}
+            <div class="px-4 py-5 sm:p-6">
+                <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">Organization Information</h3>
+                <div class="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
+                    <div class="sm:col-span-6">
+                        <label for="description" class="block text-sm font-medium text-gray-700">Description</label>
+                        <div class="mt-1">
+                            <textarea name="description" id="description" rows="4"
+                                placeholder="Describe your organization's mission, values, and what you do..."
+                                class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">{{ profile.description or '' }}</textarea>
+                        </div>
+                    </div>
+
+                    <div class="sm:col-span-6">
+                        <label for="website" class="block text-sm font-medium text-gray-700">Website</label>
+                        <div class="mt-1">
+                            <input type="url" name="website" id="website" value="{{ profile.website or '' }}"
+                                placeholder="https://example.com"
+                                class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Actions -->
+            <div class="px-4 py-4 sm:px-6 flex justify-between">
+                <div>
+                    <button type="button"
+                        class="bg-red-600 border border-transparent rounded-md shadow-sm py-2 px-4 inline-flex justify-center text-sm font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+                        Delete Account
+                    </button>
+                </div>
+                <div class="flex space-x-3">
+                    <button type="button"
+                        class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-4 inline-flex justify-center text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        Cancel
+                    </button>
+                    <button type="submit"
+                        class="bg-blue-600 border border-transparent rounded-md shadow-sm py-2 px-4 inline-flex justify-center text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        Save Changes
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Additional Information -->
+    {% if user_type == 'student' %}
+    <div class="mt-8 bg-blue-50 rounded-lg p-6">
+        <h3 class="text-lg font-medium text-gray-900 mb-2">Complete Your Profile</h3>
+        <p class="text-gray-600 mb-4">A complete profile helps organizations find the right students for their
+            opportunities.</p>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div class="flex items-center">
+                <i class="fas fa-check-circle text-green-500 mr-2"></i>
+                <span class="text-sm text-gray-700">Basic information completed</span>
+            </div>
+            <div class="flex items-center">
+                <i
+                    class="fas fa-{% if profile.bio %}check-circle text-green-500{% else %}circle text-gray-400{% endif %} mr-2"></i>
+                <span class="text-sm text-gray-700">Bio {% if not profile.bio %}(add to improve visibility){% endif
+                    %}</span>
+            </div>
+            <div class="flex items-center">
+                <i
+                    class="fas fa-{% if profile.skills %}check-circle text-green-500{% else %}circle text-gray-400{% endif %} mr-2"></i>
+                <span class="text-sm text-gray-700">Skills {% if not profile.skills %}(help organizations find you){%
+                    endif %}</span>
+            </div>
+            <div class="flex items-center">
+                <i
+                    class="fas fa-{% if profile.school %}check-circle text-green-500{% else %}circle text-gray-400{% endif %} mr-2"></i>
+                <span class="text-sm text-gray-700">School information {% if not profile.school %}(optional){%
+                    endif
+                    %}</span>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
