@@ -172,17 +172,20 @@
                             {% else %}bg-green-100 text-green-800{% endif %}">
                             {{ opportunity.type }}
                         </span>
-                        <span class="text-sm text-gray-500">{{ opportunity.category }}</span>
+                        <span class="text-sm text-gray-500">{{ opportunity.type }}</span>
                     </div>
                     <h3 class="text-lg font-semibold text-gray-900 mb-2">{{ opportunity.title }}</h3>
-                    <p class="text-sm text-gray-600 mb-2">{{ opportunity.organization.name }}</p>
+                    <p class="text-sm text-gray-600 mb-2">{{ opportunity.profiles.name or
+                        opportunity.profiles.organization_name or 'Organization' if opportunity.profiles else
+                        'Organization' }}</p>
                     <p class="text-sm text-gray-500 mb-4">
                         <i class="fas fa-map-marker-alt mr-1"></i>{{ opportunity.location }}
                     </p>
                     <p class="text-gray-700 text-sm mb-4">{{ opportunity.description[:150] }}{% if
                         opportunity.description|length > 150 %}...{% endif %}</p>
                     <div class="flex justify-between items-center">
-                        <span class="text-sm text-gray-500">{{ opportunity.hours }}</span>
+                        <span class="text-sm text-gray-500">{{ opportunity.duration or 'Duration not specified'
+                            }}</span>
                         <a href="{{ url_for('opportunity_details', id=opportunity.id) }}"
                             class="text-blue-600 hover:text-blue-800 font-medium text-sm">
                             Learn More →

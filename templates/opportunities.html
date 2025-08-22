@@ -71,7 +71,7 @@
                             {% else %}bg-green-100 text-green-800{% endif %}">
                         {{ opportunity.type }}
                     </span>
-                    <span class="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">{{ opportunity.category }}</span>
+                    <span class="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">{{ opportunity.type }}</span>
                 </div>
 
                 <h3 class="text-lg font-semibold text-gray-900 mb-2 hover:text-blue-600">
@@ -81,11 +81,13 @@
                 </h3>
 
                 <div class="flex items-center mb-2">
-                    {% if opportunity.organization.logo %}
-                    <img src="{{ opportunity.organization.logo }}" alt="{{ opportunity.organization.name }}"
+                    {% if opportunity.profiles and opportunity.profiles.profile_image %}
+                    <img src="{{ opportunity.profiles.profile_image }}"
+                        alt="{{ opportunity.profiles.name or opportunity.profiles.organization_name }}"
                         class="w-6 h-6 rounded-full mr-2">
                     {% endif %}
-                    <p class="text-sm text-gray-600 font-medium">{{ opportunity.organization.name }}</p>
+                    <p class="text-sm text-gray-600 font-medium">{{ opportunity.profiles.name or
+                        opportunity.profiles.organization_name or 'Organization' }}</p>
                 </div>
 
                 <div class="space-y-1 mb-4 text-sm text-gray-500">
@@ -95,11 +97,11 @@
                     </div>
                     <div class="flex items-center">
                         <i class="fas fa-clock mr-2 w-4"></i>
-                        <span>{{ opportunity.hours }}</span>
+                        <span>{{ opportunity.duration or 'Duration not specified' }}</span>
                     </div>
                     <div class="flex items-center">
                         <i class="fas fa-calendar mr-2 w-4"></i>
-                        <span>{{ opportunity.date }}</span>
+                        <span>{{ opportunity.created_at | format_date }}</span>
                     </div>
                 </div>
 
@@ -110,7 +112,8 @@
                 <div class="flex items-center justify-between">
                     <div class="text-sm text-gray-500">
                         <i class="fas fa-exclamation-circle mr-1"></i>
-                        Deadline: {{ opportunity.deadline }}
+                        Deadline: {{ opportunity.application_deadline | format_date if opportunity.application_deadline
+                        else 'No deadline' }}
                     </div>
                     <a href="{{ url_for('opportunity_details', id=opportunity.id) }}"
                         class="text-blue-600 hover:text-blue-800 font-medium text-sm">

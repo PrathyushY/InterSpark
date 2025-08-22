@@ -221,7 +221,8 @@
                             </div>
                             <p class="text-sm text-gray-500 mb-2">
                                 <i class="fas fa-map-marker-alt mr-1"></i>{{ opportunity.location }}
-                                <span class="ml-4"><i class="fas fa-calendar mr-1"></i>{{ opportunity.date }}</span>
+                                <span class="ml-4"><i class="fas fa-calendar mr-1"></i>{{ opportunity.created_at |
+                                    format_date }}</span>
                             </p>
                             <p class="text-sm text-gray-700">{{ opportunity.description[:120] }}{% if
                                 opportunity.description|length > 120 %}...{% endif %}</p>

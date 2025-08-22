@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, session
 from dotenv import load_dotenv
 import os
+from datetime import datetime
 from supabase_config import supabase_service
 
 # Load environment variables
@@ -8,6 +9,34 @@ load_dotenv()
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "2a15f8283ab2353f15089e80d8acf104")
+
+
+# Custom template filter for date formatting
+@app.template_filter("format_date")
+def format_date_filter(date_string, format="%B %d, %Y"):
+    """
+    Format an ISO date string to a readable format.
+
+    Args:
+        date_string: ISO format date string from Supabase
+        format: strftime format string
+
+    Returns:
+        Formatted date string or 'Recently' if parsing fails
+    """
+    if not date_string:
+        return "Recently"
+
+    try:
+        # Parse ISO format: 2025-08-21T23:02:27.393868+00:00
+        dt = datetime.fromisoformat(date_string.replace("Z", "+00:00"))
+        return dt.strftime(format)
+    except (ValueError, AttributeError):
+        # Fallback: just return the date part if it's already formatted
+        try:
+            return date_string.split("T")[0]
+        except:
+            return "Recently"
 
 
 @app.route("/")
