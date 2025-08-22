@@ -30,11 +30,10 @@
                         {% else %}bg-green-100 text-green-800{% endif %}">
                         {{ opportunity.type }}
                     </span>
-                    <span class="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">{{ opportunity.category
-                        }}</span>
+                    <span class="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">{{ opportunity.type }}</span>
                 </div>
                 <div class="text-sm text-gray-500">
-                    Posted {{ opportunity.created_at.strftime('%B %d, %Y') }}
+                    Posted {{ opportunity.created_at | format_date }}
                 </div>
             </div>
 
@@ -42,8 +41,9 @@
 
             <!-- Organization Info -->
             <div class="flex items-center mb-6">
-                {% if opportunity.organization.logo %}
-                <img src="{{ opportunity.organization.logo }}" alt="{{ opportunity.organization.name }}"
+                {% if opportunity.profiles and opportunity.profiles.profile_image %}
+                <img src="{{ opportunity.profiles.profile_image }}"
+                    alt="{{ opportunity.profiles.name or opportunity.profiles.organization_name }}"
                     class="w-12 h-12 rounded-full mr-4">
                 {% else %}
                 <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mr-4">
@@ -51,8 +51,9 @@
                 </div>
                 {% endif %}
                 <div>
-                    <h2 class="text-lg font-semibold text-gray-900">{{ opportunity.organization.name }}</h2>
-                    <p class="text-gray-600">{{ opportunity.organization.location }}</p>
+                    <h2 class="text-lg font-semibold text-gray-900">{{ opportunity.profiles.name or
+                        opportunity.profiles.organization_name or 'Organization' }}</h2>
+                    <p class="text-gray-600">{{ opportunity.profiles.location or opportunity.location }}</p>
                 </div>
             </div>
 
@@ -65,31 +66,32 @@
                     </div>
                     <div class="flex items-center">
                         <i class="fas fa-clock text-gray-400 w-5 mr-3"></i>
-                        <span class="text-gray-700">{{ opportunity.hours }}</span>
+                        <span class="text-gray-700">{{ opportunity.duration or 'Duration not specified' }}</span>
                     </div>
                     <div class="flex items-center">
                         <i class="fas fa-calendar text-gray-400 w-5 mr-3"></i>
-                        <span class="text-gray-700">{{ opportunity.date }}</span>
+                        <span class="text-gray-700">{{ opportunity.created_at | format_date }}</span>
                     </div>
                 </div>
                 <div class="space-y-4">
                     <div class="flex items-center">
                         <i class="fas fa-exclamation-circle text-red-400 w-5 mr-3"></i>
-                        <span class="text-gray-700">Deadline: {{ opportunity.deadline }}</span>
+                        <span class="text-gray-700">Deadline: {{ opportunity.application_deadline | format_date if
+                            opportunity.application_deadline else 'No deadline specified' }}</span>
                     </div>
-                    {% if opportunity.organization.website %}
+                    {% if opportunity.profiles and opportunity.profiles.website %}
                     <div class="flex items-center">
                         <i class="fas fa-globe text-gray-400 w-5 mr-3"></i>
-                        <a href="{{ opportunity.organization.website }}" target="_blank"
+                        <a href="{{ opportunity.profiles.website }}" target="_blank"
                             class="text-blue-600 hover:text-blue-800">
-                            {{ opportunity.organization.website }}
+                            {{ opportunity.profiles.website }}
                         </a>
                     </div>
                     {% endif %}
-                    {% if opportunity.organization.phone %}
+                    {% if opportunity.profiles and opportunity.profiles.phone %}
                     <div class="flex items-center">
                         <i class="fas fa-phone text-gray-400 w-5 mr-3"></i>
-                        <span class="text-gray-700">{{ opportunity.organization.phone }}</span>
+                        <span class="text-gray-700">{{ opportunity.profiles.phone }}</span>
                     </div>
                     {% endif %}
                 </div>
@@ -198,28 +200,31 @@
 
             <!-- Organization Details -->
             <div class="bg-white rounded-lg shadow-md p-6">
-                <h3 class="text-lg font-semibold text-gray-900 mb-4">About {{ opportunity.organization.name }}</h3>
-                {% if opportunity.organization.description %}
-                <p class="text-gray-700 text-sm mb-4">{{ opportunity.organization.description }}</p>
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">About {{ opportunity.profiles.name or
+                    opportunity.profiles.organization_name or 'Organization' }}</h3>
+                {% if opportunity.profiles and opportunity.profiles.description %}
+                <p class="text-gray-700 text-sm mb-4">{{ opportunity.profiles.description }}</p>
                 {% endif %}
 
                 <div class="space-y-3 text-sm">
+                    {% if opportunity.profiles and opportunity.profiles.email %}
                     <div class="flex items-center">
                         <i class="fas fa-envelope text-gray-400 w-4 mr-3"></i>
-                        <a href="mailto:{{ opportunity.organization.email }}" class="text-blue-600 hover:text-blue-800">
-                            {{ opportunity.organization.email }}
+                        <a href="mailto:{{ opportunity.profiles.email }}" class="text-blue-600 hover:text-blue-800">
+                            {{ opportunity.profiles.email }}
                         </a>
                     </div>
-                    {% if opportunity.organization.phone %}
+                    {% endif %}
+                    {% if opportunity.profiles and opportunity.profiles.phone %}
                     <div class="flex items-center">
                         <i class="fas fa-phone text-gray-400 w-4 mr-3"></i>
-                        <span class="text-gray-700">{{ opportunity.organization.phone }}</span>
+                        <span class="text-gray-700">{{ opportunity.profiles.phone }}</span>
                     </div>
                     {% endif %}
-                    {% if opportunity.organization.website %}
+                    {% if opportunity.profiles and opportunity.profiles.website %}
                     <div class="flex items-center">
                         <i class="fas fa-globe text-gray-400 w-4 mr-3"></i>
-                        <a href="{{ opportunity.organization.website }}" target="_blank"
+                        <a href="{{ opportunity.profiles.website }}" target="_blank"
                             class="text-blue-600 hover:text-blue-800">
                             Visit Website
                         </a>
