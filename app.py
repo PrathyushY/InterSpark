@@ -41,6 +41,9 @@ def format_date_filter(date_string, format="%B %d, %Y"):
 
 @app.route("/")
 def home():
+    # Redirect logged-in users to dashboard
+    if "user_id" in session:
+        return redirect(url_for("dashboard"))
     # Get featured opportunities from Supabase
     try:
         opportunities = supabase_service.get_opportunities(limit=3)
@@ -350,6 +353,27 @@ def profile():
             profile=default_profile,
             user=default_profile,
         )
+
+
+@app.route("/profile/<user_id>", methods=["GET"])
+def view_profile(user_id):
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+
+    profile = supabase_service.get_profile(user_id)
+    if not profile:
+        flash("User profile not found.", "error")
+        return redirect(url_for("talent_search"))
+
+    is_own_profile = (session.get("user_id") == user_id)
+    return render_template(
+        "profile.html",
+        user_type=profile.get("user_type", "student"),
+        profile=profile,
+        user=profile,
+        is_own_profile=is_own_profile,
+        read_only=not is_own_profile
+    )
 
 
 @app.route("/opportunities")
