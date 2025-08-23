@@ -307,23 +307,14 @@ def profile():
             k: v for k, v in profile_data.items() if v is not None and v.strip() != ""
         }
 
-        print(f"DEBUG - Profile update attempt:")
-        print(f"  User ID: {user_id}")
-        print(f"  User Type: {user_type}")
-        print(f"  Profile Data: {profile_data}")
-
         try:
             result = supabase_service.update_profile(user_id, profile_data)
-            print(f"  Update Result: {result}")
             if result["success"]:
                 flash("Profile updated successfully!", "success")
                 # Update session data
                 if "name" in profile_data:
                     session["user_name"] = profile_data["name"]
-            else:
-                flash(result.get("error", "Failed to update profile"), "error")
         except Exception as e:
-            print(f"  Exception during update: {str(e)}")
             flash(f"Error updating profile: {str(e)}", "error")
 
     # Get current profile data
@@ -338,7 +329,12 @@ def profile():
         # Ensure user_type is in the profile data
         profile["user_type"] = user_type
         return render_template(
-            "profile.html", user_type=user_type, profile=profile, user=profile
+            "profile.html",
+            user_type=user_type,
+            profile=profile,
+            user=profile,
+            is_own_profile=True,
+            read_only=False
         )
     except Exception as e:
         flash(f"Error loading profile: {str(e)}", "error")
@@ -352,6 +348,8 @@ def profile():
             user_type=user_type,
             profile=default_profile,
             user=default_profile,
+            is_own_profile=True,
+            read_only=False
         )
 
 
@@ -366,13 +364,25 @@ def view_profile(user_id):
         return redirect(url_for("talent_search"))
 
     is_own_profile = (session.get("user_id") == user_id)
+
+    # Get Talent Search filter params from query string
+    search_query = request.args.get("search", "")
+    skills = request.args.get("skills", "")
+    school = request.args.get("school", "")
+    grade = request.args.get("grade", "")
+
     return render_template(
         "profile.html",
         user_type=profile.get("user_type", "student"),
         profile=profile,
         user=profile,
         is_own_profile=is_own_profile,
-        read_only=not is_own_profile
+        read_only=not is_own_profile,
+        back_to_talent_search=True,
+        search_query=search_query,
+        selected_skills=skills,
+        selected_school=school,
+        selected_grade=grade
     )
 
 
@@ -489,4 +499,7 @@ def create_opportunity():
 
 
 if __name__ == "__main__":
+    import os
+    print(f"SUPABASE_URL: {os.getenv('SUPABASE_URL')}")
+    print(f"SUPABASE_PUBLIC_KEY: {os.getenv('SUPABASE_PUBLIC_KEY')}")
     app.run(debug=True, port=5000)
