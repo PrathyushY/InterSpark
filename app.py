@@ -307,6 +307,11 @@ def profile():
             k: v for k, v in profile_data.items() if v is not None and v.strip() != ""
         }
 
+        print(f"DEBUG - Profile update attempt:")
+        print(f"  User ID: {user_id}")
+        print(f"  User Type: {user_type}")
+        print(f"  Profile data: {profile_data}")
+
         try:
             result = supabase_service.update_profile(user_id, profile_data)
             if result["success"]:
@@ -314,6 +319,12 @@ def profile():
                 # Update session data
                 if "name" in profile_data:
                     session["user_name"] = profile_data["name"]
+                return redirect(url_for("profile"))
+            else:
+                flash(
+                    f"Failed to update profile: {result.get('error', 'Unknown error')}",
+                    "error",
+                )
         except Exception as e:
             flash(f"Error updating profile: {str(e)}", "error")
 
@@ -334,7 +345,7 @@ def profile():
             profile=profile,
             user=profile,
             is_own_profile=True,
-            read_only=False
+            read_only=False,
         )
     except Exception as e:
         flash(f"Error loading profile: {str(e)}", "error")
@@ -349,7 +360,7 @@ def profile():
             profile=default_profile,
             user=default_profile,
             is_own_profile=True,
-            read_only=False
+            read_only=False,
         )
 
 
@@ -363,7 +374,7 @@ def view_profile(user_id):
         flash("User profile not found.", "error")
         return redirect(url_for("talent_search"))
 
-    is_own_profile = (session.get("user_id") == user_id)
+    is_own_profile = session.get("user_id") == user_id
 
     # Get Talent Search filter params from query string
     search_query = request.args.get("search", "")
@@ -382,7 +393,7 @@ def view_profile(user_id):
         search_query=search_query,
         selected_skills=skills,
         selected_school=school,
-        selected_grade=grade
+        selected_grade=grade,
     )
 
 
@@ -500,6 +511,7 @@ def create_opportunity():
 
 if __name__ == "__main__":
     import os
+
     print(f"SUPABASE_URL: {os.getenv('SUPABASE_URL')}")
     print(f"SUPABASE_PUBLIC_KEY: {os.getenv('SUPABASE_PUBLIC_KEY')}")
     app.run(debug=True, port=5000)

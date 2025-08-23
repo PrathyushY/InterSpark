@@ -23,14 +23,23 @@ class SupabaseService:
     def __init__(self):
         """Initialize Supabase client with environment variables."""
         self.url = os.getenv("SUPABASE_URL")
-        self.key = os.getenv("SUPABASE_PUBLIC_KEY")
+        self.public_key = os.getenv("SUPABASE_PUBLIC_KEY")
+        self.service_key = os.getenv("SUPABASE_SECRET_KEY")
 
-        if not self.url or not self.key:
+        if not self.url or not self.public_key:
             raise ValueError(
                 "SUPABASE_URL and SUPABASE_PUBLIC_KEY must be set in environment variables"
             )
 
-        self.client: Client = create_client(self.url, self.key)
+        # Public client for authentication operations
+        self.client: Client = create_client(self.url, self.public_key)
+
+        # Service client for administrative operations (bypasses RLS)
+        if self.service_key:
+            self.service_client: Client = create_client(self.url, self.service_key)
+        else:
+            self.service_client = self.client  # Fallback to public client
+
         logger.info("Supabase client initialized successfully")
 
     # Authentication Methods
@@ -78,7 +87,9 @@ class SupabaseService:
                 try:
                     # Try to create the profile directly
                     profile_response = (
-                        self.client.table("profiles").insert(profile_data).execute()
+                        self.service_client.table("profiles")
+                        .insert(profile_data)
+                        .execute()
                     )
                     if profile_response.data:
                         logger.info(f"Profile created successfully: {response.user.id}")
@@ -270,7 +281,7 @@ class SupabaseService:
             }
 
             profile_response = (
-                self.client.table("profiles").insert(profile_data).execute()
+                self.service_client.table("profiles").insert(profile_data).execute()
             )
             if profile_response.data and len(profile_response.data) > 0:
                 logger.info(f"Created missing profile for user: {user_id}")
@@ -343,12 +354,19 @@ class SupabaseService:
             Success/error response
         """
         try:
+            print(f"DEBUG - Supabase update_profile called:")
+            print(f"  User ID: {user_id}")
+            print(f"  Profile data to update: {profile_data}")
+
             response = (
-                self.client.table("profiles")
+                self.service_client.table("profiles")
                 .update(profile_data)
                 .eq("id", user_id)
                 .execute()
             )
+
+            print(f"DEBUG - Supabase response: {response}")
+            print(f"DEBUG - Response data: {response.data}")
 
             if response.data:
                 logger.info(f"Profile updated successfully for user: {user_id}")
@@ -358,6 +376,7 @@ class SupabaseService:
 
         except Exception as e:
             logger.error(f"Error updating profile: {str(e)}")
+            print(f"DEBUG - Exception in update_profile: {str(e)}")
             return {"success": False, "error": str(e)}
 
     def search_students(
@@ -564,7 +583,9 @@ class SupabaseService:
         """
         try:
             response = (
-                self.client.table("opportunities").insert(opportunity_data).execute()
+                self.service_client.table("opportunities")
+                .insert(opportunity_data)
+                .execute()
             )
 
             if response.data:
