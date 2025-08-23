@@ -131,9 +131,9 @@
                         View Profile
                     </a>
                     <button onclick="toggleSaveProfile('{{ student.id }}', this)"
-                        class="px-2 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                        class="px-2 py-2 border rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 {% if student.is_saved %}bg-blue-50 border-blue-300 text-blue-700{% else %}border-gray-300 text-gray-700{% endif %}"
                         title="Save Profile">
-                        <i class="fas fa-bookmark text-sm"></i>
+                        <i class="{% if student.is_saved %}fas fa-bookmark{% else %}far fa-bookmark{% endif %} text-sm"></i>
                     </button>
                     {% else %}
                     <div class="flex-1 text-center py-2 text-sm text-gray-500">
@@ -209,28 +209,37 @@
         // Disable button during request
         button.disabled = true;
         const icon = button.querySelector('i');
-        const originalClass = icon.className;
+
+        // Check current state based on icon class
+        const isSaved = icon.classList.contains('fas');
 
         try {
-            // Always try to save first (it will handle duplicates gracefully)
-            const response = await fetch(`/save_profile/${profileId}`, {
+            // Toggle between save and unsave based on current state
+            const url = isSaved ? `/unsave_profile/${profileId}` : `/save_profile/${profileId}`;
+            const response = await fetch(url, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' }
             });
             const data = await response.json();
 
             if (data.success) {
-                // Update UI to show saved state
-                icon.className = 'fas fa-bookmark text-sm text-blue-600';
-                button.classList.add('border-blue-300', 'bg-blue-50');
-                button.classList.remove('border-gray-300');
-                showAlert(data.message || 'Profile saved successfully', 'success');
+                // Update UI based on new state
+                if (isSaved) {
+                    // Was saved, now unsaved
+                    icon.className = 'far fa-bookmark text-sm';
+                    button.className = button.className.replace('bg-blue-50 border-blue-300 text-blue-700', 'border-gray-300 text-gray-700');
+                } else {
+                    // Was unsaved, now saved
+                    icon.className = 'fas fa-bookmark text-sm';
+                    button.className = button.className.replace('border-gray-300 text-gray-700', 'bg-blue-50 border-blue-300 text-blue-700');
+                }
+                showAlert(data.message || (isSaved ? 'Profile removed from saved' : 'Profile saved successfully'), 'success');
             } else {
-                showAlert(data.error || 'Failed to save profile', 'error');
+                showAlert(data.error || 'Failed to update profile', 'error');
             }
         } catch (error) {
             showAlert('An error occurred. Please try again.', 'error');
-            console.error('Save profile error:', error);
+            console.error('Toggle profile error:', error);
         } finally {
             button.disabled = false;
         }

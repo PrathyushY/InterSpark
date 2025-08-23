@@ -970,7 +970,7 @@ class SupabaseService:
         """
         try:
             response = (
-                self.client.table("saved_opportunities")
+                self.service_client.table("saved_opportunities")
                 .select(
                     "*, opportunities(*, profiles!company_id(name, organization_name, email))"
                 )
@@ -997,7 +997,7 @@ class SupabaseService:
         """
         try:
             response = (
-                self.client.table("saved_profiles")
+                self.service_client.table("saved_profiles")
                 .select("*, profiles(*)")
                 .eq("user_id", user_id)
                 .order("created_at", desc=True)
@@ -1023,7 +1023,7 @@ class SupabaseService:
         """
         try:
             response = (
-                self.client.table("saved_opportunities")
+                self.service_client.table("saved_opportunities")
                 .select("id")
                 .eq("user_id", user_id)
                 .eq("opportunity_id", opportunity_id)
@@ -1049,7 +1049,7 @@ class SupabaseService:
         """
         try:
             response = (
-                self.client.table("saved_profiles")
+                self.service_client.table("saved_profiles")
                 .select("id")
                 .eq("user_id", user_id)
                 .eq("profile_id", profile_id)

@@ -179,7 +179,7 @@
                 <button id="save-opportunity-btn" onclick="toggleSaveOpportunity({{ opportunity.id }})"
                     class="w-full border border-gray-300 px-4 py-2 rounded-md hover:bg-gray-50 transition-colors
                                {% if is_saved %}bg-blue-50 border-blue-300 text-blue-700{% else %}text-gray-700{% endif %}">
-                    <i class="fas fa-{% if is_saved %}bookmark{% else %}bookmark-o{% endif %} mr-2"></i>
+                    <i class="{% if is_saved %}fas fa-bookmark{% else %}far fa-bookmark{% endif %} mr-2"></i>
                     <span id="save-text">{% if is_saved %}Saved{% else %}Save for Later{% endif %}</span>
                 </button>
             </div>
@@ -262,7 +262,7 @@
                     saveText.textContent = 'Saved';
                     btn.className = btn.className.replace('text-gray-700', 'bg-blue-50 border-blue-300 text-blue-700');
                 } else {
-                    icon.className = 'fas fa-bookmark-o mr-2';
+                    icon.className = 'far fa-bookmark mr-2';
                     saveText.textContent = 'Save for Later';
                     btn.className = btn.className.replace('bg-blue-50 border-blue-300 text-blue-700', 'text-gray-700');
                 }

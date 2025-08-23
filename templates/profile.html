@@ -37,7 +37,7 @@
             <button id="save-profile-btn" onclick="toggleSaveProfile('{{ profile.id }}')"
                 class="inline-flex items-center px-4 py-2 border rounded-md text-sm font-medium transition-colors hover:bg-gray-50
                            {% if is_saved %}bg-blue-50 border-blue-300 text-blue-700{% else %}border-gray-300 text-gray-700{% endif %}">
-                <i class="fas fa-{% if is_saved %}bookmark{% else %}bookmark-o{% endif %} mr-2"></i>
+                <i class="{% if is_saved %}fas fa-bookmark{% else %}far fa-bookmark{% endif %} mr-2"></i>
                 <span id="save-profile-text">{% if is_saved %}Saved{% else %}Save Profile{% endif %}</span>
             </button>
         </div>
@@ -480,7 +480,7 @@
                     saveText.textContent = 'Saved';
                     btn.className = btn.className.replace('border-gray-300 text-gray-700', 'bg-blue-50 border-blue-300 text-blue-700');
                 } else {
-                    icon.className = 'fas fa-bookmark-o mr-2';
+                    icon.className = 'far fa-bookmark mr-2';
                     saveText.textContent = 'Save Profile';
                     btn.className = btn.className.replace('bg-blue-50 border-blue-300 text-blue-700', 'border-gray-300 text-gray-700');
                 }

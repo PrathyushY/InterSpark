@@ -568,6 +568,8 @@ def talent_search():
         return redirect(url_for("login"))
 
     try:
+        user_id = session.get("user_id")
+
         # Get filters from query parameters
         search_query = request.args.get("search", "")
         skills = request.args.get("skills", "")
@@ -578,6 +580,10 @@ def talent_search():
         students = supabase_service.search_students(
             search_query=search_query, skills=skills, school=school, grade=grade
         )
+
+        # Check which profiles are saved by the current user
+        for student in students:
+            student['is_saved'] = supabase_service.is_profile_saved(user_id, student['id'])
 
         return render_template(
             "talent_search.html",
