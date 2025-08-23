@@ -30,13 +30,13 @@
                     <div class="ml-5 w-0 flex-1">
                         <dl>
                             <dt class="text-sm font-medium text-gray-500 truncate">
-                                Browse
+                                                {{ opportunity.title if opportunity.title else 'Untitled' }}
                             </dt>
                             <dd class="text-lg font-medium text-gray-900">
                                 <a href="{{ url_for('opportunities') }}" class="text-blue-600 hover:text-blue-800">
                                     Opportunities
                                 </a>
-                            </dd>
+                                            {{ opportunity.type if opportunity.type else 'Draft' }}
                         </dl>
                     </div>
                 </div>
@@ -152,13 +152,13 @@
                                 <h4 class="text-base font-semibold text-gray-900">
                                     <a href="{{ url_for('opportunity_details', id=opportunity.id) }}"
                                         class="hover:text-blue-600">
-                                        {{ opportunity.title }}
+                                        {{ opportunity.title if opportunity.title else 'Untitled' }}
                                     </a>
                                 </h4>
                                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
                                             {% if opportunity.type == 'Internship' %}bg-blue-100 text-blue-800
                                             {% else %}bg-green-100 text-green-800{% endif %}">
-                                    {{ opportunity.type }}
+                                    {{ opportunity.type if opportunity.type else 'Draft' }}
                                 </span>
                             </div>
                             <p class="text-sm text-gray-600 mb-1">
@@ -170,10 +170,9 @@
                                 {% endif %}
                             </p>
                             <p class="text-sm text-gray-500 mb-2">
-                                <i class="fas fa-map-marker-alt mr-1"></i>{{ opportunity.location }}
+                                <i class="fas fa-map-marker-alt mr-1"></i>{{ opportunity.location if opportunity.location else 'Location not specified' }}
                             </p>
-                            <p class="text-sm text-gray-700">{{ opportunity.description[:120] }}{% if
-                                opportunity.description|length > 120 %}...{% endif %}</p>
+                            <p class="text-sm text-gray-700">{{ opportunity.description[:120] if opportunity.description else '' }}{% if opportunity.description and opportunity.description|length > 120 %}...{% endif %}</p>
                         </div>
                         {% endfor %}
                     </div>
@@ -214,7 +213,7 @@
                                                 {% else %}bg-green-100 text-green-800{% endif %}">
                                         {{ opportunity.type }}
                                     </span>
-                                    <button onclick="unsaveOpportunity({{ opportunity.id }}, this)"
+                                    <button onclick="unsaveOpportunity('{{ opportunity.id }}', this)"
                                         class="text-red-500 hover:text-red-700" title="Remove from saved">
                                         <i class="fas fa-times text-sm"></i>
                                     </button>
@@ -304,54 +303,139 @@
                             Add New
                         </a>
                     </div>
-                    {% if opportunities %}
-                    <div class="space-y-4">
-                        {% for opportunity in opportunities %}
-                        <div class="border border-gray-200 rounded-lg p-4">
-                            <div class="flex items-center justify-between mb-2">
-                                <h4 class="text-base font-semibold text-gray-900">
-                                    <a href="{{ url_for('opportunity_details', id=opportunity.id) }}"
-                                        class="hover:text-blue-600">
-                                        {{ opportunity.title }}
+                    {% set published_opps = opportunities | selectattr('status', 'equalto', 'active') | list %}
+                    {% set draft_opps = opportunities | selectattr('status', 'equalto', 'draft') | list %}
+                    {% if published_opps or draft_opps %}
+                        {% if published_opps %}
+                        <div class="space-y-4">
+                            {% for opportunity in published_opps %}
+                            <div class="border border-gray-200 rounded-lg p-4">
+                                <div class="flex items-center justify-between mb-2">
+                                    <h4 class="text-base font-semibold text-gray-900">
+                                        <a href="{{ url_for('opportunity_details', id=opportunity.id) }}"
+                                            class="hover:text-blue-600">
+                                            {{ opportunity.title }}
+                                        </a>
+                                    </h4>
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
+                                                {% if opportunity.type == 'Internship' %}bg-blue-100 text-blue-800
+                                                {% else %}bg-green-100 text-green-800{% endif %}">
+                                        {{ opportunity.type }}
+                                    </span>
+                                </div>
+                                <p class="text-sm text-gray-500 mb-2">
+                                    <i class="fas fa-map-marker-alt mr-1"></i>{{ opportunity.location }}
+                                    <span class="ml-4"><i class="fas fa-calendar mr-1"></i>{{ opportunity.created_at |
+                                        format_date }}</span>
+                                </p>
+                                <p class="text-sm text-gray-700">{{ opportunity.description[:120] }}{% if
+                                    opportunity.description|length > 120 %}...{% endif %}</p>
+                                <div class="mt-3 flex space-x-2">
+                                    <a href="{{ url_for('create_opportunity', opportunity_id=opportunity.id) }}"
+                                        class="text-sm text-blue-600 hover:text-blue-800">
+                                        <i class="fas fa-edit mr-1"></i>Edit
                                     </a>
-                                </h4>
-                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
-                                            {% if opportunity.type == 'Internship' %}bg-blue-100 text-blue-800
-                                            {% else %}bg-green-100 text-green-800{% endif %}">
-                                    {{ opportunity.type }}
-                                </span>
+                                    <button
+                                        onclick="confirmDeleteOpportunity('{{ opportunity.id }}', '{{ opportunity.title|escape }}')"
+                                        class="text-sm text-red-600 hover:text-red-800">
+                                        <i class="fas fa-trash mr-1"></i>Delete
+                                    </button>
+                                </div>
                             </div>
-                            <p class="text-sm text-gray-500 mb-2">
-                                <i class="fas fa-map-marker-alt mr-1"></i>{{ opportunity.location }}
-                                <span class="ml-4"><i class="fas fa-calendar mr-1"></i>{{ opportunity.created_at |
-                                    format_date }}</span>
-                            </p>
-                            <p class="text-sm text-gray-700">{{ opportunity.description[:120] }}{% if
-                                opportunity.description|length > 120 %}...{% endif %}</p>
-                            <div class="mt-3 flex space-x-2">
-                                <a href="{{ url_for('create_opportunity', opportunity_id=opportunity.id) }}"
-                                    class="text-sm text-blue-600 hover:text-blue-800">
-                                    <i class="fas fa-edit mr-1"></i>Edit
-                                </a>
-                                <button
-                                    onclick="confirmDeleteOpportunity({{ opportunity.id }}, '{{ opportunity.title }}')"
-                                    class="text-sm text-red-600 hover:text-red-800">
-                                    <i class="fas fa-trash mr-1"></i>Delete
-                                </button>
-                            </div>
+                            {% endfor %}
                         </div>
-                        {% endfor %}
-                    </div>
+                        {% endif %}
                     {% else %}
-                    <div class="text-center py-6">
-                        <i class="fas fa-briefcase text-gray-400 text-4xl mb-4"></i>
-                        <h3 class="text-lg font-medium text-gray-900 mb-2">No opportunities yet</h3>
-                        <p class="text-gray-500 mb-4">Create your first opportunity to start connecting with talented
-                            students.</p>
-                        <a href="{{ url_for('create_opportunity') }}"
-                            class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
-                            Create Opportunity
-                        </a>
+                        {% if opportunities %}
+                        <div class="space-y-4">
+                            {% for opportunity in opportunities %}
+                            <div class="border border-gray-200 rounded-lg p-4">
+                                <div class="flex items-center justify-between mb-2">
+                                    <h4 class="text-base font-semibold text-gray-900">
+                                        <a href="{{ url_for('create_opportunity', opportunity_id=opportunity.id) }}"
+                                            class="hover:text-blue-600">
+                                            {{ opportunity.title or 'Untitled' }}
+                                        </a>
+                                    </h4>
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
+                                                {% if opportunity.status == 'draft' %}bg-yellow-200 text-yellow-800
+                                                {% elif opportunity.type == 'Internship' %}bg-blue-100 text-blue-800
+                                                {% else %}bg-green-100 text-green-800{% endif %}">
+                                        {{ opportunity.type or 'Draft' }}
+                                    </span>
+                                </div>
+                                <p class="text-sm text-gray-500 mb-2">
+                                    <i class="fas fa-map-marker-alt mr-1"></i>{{ opportunity.location }}
+                                    <span class="ml-4"><i class="fas fa-calendar mr-1"></i>{{ opportunity.created_at |
+                                        format_date }}</span>
+                                </p>
+                                <p class="text-sm text-gray-700">{{ opportunity.description[:120] }}{% if
+                                    opportunity.description|length > 120 %}...{% endif %}</p>
+                                <div class="mt-3 flex space-x-2">
+                                    <a href="{{ url_for('create_opportunity', opportunity_id=opportunity.id) }}"
+                                        class="text-sm text-blue-600 hover:text-blue-800">
+                                        <i class="fas fa-edit mr-1"></i>Edit
+                                    </a>
+                                    <button
+                                        onclick="confirmDeleteOpportunity('{{ opportunity.id }}', '{{ opportunity.title|escape }}')"
+                                        class="text-sm text-red-600 hover:text-red-800">
+                                        <i class="fas fa-trash mr-1"></i>Delete
+                                    </button>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <div class="text-center py-6">
+                            <i class="fas fa-briefcase text-gray-400 text-4xl mb-4"></i>
+                            <h3 class="text-lg font-medium text-gray-900 mb-2">No opportunities yet</h3>
+                            <p class="text-gray-500 mb-4">Create your first opportunity to start connecting with talented
+                                students.</p>
+                            <a href="{{ url_for('create_opportunity') }}"
+                                class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
+                                Create Opportunity
+                            </a>
+                        </div>
+                        {% endif %}
+                    {% endif %}
+                    {% if draft_opps %}
+                    <div class="mt-8">
+                        <h4 class="text-md font-semibold text-gray-900 mb-2">Draft Opportunities</h4>
+                        <div class="space-y-4">
+                            {% for opportunity in draft_opps %}
+                            <div class="border border-yellow-200 rounded-lg p-4 bg-yellow-50">
+                                <div class="flex items-center justify-between mb-2">
+                                    <h4 class="text-base font-semibold text-gray-900">
+                                        <a href="{{ url_for('create_opportunity', opportunity_id=opportunity.id) }}"
+                                            class="hover:text-blue-600">
+                                            {{ opportunity.title or 'Untitled Draft' }}
+                                        </a>
+                                    </h4>
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-200 text-yellow-800">
+                                        Draft
+                                    </span>
+                                </div>
+                                <p class="text-sm text-gray-500 mb-2">
+                                    <i class="fas fa-map-marker-alt mr-1"></i>{{ opportunity.location }}
+                                    <span class="ml-4"><i class="fas fa-calendar mr-1"></i>{{ opportunity.created_at |
+                                        format_date }}</span>
+                                </p>
+                                <p class="text-sm text-gray-700">{{ opportunity.description[:120] }}{% if
+                                    opportunity.description|length > 120 %}...{% endif %}</p>
+                                <div class="mt-3 flex space-x-2">
+                                    <a href="{{ url_for('create_opportunity', opportunity_id=opportunity.id) }}"
+                                        class="text-sm text-blue-600 hover:text-blue-800">
+                                        <i class="fas fa-edit mr-1"></i>Edit
+                                    </a>
+                                    <button
+                                        onclick="confirmDeleteOpportunity('{{ opportunity.id }}', '{{ opportunity.title|escape }}')"
+                                        class="text-sm text-red-600 hover:text-red-800">
+                                        <i class="fas fa-trash mr-1"></i>Delete
+                                    </button>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
                     </div>
                     {% endif %}
                 </div>
@@ -430,7 +514,7 @@
                                                 {% else %}bg-green-100 text-green-800{% endif %}">
                                         {{ opportunity.type }}
                                     </span>
-                                    <button onclick="unsaveOpportunity({{ opportunity.id }}, this)"
+                                    <button onclick="unsaveOpportunity('{{ opportunity.id }}', this)"
                                         class="text-red-500 hover:text-red-700" title="Remove from saved">
                                         <i class="fas fa-times text-sm"></i>
                                     </button>

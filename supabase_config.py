@@ -755,7 +755,7 @@ class SupabaseService:
         self, organization_id: str
     ) -> List[Dict[str, Any]]:
         """
-        Get all opportunities for a specific organization.
+        Get all opportunities for a specific organization, including drafts and all statuses.
 
         Args:
             organization_id: The organization's user ID
@@ -776,7 +776,7 @@ class SupabaseService:
 
         except Exception as e:
             logger.error(f"Error getting organization opportunities: {str(e)}")
-            return []  # Application Management Methods (for future use)
+            return []
 
     def get_applications(self, user_id: str, user_type: str) -> List[Dict[str, Any]]:
         """
