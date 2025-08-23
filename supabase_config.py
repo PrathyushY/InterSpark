@@ -560,7 +560,7 @@ class SupabaseService:
             return []
 
     def search_opportunities(
-        self, search_query: str = "", opportunity_type: str = "", location: str = ""
+        self, search_query: str = "", opportunity_type: str = "", category: str = "", location: str = ""
     ) -> List[Dict[str, Any]]:
         """
         Search opportunities with text and filters.
@@ -568,6 +568,7 @@ class SupabaseService:
         Args:
             search_query: Text to search in title and description
             opportunity_type: Filter by opportunity type
+            category: Filter by category
             location: Filter by location
 
         Returns:
@@ -588,6 +589,10 @@ class SupabaseService:
             # Apply type filter
             if opportunity_type:
                 query = query.eq("type", opportunity_type)
+
+            # Apply category filter
+            if category:
+                query = query.eq("category", category)
 
             # Apply location filter
             if location:
