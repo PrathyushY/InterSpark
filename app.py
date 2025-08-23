@@ -572,15 +572,32 @@ def talent_search():
 
 
 @app.route("/create_opportunity", methods=["GET", "POST"])
-def create_opportunity():
+@app.route("/create_opportunity/<int:opportunity_id>", methods=["GET", "POST"])
+def create_opportunity(opportunity_id=None):
     if "user_id" not in session or session.get("user_type") != "organization":
         flash(
             "You must be logged in as an organization to create opportunities", "error"
         )
         return redirect(url_for("login"))
 
+    user_id = session.get("user_id")
+    opportunity = None
+    is_editing = opportunity_id is not None
+
+    # If editing, get the existing opportunity
+    if is_editing:
+        opportunity = supabase_service.get_opportunity_by_id(opportunity_id)
+        if not opportunity:
+            flash("Opportunity not found", "error")
+            return redirect(url_for("dashboard"))
+
+        # Check if user owns this opportunity
+        if opportunity.get("company_id") != user_id:
+            flash("You can only edit your own opportunities", "error")
+            return redirect(url_for("dashboard"))
+
     if request.method == "POST":
-        # Get form data
+        # Get form data and map to database fields
         opportunity_data = {
             "title": request.form.get("title"),
             "description": request.form.get("description"),
@@ -590,70 +607,33 @@ def create_opportunity():
             "compensation": request.form.get("compensation"),
             "duration": request.form.get("duration"),
             "application_deadline": request.form.get("application_deadline"),
-            "company_id": session.get("user_id"),
         }
 
+        # Add company_id only for new opportunities
+        if not is_editing:
+            opportunity_data["company_id"] = user_id
+
         try:
-            result = supabase_service.create_opportunity(opportunity_data)
-            if result["success"]:
-                flash("Opportunity created successfully!", "success")
-                return redirect(url_for("dashboard"))
+            if is_editing:
+                result = supabase_service.update_opportunity(opportunity_id, opportunity_data)
+                success_message = "Opportunity updated successfully!"
+                redirect_route = url_for("opportunity_details", id=opportunity_id)
             else:
-                flash(result.get("error", "Failed to create opportunity"), "error")
-        except Exception as e:
-            flash(f"Error creating opportunity: {str(e)}", "error")
+                result = supabase_service.create_opportunity(opportunity_data)
+                success_message = "Opportunity created successfully!"
+                redirect_route = url_for("dashboard")
 
-    return render_template("create_opportunity.html")
-
-
-@app.route("/edit_opportunity/<int:opportunity_id>", methods=["GET", "POST"])
-def edit_opportunity(opportunity_id):
-    if "user_id" not in session:
-        return redirect(url_for("login"))
-
-    user_id = session.get("user_id")
-    user_type = session.get("user_type")
-
-    if user_type != "organization":
-        flash("Only organizations can edit opportunities", "error")
-        return redirect(url_for("dashboard"))
-
-    # Get the opportunity
-    opportunity = supabase_service.get_opportunity_by_id(opportunity_id)
-    if not opportunity:
-        flash("Opportunity not found", "error")
-        return redirect(url_for("dashboard"))
-
-    # Check if user owns this opportunity
-    if opportunity.get("company_id") != user_id:
-        flash("You can only edit your own opportunities", "error")
-        return redirect(url_for("dashboard"))
-
-    if request.method == "POST":
-        try:
-            opportunity_data = {
-                "title": request.form.get("title"),
-                "description": request.form.get("description"),
-                "type": request.form.get("type"),
-                "location": request.form.get("location"),
-                "requirements": request.form.get("requirements"),
-                "compensation": request.form.get("compensation"),
-                "duration": request.form.get("duration"),
-                "application_deadline": request.form.get("application_deadline"),
-            }
-
-            result = supabase_service.update_opportunity(
-                opportunity_id, opportunity_data
-            )
             if result["success"]:
-                flash("Opportunity updated successfully!", "success")
-                return redirect(url_for("opportunity_details", id=opportunity_id))
+                flash(success_message, "success")
+                return redirect(redirect_route)
             else:
-                flash(result.get("error", "Failed to update opportunity"), "error")
+                error_message = "Failed to update opportunity" if is_editing else "Failed to create opportunity"
+                flash(result.get("error", error_message), "error")
         except Exception as e:
-            flash(f"Error updating opportunity: {str(e)}", "error")
+            error_message = f"Error updating opportunity: {str(e)}" if is_editing else f"Error creating opportunity: {str(e)}"
+            flash(error_message, "error")
 
-    return render_template("edit_opportunity.html", opportunity=opportunity)
+    return render_template("create_opportunity.html", opportunity=opportunity, is_editing=is_editing)
 
 
 @app.route("/delete_opportunity/<int:opportunity_id>", methods=["POST"])
