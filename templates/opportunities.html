@@ -21,6 +21,7 @@
                         <option value="" {% if not selected_type %}selected{% endif %}>All Types</option>
                         <option value="Internship" {% if selected_type == 'Internship' %}selected{% endif %}>Internship</option>
                         <option value="Volunteer" {% if selected_type == 'Volunteer' %}selected{% endif %}>Volunteer</option>
+                        <option value="Full Time" {% if selected_type == 'Full Time' %}selected{% endif %}>Full Time</option>
                     </select>
                 </div>
                 <div>
@@ -70,6 +71,7 @@
                 <div class="flex items-center justify-between mb-3">
                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
                             {% if opportunity.type == 'Internship' %}bg-blue-100 text-blue-800
+                            {% elif opportunity.type == 'Full Time' %}bg-purple-100 text-purple-800
                             {% else %}bg-green-100 text-green-800{% endif %}">
                         {{ opportunity.type if opportunity.type else 'Draft' }}
                     </span>

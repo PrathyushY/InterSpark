@@ -651,8 +651,8 @@ def create_opportunity(opportunity_id=None):
                 # Publishing: require all fields
                 missing = [f for f in required_fields if not opportunity_data.get(f)]
                 if missing:
-                    flash(f"Missing required fields for publishing: {', '.join(missing)}", "error")
-                    return render_template("create_opportunity.html", opportunity=opportunity, is_editing=is_editing)
+                    flash(f"Missing required fields for publishing: {', '.join(missing)}. Complete all fields to publish.", "error")
+                    return render_template("create_opportunity.html", opportunity=opportunity_data, is_editing=is_editing, missing_fields=missing)
                 opportunity_data["status"] = "active"
                 result = supabase_service.update_opportunity(opportunity_id, opportunity_data)
                 success_message = "Opportunity published successfully!"
@@ -667,8 +667,8 @@ def create_opportunity(opportunity_id=None):
                 # Creating and publishing
                 missing = [f for f in required_fields if not opportunity_data.get(f)]
                 if missing:
-                    flash(f"Missing required fields for publishing: {', '.join(missing)}", "error")
-                    return render_template("create_opportunity.html", opportunity=opportunity, is_editing=is_editing)
+                    flash(f"Missing required fields for publishing: {', '.join(missing)}. Complete all fields to publish.", "error")
+                    return render_template("create_opportunity.html", opportunity=opportunity_data, is_editing=is_editing, missing_fields=missing)
                 opportunity_data["status"] = "active"
                 result = supabase_service.create_opportunity(opportunity_data)
                 success_message = "Opportunity created successfully!"
