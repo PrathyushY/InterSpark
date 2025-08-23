@@ -1,3 +1,9 @@
+<style>
+        .required-label {
+            color: #ef4444 !important;
+            font-weight: bold;
+        }
+</style>
 {% extends "base.html" %}
 
 {% block title %}{% if is_editing %}Edit Opportunity{% else %}Create Opportunity{% endif %} - InterSpark{% endblock %}
@@ -11,38 +17,138 @@
 
     <div class="bg-white shadow rounded-lg">
     <form method="POST" class="divide-y divide-gray-200" id="opportunity-form">
+<script>
+// Utility to get required fields
+function getRequiredFields() {
+    return ["title", "type", "category", "location", "requirements", "compensation", "duration", "application_deadline", "description"];
+}
+
+// Save form data to localStorage
+function saveFormLocally() {
+    const data = {};
+    getRequiredFields().forEach(function(field) {
+        var el = document.getElementById(field);
+        if (el) {
+            data[field] = el.value;
+        }
+    });
+    localStorage.setItem("opportunityDraft", JSON.stringify(data));
+}
+
+// Restore form data from localStorage
+function restoreFormLocally() {
+    const data = localStorage.getItem("opportunityDraft");
+    if (data) {
+        const obj = JSON.parse(data);
+        getRequiredFields().forEach(function(field) {
+            var el = document.getElementById(field);
+            if (el && obj[field] !== undefined) {
+                el.value = obj[field];
+            }
+        });
+    }
+}
+
+// Clear localStorage draft
+function clearFormLocally() {
+    localStorage.removeItem("opportunityDraft");
+}
+
+// On page load, restore form
+document.addEventListener('DOMContentLoaded', restoreFormLocally);
+
+// Intercept Publish button
+function publishOpportunity() {
+    // Check for missing required fields
+    var missing = [];
+    getRequiredFields().forEach(function(field) {
+        var el = document.getElementById(field);
+        if (el && !el.value) {
+            missing.push(field);
+        }
+    });
+    if (missing.length > 0) {
+        saveFormLocally();
+        highlightRequiredFields(missing);
+        alert("Missing required fields: " + missing.join(", ") + "\nDraft saved locally. Complete all fields to publish.");
+        return false;
+    }
+    clearFormLocally();
+    // Set status to active and add a hidden field to indicate publish
+    document.getElementById('status-field').value = 'active';
+    let publishField = document.getElementById('publish-field');
+    if (!publishField) {
+        publishField = document.createElement('input');
+        publishField.type = 'hidden';
+        publishField.name = 'publish';
+        publishField.id = 'publish-field';
+        publishField.value = '1';
+        document.getElementById('opportunity-form').appendChild(publishField);
+    } else {
+        publishField.value = '1';
+    }
+    document.getElementById('opportunity-form').submit();
+}
+
+// Intercept Save as Draft button
+function saveAsDraft() {
+    clearFormLocally();
+    document.getElementById('status-field').value = 'draft';
+    document.getElementById('opportunity-form').submit();
+}
+
+// Clear local draft if user leaves page
+window.addEventListener('beforeunload', clearFormLocally);
+</script>
             <input type="hidden" name="status" id="status-field" value="active">
-            <!-- Basic Information -->
+                        <!-- Basic Information -->
+                        <script>
+                        function highlightRequiredFields(missingFields) {
+                            missingFields.forEach(function(field) {
+                                var el = document.getElementById(field);
+                                if (el) {
+                                    el.classList.add('required-highlight');
+                                }
+                            });
+                        }
+                        function clearRequiredHighlights() {
+                            var highlighted = document.querySelectorAll('.required-highlight');
+                            highlighted.forEach(function(el) {
+                                el.classList.remove('required-highlight');
+                            });
+                        }
+                        </script>
             <div class="px-4 py-5 sm:p-6">
                 <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">Basic Information</h3>
                 <div class="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
                     <div class="sm:col-span-4">
-                        <label for="title" class="block text-sm font-medium text-gray-700">Opportunity Title *</label>
+                        <label for="title" class="block text-sm font-medium text-gray-700 {% if missing_fields and 'title' in missing_fields %}required-label{% endif %}">Opportunity Title *</label>
                         <div class="mt-1">
                             <input type="text" name="title" id="title" required
                                 value="{% if opportunity and opportunity.title %}{{ opportunity.title }}{% endif %}"
                                 placeholder="e.g., Web Development Intern, Marketing Assistant"
-                                class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">
+                                class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md{% if missing_fields and 'title' in missing_fields %} required-highlight{% endif %}">
                         </div>
                     </div>
 
                     <div class="sm:col-span-2">
-                        <label for="type" class="block text-sm font-medium text-gray-700">Type</label>
+                        <label for="type" class="block text-sm font-medium text-gray-700 {% if missing_fields and 'type' in missing_fields %}required-label{% endif %}">Type</label>
                         <div class="mt-1">
                             <select name="type" id="type"
-                                class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">
+                                class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md{% if missing_fields and 'type' in missing_fields %} required-highlight{% endif %}">
                                 <option value="">Select Type</option>
                                 <option value="Internship" {% if opportunity and opportunity.type == 'Internship' %}selected{% endif %}>Internship</option>
                                 <option value="Volunteer" {% if opportunity and opportunity.type == 'Volunteer' %}selected{% endif %}>Volunteer</option>
+                                <option value="Full Time" {% if opportunity and opportunity.type == 'Full Time' %}selected{% endif %}>Full Time</option>
                             </select>
                         </div>
                     </div>
 
                     <div class="sm:col-span-3">
-                        <label for="category" class="block text-sm font-medium text-gray-700">Category</label>
+                        <label for="category" class="block text-sm font-medium text-gray-700 {% if missing_fields and 'category' in missing_fields %}required-label{% endif %}">Category</label>
                         <div class="mt-1">
                             <select name="category" id="category"
-                                class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">
+                                class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md {% if missing_fields and 'category' in missing_fields %}required-highlight{% endif %}">
                                 <option value="">Select Category</option>
                                 <option value="Technology" {% if opportunity and opportunity.category == 'Technology' %}selected{% endif %}>Technology</option>
                                 <option value="Environment" {% if opportunity and opportunity.category == 'Environment' %}selected{% endif %}>Environment</option>
@@ -54,10 +160,11 @@
                         </div>
                     </div>
                     <div class="sm:col-span-3">
-                        <label for="location" class="block text-sm font-medium text-gray-700">Location</label>
+                        <label for="location" class="block text-sm font-medium text-gray-700 {% if missing_fields and 'location' in missing_fields %}required-label{% endif %}">Location</label>
                         <div class="mt-1">
                             <input type="text" name="location" id="location"
                                 value="{% if opportunity and opportunity.location %}{{ opportunity.location }}{% endif %}"
+                                {% if missing_fields and 'location' in missing_fields %}class="required-highlight"{% endif %}
                                 placeholder="City, State or Remote"
                                 class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">
                         </div>
@@ -70,29 +177,32 @@
                 <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">Schedule & Timeline</h3>
                 <div class="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
                     <div class="sm:col-span-3">
-                        <label for="duration" class="block text-sm font-medium text-gray-700">Duration</label>
+                        <label for="duration" class="block text-sm font-medium text-gray-700 {% if missing_fields and 'duration' in missing_fields %}required-label{% endif %}">Duration</label>
                         <div class="mt-1">
                             <input type="text" name="duration" id="duration"
                                 value="{% if opportunity and opportunity.duration %}{{ opportunity.duration }}{% endif %}"
+                                {% if missing_fields and 'duration' in missing_fields %}class="required-highlight"{% endif %}
                                 placeholder="e.g., Summer 2024, 3 months, Ongoing"
                                 class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">
                         </div>
                     </div>
 
                     <div class="sm:col-span-3">
-                        <label for="application_deadline" class="block text-sm font-medium text-gray-700">Application Deadline</label>
+                        <label for="application_deadline" class="block text-sm font-medium text-gray-700 {% if missing_fields and 'application_deadline' in missing_fields %}required-label{% endif %}">Application Deadline</label>
                         <div class="mt-1">
                             <input type="date" name="application_deadline" id="application_deadline"
                                 value="{% if opportunity and opportunity.application_deadline %}{{ opportunity.application_deadline }}{% endif %}"
+                                {% if missing_fields and 'application_deadline' in missing_fields %}class="required-highlight"{% endif %}
                                 class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">
                         </div>
                     </div>
 
                     <div class="sm:col-span-6">
-                        <label for="compensation" class="block text-sm font-medium text-gray-700">Compensation</label>
+                        <label for="compensation" class="block text-sm font-medium text-gray-700 {% if missing_fields and 'compensation' in missing_fields %}required-label{% endif %}">Compensation</label>
                         <div class="mt-1">
                             <input type="text" name="compensation" id="compensation"
                                 value="{% if opportunity and opportunity.compensation %}{{ opportunity.compensation }}{% endif %}"
+                                {% if missing_fields and 'compensation' in missing_fields %}class="required-highlight"{% endif %}
                                 placeholder="e.g., Unpaid, $15/hour, Stipend provided, Academic credit"
                                 class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">
                         </div>
@@ -107,21 +217,21 @@
 
                 <div class="space-y-6">
                     <div>
-                        <label for="description" class="block text-sm font-medium text-gray-700">Description</label>
+                        <label for="description" class="block text-sm font-medium text-gray-700 {% if missing_fields and 'description' in missing_fields %}required-label{% endif %}">Description</label>
                         <div class="mt-1">
                             <textarea name="description" id="description" rows="6"
                                 placeholder="Provide a detailed description of the opportunity, what the student will learn, responsibilities, and why they should be excited about this role..."
-                                class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">{% if opportunity and opportunity.description %}{{ opportunity.description }}{% endif %}</textarea>
+                                class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md {% if missing_fields and 'description' in missing_fields %}required-highlight{% endif %}">{% if opportunity and opportunity.description %}{{ opportunity.description }}{% endif %}</textarea>
                         </div>
                         <p class="mt-2 text-sm text-gray-500">Describe the opportunity in detail, including responsibilities and what students will gain from this experience.</p>
                     </div>
 
                     <div>
-                        <label for="requirements" class="block text-sm font-medium text-gray-700">Requirements</label>
+                        <label for="requirements" class="block text-sm font-medium text-gray-700 {% if missing_fields and 'requirements' in missing_fields %}required-label{% endif %}">Requirements</label>
                         <div class="mt-1">
                             <textarea name="requirements" id="requirements" rows="4"
                                 placeholder="List the skills, qualifications, or characteristics you're looking for. Put each requirement on a new line."
-                                class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">{% if opportunity and opportunity.requirements %}{{ opportunity.requirements }}{% endif %}</textarea>
+                                class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md {% if missing_fields and 'requirements' in missing_fields %}required-highlight{% endif %}">{% if opportunity and opportunity.requirements %}{{ opportunity.requirements }}{% endif %}</textarea>
                         </div>
                         <p class="mt-2 text-sm text-gray-500">Specify skills, experience level, and other qualifications. Each line will be displayed as a bullet point.</p>
                     </div>
