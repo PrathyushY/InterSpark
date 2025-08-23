@@ -496,12 +496,14 @@ def opportunities():
         # Get filters from query parameters
         search_query = request.args.get("search", "")
         opportunity_type = request.args.get("type", "")
+        category = request.args.get("category", "")
         location = request.args.get("location", "")
 
         # Fetch opportunities with filters
         opportunities = supabase_service.search_opportunities(
             search_query=search_query,
             opportunity_type=opportunity_type,
+            category=category,
             location=location,
         )
 
@@ -510,6 +512,7 @@ def opportunities():
             opportunities=opportunities,
             search_query=search_query,
             selected_type=opportunity_type,
+            selected_category=category,
             selected_location=location,
         )
     except Exception as e:
