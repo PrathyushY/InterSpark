@@ -11,6 +11,46 @@ app = Flask(__name__)
 app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "2a15f8283ab2353f15089e80d8acf104")
 
 
+def check_profile_completion():
+    """
+    Check if the current user's profile is complete.
+    Redirect to profile page if incomplete (except for certain routes).
+    """
+    # Skip profile check for these routes
+    exempt_routes = ["profile", "logout", "static", "login", "signup", "home"]
+
+    if request.endpoint in exempt_routes:
+        return
+
+    # Only check for logged-in users
+    if "user_id" not in session:
+        return
+
+    try:
+        user_id = session.get("user_id")
+        user_type = session.get("user_type")
+
+        profile = supabase_service.get_profile(user_id)
+        if profile:
+            completion_check = supabase_service.is_profile_complete(profile, user_type)
+
+            if not completion_check["complete"]:
+                missing_fields_str = ", ".join(completion_check["missing_fields"])
+                flash(
+                    f"Please complete your profile. Missing: {missing_fields_str}",
+                    "warning",
+                )
+                return redirect(url_for("profile"))
+
+    except Exception as e:
+        # Log error but don't block navigation
+        print(f"Profile completion check error: {str(e)}")
+
+
+# Apply the profile completion check before each request
+app.before_request(check_profile_completion)
+
+
 # Custom template filter for date formatting
 @app.template_filter("format_date")
 def format_date_filter(date_string, format="%B %d, %Y"):
@@ -160,10 +200,41 @@ def signup():
             flash("Password must be at least 6 characters long", "error")
             return render_template("signup.html")
 
+        # Collect additional required fields based on user type
+        user_data = {"name": name, "user_type": user_type}
+
+        if user_type == "student":
+            school = request.form.get("school", "").strip()
+            grade = request.form.get("grade", "").strip()
+            bio = request.form.get("bio", "").strip()
+
+            # Validate required student fields
+            if not school or not grade or not bio:
+                flash(
+                    "Please fill in all required fields: School, Grade, and Bio",
+                    "error",
+                )
+                return render_template("signup.html")
+
+            user_data.update({"school": school, "grade": grade, "bio": bio})
+
+        elif user_type == "organization":
+            description = request.form.get("description", "").strip()
+
+            # Validate required organization fields
+            if not description:
+                flash("Please fill in the organization description", "error")
+                return render_template("signup.html")
+
+            user_data.update(
+                {
+                    "description": description,
+                    "organization_name": name,  # Set organization_name same as name
+                }
+            )
+
         # Create user with Supabase
         try:
-            user_data = {"name": name, "user_type": user_type}
-
             result = supabase_service.create_user(email, password, user_data)
 
             if result["success"]:
@@ -173,10 +244,8 @@ def signup():
                 session["user_name"] = name
                 session["user_email"] = email
 
-                flash(
-                    "Registration successful! Please complete your profile.", "success"
-                )
-                return redirect(url_for("profile"))
+                flash("Registration successful! Welcome to InterSpark!", "success")
+                return redirect(url_for("dashboard"))
             else:
                 flash(result.get("error", "Registration failed"), "error")
 
@@ -225,13 +294,17 @@ def dashboard():
         }
 
     if user_type == "student":
-        # Get student's applications and relevant opportunities
+        # Get student's applications, relevant opportunities, and saved opportunities/profiles
         try:
             opportunities = supabase_service.get_opportunities()
+            saved_opportunities = supabase_service.get_saved_opportunities(user_id)
+            saved_profiles = supabase_service.get_saved_profiles(user_id)
             return render_template(
                 "dashboard.html",
                 user_type="student",
                 opportunities=opportunities,
+                saved_opportunities=saved_opportunities,
+                saved_profiles=saved_profiles,
                 user=user_profile,
             )
         except Exception as e:
@@ -240,19 +313,25 @@ def dashboard():
                 "dashboard.html",
                 user_type="student",
                 opportunities=[],
+                saved_opportunities=[],
+                saved_profiles=[],
                 user=user_profile,
             )
 
     elif user_type == "organization":
-        # Get organization's posted opportunities and applications
+        # Get organization's posted opportunities, applications, and saved profiles/opportunities
         try:
             company_opportunities = supabase_service.get_organization_opportunities(
                 user_id
             )
+            saved_profiles = supabase_service.get_saved_profiles(user_id)
+            saved_opportunities = supabase_service.get_saved_opportunities(user_id)
             return render_template(
                 "dashboard.html",
                 user_type="organization",
                 opportunities=company_opportunities,
+                saved_profiles=saved_profiles,
+                saved_opportunities=saved_opportunities,
                 user=user_profile,
             )
         except Exception as e:
@@ -261,6 +340,8 @@ def dashboard():
                 "dashboard.html",
                 user_type="organization",
                 opportunities=[],
+                saved_profiles=[],
+                saved_opportunities=[],
                 user=user_profile,
             )
 
@@ -369,12 +450,20 @@ def view_profile(user_id):
     if "user_id" not in session:
         return redirect(url_for("login"))
 
+    current_user_id = session.get("user_id")
+    current_user_type = session.get("user_type")
+
     profile = supabase_service.get_profile(user_id)
     if not profile:
         flash("User profile not found.", "error")
         return redirect(url_for("talent_search"))
 
-    is_own_profile = session.get("user_id") == user_id
+    is_own_profile = current_user_id == user_id
+
+    # Check if profile is saved by current user (for all users viewing other profiles)
+    is_saved = False
+    if not is_own_profile:
+        is_saved = supabase_service.is_profile_saved(current_user_id, user_id)
 
     # Get Talent Search filter params from query string
     search_query = request.args.get("search", "")
@@ -388,6 +477,7 @@ def view_profile(user_id):
         profile=profile,
         user=profile,
         is_own_profile=is_own_profile,
+        is_saved=is_saved,
         read_only=not is_own_profile,
         back_to_talent_search=True,
         search_query=search_query,
@@ -432,13 +522,20 @@ def opportunity_details(id):
     if "user_id" not in session:
         return redirect(url_for("login"))
 
+    user_id = session.get("user_id")
+
     try:
         opportunity = supabase_service.get_opportunity_by_id(id)
         if not opportunity:
             flash("Opportunity not found", "error")
             return redirect(url_for("opportunities"))
 
-        return render_template("opportunity_details.html", opportunity=opportunity)
+        # Check if opportunity is saved by current user
+        is_saved = supabase_service.is_opportunity_saved(user_id, id)
+
+        return render_template(
+            "opportunity_details.html", opportunity=opportunity, is_saved=is_saved
+        )
     except Exception as e:
         flash(f"Error loading opportunity: {str(e)}", "error")
         return redirect(url_for("opportunities"))
@@ -509,9 +606,164 @@ def create_opportunity():
     return render_template("create_opportunity.html")
 
 
+@app.route("/edit_opportunity/<int:opportunity_id>", methods=["GET", "POST"])
+def edit_opportunity(opportunity_id):
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+
+    user_id = session.get("user_id")
+    user_type = session.get("user_type")
+
+    if user_type != "organization":
+        flash("Only organizations can edit opportunities", "error")
+        return redirect(url_for("dashboard"))
+
+    # Get the opportunity
+    opportunity = supabase_service.get_opportunity_by_id(opportunity_id)
+    if not opportunity:
+        flash("Opportunity not found", "error")
+        return redirect(url_for("dashboard"))
+
+    # Check if user owns this opportunity
+    if opportunity.get("company_id") != user_id:
+        flash("You can only edit your own opportunities", "error")
+        return redirect(url_for("dashboard"))
+
+    if request.method == "POST":
+        try:
+            opportunity_data = {
+                "title": request.form.get("title"),
+                "description": request.form.get("description"),
+                "type": request.form.get("type"),
+                "location": request.form.get("location"),
+                "requirements": request.form.get("requirements"),
+                "compensation": request.form.get("compensation"),
+                "duration": request.form.get("duration"),
+                "application_deadline": request.form.get("application_deadline"),
+            }
+
+            result = supabase_service.update_opportunity(
+                opportunity_id, opportunity_data
+            )
+            if result["success"]:
+                flash("Opportunity updated successfully!", "success")
+                return redirect(url_for("opportunity_details", id=opportunity_id))
+            else:
+                flash(result.get("error", "Failed to update opportunity"), "error")
+        except Exception as e:
+            flash(f"Error updating opportunity: {str(e)}", "error")
+
+    return render_template("edit_opportunity.html", opportunity=opportunity)
+
+
+@app.route("/delete_opportunity/<int:opportunity_id>", methods=["POST"])
+def delete_opportunity(opportunity_id):
+    if "user_id" not in session:
+        return {"success": False, "error": "Not authenticated"}, 401
+
+    user_id = session.get("user_id")
+    user_type = session.get("user_type")
+
+    if user_type != "organization":
+        return {
+            "success": False,
+            "error": "Only organizations can delete opportunities",
+        }, 403
+
+    try:
+        # Get the opportunity to check ownership
+        opportunity = supabase_service.get_opportunity_by_id(opportunity_id)
+        if not opportunity:
+            return {"success": False, "error": "Opportunity not found"}, 404
+
+        # Check if user owns this opportunity
+        if opportunity.get("company_id") != user_id:
+            return {
+                "success": False,
+                "error": "You can only delete your own opportunities",
+            }, 403
+
+        result = supabase_service.delete_opportunity(opportunity_id)
+        if result["success"]:
+            return {"success": True, "message": "Opportunity deleted successfully"}
+        else:
+            return {
+                "success": False,
+                "error": result.get("error", "Failed to delete opportunity"),
+            }, 400
+    except Exception as e:
+        return {"success": False, "error": str(e)}, 500
+
+
+@app.route("/save_opportunity/<int:opportunity_id>", methods=["POST"])
+def save_opportunity(opportunity_id):
+    if "user_id" not in session:
+        return {"success": False, "error": "Not authenticated"}, 401
+
+    user_id = session.get("user_id")
+
+    try:
+        result = supabase_service.save_opportunity(user_id, opportunity_id)
+        if result["success"]:
+            return {"success": True, "message": "Opportunity saved successfully"}
+        else:
+            return {
+                "success": False,
+                "error": result.get("error", "Failed to save opportunity"),
+            }, 400
+    except Exception as e:
+        return {"success": False, "error": str(e)}, 500
+
+
+@app.route("/unsave_opportunity/<int:opportunity_id>", methods=["POST"])
+def unsave_opportunity(opportunity_id):
+    if "user_id" not in session:
+        return {"success": False, "error": "Not authenticated"}, 401
+
+    user_id = session.get("user_id")
+
+    try:
+        result = supabase_service.unsave_opportunity(user_id, opportunity_id)
+        return {"success": True, "message": "Opportunity removed from saved"}
+    except Exception as e:
+        return {"success": False, "error": str(e)}, 500
+
+
+@app.route("/save_profile/<profile_id>", methods=["POST"])
+def save_profile(profile_id):
+    if "user_id" not in session:
+        return {"success": False, "error": "Not authenticated"}, 401
+
+    user_id = session.get("user_id")
+
+    try:
+        result = supabase_service.save_profile(user_id, profile_id)
+        if result["success"]:
+            return {"success": True, "message": "Profile saved successfully"}
+        else:
+            return {
+                "success": False,
+                "error": result.get("error", "Failed to save profile"),
+            }, 400
+    except Exception as e:
+        return {"success": False, "error": str(e)}, 500
+
+
+@app.route("/unsave_profile/<profile_id>", methods=["POST"])
+def unsave_profile(profile_id):
+    if "user_id" not in session:
+        return {"success": False, "error": "Not authenticated"}, 401
+
+    user_id = session.get("user_id")
+
+    try:
+        result = supabase_service.unsave_profile(user_id, profile_id)
+        return {"success": True, "message": "Profile removed from saved"}
+    except Exception as e:
+        return {"success": False, "error": str(e)}, 500
+
+
 if __name__ == "__main__":
     import os
 
-    print(f"SUPABASE_URL: {os.getenv('SUPABASE_URL')}")
-    print(f"SUPABASE_PUBLIC_KEY: {os.getenv('SUPABASE_PUBLIC_KEY')}")
     app.run(debug=True, port=5000)
