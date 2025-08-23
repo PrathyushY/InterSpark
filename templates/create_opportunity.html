@@ -10,7 +10,8 @@
     </div>
 
     <div class="bg-white shadow rounded-lg">
-        <form method="POST" class="divide-y divide-gray-200">
+    <form method="POST" class="divide-y divide-gray-200" id="opportunity-form">
+            <input type="hidden" name="status" id="status-field" value="active">
             <!-- Basic Information -->
             <div class="px-4 py-5 sm:p-6">
                 <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">Basic Information</h3>
@@ -19,16 +20,16 @@
                         <label for="title" class="block text-sm font-medium text-gray-700">Opportunity Title *</label>
                         <div class="mt-1">
                             <input type="text" name="title" id="title" required
-                                value="{% if opportunity %}{{ opportunity.title }}{% endif %}"
+                                value="{% if opportunity and opportunity.title %}{{ opportunity.title }}{% endif %}"
                                 placeholder="e.g., Web Development Intern, Marketing Assistant"
                                 class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">
                         </div>
                     </div>
 
                     <div class="sm:col-span-2">
-                        <label for="type" class="block text-sm font-medium text-gray-700">Type *</label>
+                        <label for="type" class="block text-sm font-medium text-gray-700">Type</label>
                         <div class="mt-1">
-                            <select name="type" id="type" required
+                            <select name="type" id="type"
                                 class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">
                                 <option value="">Select Type</option>
                                 <option value="Internship" {% if opportunity and opportunity.type == 'Internship' %}selected{% endif %}>Internship</option>
@@ -38,10 +39,25 @@
                     </div>
 
                     <div class="sm:col-span-3">
-                        <label for="location" class="block text-sm font-medium text-gray-700">Location *</label>
+                        <label for="category" class="block text-sm font-medium text-gray-700">Category</label>
                         <div class="mt-1">
-                            <input type="text" name="location" id="location" required
-                                value="{% if opportunity %}{{ opportunity.location }}{% endif %}"
+                            <select name="category" id="category"
+                                class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">
+                                <option value="">Select Category</option>
+                                <option value="Technology" {% if opportunity and opportunity.category == 'Technology' %}selected{% endif %}>Technology</option>
+                                <option value="Environment" {% if opportunity and opportunity.category == 'Environment' %}selected{% endif %}>Environment</option>
+                                <option value="Healthcare" {% if opportunity and opportunity.category == 'Healthcare' %}selected{% endif %}>Healthcare</option>
+                                <option value="Education" {% if opportunity and opportunity.category == 'Education' %}selected{% endif %}>Education</option>
+                                <option value="Marketing" {% if opportunity and opportunity.category == 'Marketing' %}selected{% endif %}>Marketing</option>
+                                <option value="Science" {% if opportunity and opportunity.category == 'Science' %}selected{% endif %}>Science</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="sm:col-span-3">
+                        <label for="location" class="block text-sm font-medium text-gray-700">Location</label>
+                        <div class="mt-1">
+                            <input type="text" name="location" id="location"
+                                value="{% if opportunity and opportunity.location %}{{ opportunity.location }}{% endif %}"
                                 placeholder="City, State or Remote"
                                 class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">
                         </div>
@@ -54,20 +70,20 @@
                 <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">Schedule & Timeline</h3>
                 <div class="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
                     <div class="sm:col-span-3">
-                        <label for="duration" class="block text-sm font-medium text-gray-700">Duration *</label>
+                        <label for="duration" class="block text-sm font-medium text-gray-700">Duration</label>
                         <div class="mt-1">
-                            <input type="text" name="duration" id="duration" required
-                                value="{% if opportunity %}{{ opportunity.duration }}{% endif %}"
+                            <input type="text" name="duration" id="duration"
+                                value="{% if opportunity and opportunity.duration %}{{ opportunity.duration }}{% endif %}"
                                 placeholder="e.g., Summer 2024, 3 months, Ongoing"
                                 class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">
                         </div>
                     </div>
 
                     <div class="sm:col-span-3">
-                        <label for="application_deadline" class="block text-sm font-medium text-gray-700">Application Deadline *</label>
+                        <label for="application_deadline" class="block text-sm font-medium text-gray-700">Application Deadline</label>
                         <div class="mt-1">
-                            <input type="date" name="application_deadline" id="application_deadline" required
-                                value="{% if opportunity %}{{ opportunity.application_deadline }}{% endif %}"
+                            <input type="date" name="application_deadline" id="application_deadline"
+                                value="{% if opportunity and opportunity.application_deadline %}{{ opportunity.application_deadline }}{% endif %}"
                                 class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">
                         </div>
                     </div>
@@ -76,7 +92,7 @@
                         <label for="compensation" class="block text-sm font-medium text-gray-700">Compensation</label>
                         <div class="mt-1">
                             <input type="text" name="compensation" id="compensation"
-                                value="{% if opportunity %}{{ opportunity.compensation }}{% endif %}"
+                                value="{% if opportunity and opportunity.compensation %}{{ opportunity.compensation }}{% endif %}"
                                 placeholder="e.g., Unpaid, $15/hour, Stipend provided, Academic credit"
                                 class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">
                         </div>
@@ -91,11 +107,11 @@
 
                 <div class="space-y-6">
                     <div>
-                        <label for="description" class="block text-sm font-medium text-gray-700">Description *</label>
+                        <label for="description" class="block text-sm font-medium text-gray-700">Description</label>
                         <div class="mt-1">
-                            <textarea name="description" id="description" rows="6" required
+                            <textarea name="description" id="description" rows="6"
                                 placeholder="Provide a detailed description of the opportunity, what the student will learn, responsibilities, and why they should be excited about this role..."
-                                class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">{% if opportunity %}{{ opportunity.description }}{% endif %}</textarea>
+                                class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">{% if opportunity and opportunity.description %}{{ opportunity.description }}{% endif %}</textarea>
                         </div>
                         <p class="mt-2 text-sm text-gray-500">Describe the opportunity in detail, including responsibilities and what students will gain from this experience.</p>
                     </div>
@@ -105,7 +121,7 @@
                         <div class="mt-1">
                             <textarea name="requirements" id="requirements" rows="4"
                                 placeholder="List the skills, qualifications, or characteristics you're looking for. Put each requirement on a new line."
-                                class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">{% if opportunity %}{{ opportunity.requirements }}{% endif %}</textarea>
+                                class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">{% if opportunity and opportunity.requirements %}{{ opportunity.requirements }}{% endif %}</textarea>
                         </div>
                         <p class="mt-2 text-sm text-gray-500">Specify skills, experience level, and other qualifications. Each line will be displayed as a bullet point.</p>
                     </div>
@@ -123,15 +139,47 @@
                 <div class="flex space-x-3">
                     {% if not is_editing %}
                     <button type="button"
-                        class="bg-gray-600 border border-transparent rounded-md shadow-sm py-2 px-4 inline-flex justify-center text-sm font-medium text-white hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500">
+                        class="bg-gray-600 border border-transparent rounded-md shadow-sm py-2 px-4 inline-flex justify-center text-sm font-medium text-white hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+                        onclick="saveAsDraft()">
                         Save as Draft
                     </button>
+<script>
+function saveAsDraft() {
+    document.getElementById('status-field').value = 'draft';
+    document.getElementById('opportunity-form').submit();
+}
+</script>
                     {% endif %}
                     <button type="submit"
                         class="bg-blue-600 border border-transparent rounded-md shadow-sm py-2 px-4 inline-flex justify-center text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
                         <i class="fas {% if is_editing %}fa-save{% else %}fa-plus{% endif %} mr-2"></i>
                         {% if is_editing %}Update Opportunity{% else %}Create Opportunity{% endif %}
                     </button>
+                        {% if is_editing %}
+                        <button type="button"
+                            class="bg-green-600 border border-transparent rounded-md shadow-sm py-2 px-4 inline-flex justify-center text-sm font-medium text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                            onclick="publishOpportunity()">
+                            <i class="fas fa-upload mr-2"></i>Publish Opportunity
+                        </button>
+    <script>
+    function publishOpportunity() {
+        // Set status to active and add a hidden field to indicate publish
+        document.getElementById('status-field').value = 'active';
+        let publishField = document.getElementById('publish-field');
+        if (!publishField) {
+            publishField = document.createElement('input');
+            publishField.type = 'hidden';
+            publishField.name = 'publish';
+            publishField.id = 'publish-field';
+            publishField.value = '1';
+            document.getElementById('opportunity-form').appendChild(publishField);
+        } else {
+            publishField.value = '1';
+        }
+        document.getElementById('opportunity-form').submit();
+    }
+    </script>
+                        {% endif %}
                 </div>
             </div>
         </form>

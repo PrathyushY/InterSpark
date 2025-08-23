@@ -52,6 +52,7 @@
     </div>
 
     <!-- Opportunities Grid -->
+
     {% if opportunities %}
     <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {% for opportunity in opportunities %}
@@ -70,9 +71,8 @@
                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
                             {% if opportunity.type == 'Internship' %}bg-blue-100 text-blue-800
                             {% else %}bg-green-100 text-green-800{% endif %}">
-                        {{ opportunity.type }}
+                        {{ opportunity.type if opportunity.type else 'Draft' }}
                     </span>
-                    <span class="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">{{ opportunity.type }}</span>
                 </div>
                 {% if opportunity.category %}
                 <div class="mb-2">
@@ -82,7 +82,7 @@
 
                 <h3 class="text-lg font-semibold text-gray-900 mb-2 hover:text-blue-600">
                         <a href="{{ url_for('opportunity_details', id=opportunity.id) }}?type={{ selected_type }}&category={{ selected_category }}&location={{ selected_location }}&search={{ search_query }}">
-                            {{ opportunity.title }}
+                            {{ opportunity.title if opportunity.title else 'Untitled' }}
                         </a>
                 </h3>
 
@@ -99,11 +99,11 @@
                 <div class="space-y-1 mb-4 text-sm text-gray-500">
                     <div class="flex items-center">
                         <i class="fas fa-map-marker-alt mr-2 w-4"></i>
-                        <span>{{ opportunity.location }}</span>
+                        <span>{{ opportunity.location if opportunity.location else 'Location not specified' }}</span>
                     </div>
                     <div class="flex items-center">
                         <i class="fas fa-clock mr-2 w-4"></i>
-                        <span>{{ opportunity.duration or 'Duration not specified' }}</span>
+                        <span>{{ opportunity.duration if opportunity.duration else 'Duration not specified' }}</span>
                     </div>
                     <div class="flex items-center">
                         <i class="fas fa-calendar mr-2 w-4"></i>
@@ -112,14 +112,13 @@
                 </div>
 
                 <p class="text-gray-700 text-sm mb-4 line-clamp-3">
-                    {{ opportunity.description[:150] }}{% if opportunity.description|length > 150 %}...{% endif %}
+                    {{ opportunity.description[:150] if opportunity.description else '' }}{% if opportunity.description and opportunity.description|length > 150 %}...{% endif %}
                 </p>
 
                 <div class="flex items-center justify-between">
                     <div class="text-sm text-gray-500">
                         <i class="fas fa-exclamation-circle mr-1"></i>
-                        Deadline: {{ opportunity.application_deadline | format_date if opportunity.application_deadline
-                        else 'No deadline' }}
+                        Deadline: {{ opportunity.application_deadline | format_date if opportunity.application_deadline else 'No deadline' }}
                     </div>
                     <a href="{{ url_for('opportunity_details', id=opportunity.id) }}"
                             class="text-blue-600 hover:text-blue-800 font-medium text-sm"

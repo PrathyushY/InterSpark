@@ -321,11 +321,29 @@ def dashboard():
     elif user_type == "organization":
         # Get organization's posted opportunities, applications, and saved profiles/opportunities
         try:
-            company_opportunities = supabase_service.get_organization_opportunities(
-                user_id
-            )
+            company_opportunities = supabase_service.get_organization_opportunities(user_id)
+            # Ensure all opportunities are dicts with all expected fields
+            expected_fields = ["title", "description", "type", "category", "location", "requirements", "compensation", "duration", "application_deadline", "status"]
+            for opp in company_opportunities:
+                for field in expected_fields:
+                    if field not in opp:
+                        opp[field] = None
+                print("company_opportunities for dashboard:", company_opportunities)
+                # Extra: ensure every opportunity is a dict and has all expected fields
+                for i, opp in enumerate(company_opportunities):
+                    if not isinstance(opp, dict):
+                        company_opportunities[i] = dict(opp)
+                    for field in expected_fields:
+                        if field not in company_opportunities[i] or company_opportunities[i][field] is None:
+                            company_opportunities[i][field] = '' if field in ['title', 'description', 'type', 'category', 'location', 'requirements', 'compensation', 'duration'] else None
+            if not company_opportunities:
+                company_opportunities = []
             saved_profiles = supabase_service.get_saved_profiles(user_id)
+            if not saved_profiles:
+                saved_profiles = []
             saved_opportunities = supabase_service.get_saved_opportunities(user_id)
+            if not saved_opportunities:
+                saved_opportunities = []
             return render_template(
                 "dashboard.html",
                 user_type="organization",
@@ -601,29 +619,65 @@ def create_opportunity(opportunity_id=None):
 
     if request.method == "POST":
         # Get form data and map to database fields
+        status = request.form.get("status", "active")
         opportunity_data = {
-            "title": request.form.get("title"),
-            "description": request.form.get("description"),
-            "type": request.form.get("type"),
-            "location": request.form.get("location"),
-            "requirements": request.form.get("requirements"),
-            "compensation": request.form.get("compensation"),
-            "duration": request.form.get("duration"),
-            "application_deadline": request.form.get("application_deadline"),
+            "title": request.form.get("title") or None,
+            "description": request.form.get("description") or None,
+            "type": request.form.get("type") or None,
+            "category": request.form.get("category") or None,
+            "location": request.form.get("location") or None,
+            "requirements": request.form.get("requirements") or None,
+            "compensation": request.form.get("compensation") or None,
+            "duration": request.form.get("duration") or None,
+            "application_deadline": request.form.get("application_deadline") or None,
+            "status": status,
         }
+
+        # For drafts, ensure all keys exist, but allow None values
+        if status == "draft":
+            for key in ["title", "description", "type", "category", "location", "requirements", "compensation", "duration", "application_deadline"]:
+                if opportunity_data.get(key) is None:
+                    opportunity_data[key] = None
 
         # Add company_id only for new opportunities
         if not is_editing:
             opportunity_data["company_id"] = user_id
 
         try:
-            if is_editing:
+            # If editing and publishing, require all fields
+            is_publish = request.form.get("publish") == "1"
+            required_fields = ["title", "description", "type", "category", "location", "requirements", "compensation", "duration", "application_deadline"]
+            if is_editing and is_publish:
+                # Publishing: require all fields
+                missing = [f for f in required_fields if not opportunity_data.get(f)]
+                if missing:
+                    flash(f"Missing required fields for publishing: {', '.join(missing)}", "error")
+                    return render_template("create_opportunity.html", opportunity=opportunity, is_editing=is_editing)
+                opportunity_data["status"] = "active"
+                result = supabase_service.update_opportunity(opportunity_id, opportunity_data)
+                success_message = "Opportunity published successfully!"
+                redirect_route = url_for("opportunity_details", id=opportunity_id)
+            elif is_editing:
+                # Regular update, always keep as draft
+                opportunity_data["status"] = "draft"
                 result = supabase_service.update_opportunity(opportunity_id, opportunity_data)
                 success_message = "Opportunity updated successfully!"
                 redirect_route = url_for("opportunity_details", id=opportunity_id)
-            else:
+            elif not is_editing and status == "active":
+                # Creating and publishing
+                missing = [f for f in required_fields if not opportunity_data.get(f)]
+                if missing:
+                    flash(f"Missing required fields for publishing: {', '.join(missing)}", "error")
+                    return render_template("create_opportunity.html", opportunity=opportunity, is_editing=is_editing)
+                opportunity_data["status"] = "active"
                 result = supabase_service.create_opportunity(opportunity_data)
                 success_message = "Opportunity created successfully!"
+                redirect_route = url_for("dashboard")
+            else:
+                # Save as draft
+                opportunity_data["status"] = "draft"
+                result = supabase_service.create_opportunity(opportunity_data)
+                success_message = "Draft saved successfully!"
                 redirect_route = url_for("dashboard")
 
             if result["success"]:
