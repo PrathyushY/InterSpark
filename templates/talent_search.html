@@ -118,23 +118,29 @@
                 <!-- Contact Actions -->
                 <div class="flex space-x-2">
                     {% if session.user_id %}
-                        {% if session.user_type == 'organization' %}
-                            <button
-                                class="flex-1 bg-blue-600 text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                                <i class="fas fa-envelope mr-1"></i>
-                                Contact
-                            </button>
-                        {% endif %}
-                        <a href="{{ url_for('view_profile', user_id=student.id, search=search_query, skills=selected_skills, school=selected_school, grade=selected_grade) }}"
-                            class="px-3 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 flex items-center">
-                            <i class="fas fa-eye mr-1"></i>
-                            View Profile
-                        </a>
+                    {% if session.user_type == 'organization' %}
+                    <button
+                        class="flex-1 bg-blue-600 text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        <i class="fas fa-envelope mr-1"></i>
+                        Contact
+                    </button>
+                    {% endif %}
+                    <a href="{{ url_for('view_profile', user_id=student.id, search=search_query, skills=selected_skills, school=selected_school, grade=selected_grade) }}"
+                        class="px-3 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 flex items-center">
+                        <i class="fas fa-eye mr-1"></i>
+                        View Profile
+                    </a>
+                    <button onclick="toggleSaveProfile('{{ student.id }}', this)"
+                        class="px-2 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                        title="Save Profile">
+                        <i class="fas fa-bookmark text-sm"></i>
+                    </button>
                     {% else %}
-                        <div class="flex-1 text-center py-2 text-sm text-gray-500">
-                            <i class="fas fa-lock mr-1"></i>
-                            <a href="{{ url_for('login') }}" class="text-blue-600 hover:text-blue-800">Login</a> to view profiles
-                        </div>
+                    <div class="flex-1 text-center py-2 text-sm text-gray-500">
+                        <i class="fas fa-lock mr-1"></i>
+                        <a href="{{ url_for('login') }}" class="text-blue-600 hover:text-blue-800">Login</a> to view
+                        profiles
+                    </div>
                     {% endif %}
                 </div>
             </div>
@@ -197,4 +203,62 @@
         overflow: hidden;
     }
 </style>
+
+<script>
+    async function toggleSaveProfile(profileId, button) {
+        // Disable button during request
+        button.disabled = true;
+        const icon = button.querySelector('i');
+        const originalClass = icon.className;
+
+        try {
+            // Always try to save first (it will handle duplicates gracefully)
+            const response = await fetch(`/save_profile/${profileId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            });
+            const data = await response.json();
+
+            if (data.success) {
+                // Update UI to show saved state
+                icon.className = 'fas fa-bookmark text-sm text-blue-600';
+                button.classList.add('border-blue-300', 'bg-blue-50');
+                button.classList.remove('border-gray-300');
+                showAlert(data.message || 'Profile saved successfully', 'success');
+            } else {
+                showAlert(data.error || 'Failed to save profile', 'error');
+            }
+        } catch (error) {
+            showAlert('An error occurred. Please try again.', 'error');
+            console.error('Save profile error:', error);
+        } finally {
+            button.disabled = false;
+        }
+    }
+
+    function showAlert(message, type) {
+        const alert = document.createElement('div');
+        alert.className = `alert p-4 rounded-lg shadow-lg fixed top-4 left-1/2 transform -translate-x-1/2 z-50 max-w-md
+                      ${type === 'error' ? 'bg-red-50/95 border border-red-200 text-red-700' : 'bg-green-50/95 border border-green-200 text-green-700'}`;
+        alert.innerHTML = `
+        <div class="flex justify-between items-center">
+            <span class="text-sm font-medium">${message}</span>
+            <button onclick="this.parentElement.parentElement.remove()" class="ml-4 text-${type === 'error' ? 'red' : 'green'}-500">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    `;
+
+        document.body.appendChild(alert);
+
+        // Auto-remove after 3 seconds
+        setTimeout(() => {
+            if (alert.parentNode) {
+                alert.style.transition = 'opacity 0.3s ease';
+                alert.style.opacity = '0';
+                setTimeout(() => alert.remove(), 300);
+            }
+        }, 3000);
+    }
+</script>
 {% endblock %}
