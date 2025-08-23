@@ -644,6 +644,9 @@ def create_opportunity(opportunity_id=None):
             opportunity_data["company_id"] = user_id
 
         try:
+            # Get referrer URL from form data
+            referrer_url = request.form.get("referrer", url_for("dashboard"))
+
             # If editing and publishing, require all fields
             is_publish = request.form.get("publish") == "1"
             required_fields = ["title", "description", "type", "category", "location", "requirements", "compensation", "duration", "application_deadline"]
@@ -658,11 +661,11 @@ def create_opportunity(opportunity_id=None):
                 success_message = "Opportunity published successfully!"
                 redirect_route = url_for("opportunity_details", id=opportunity_id)
             elif is_editing:
-                # Regular update, always keep as draft
+                # Regular update, redirect back to referrer
                 opportunity_data["status"] = "draft"
                 result = supabase_service.update_opportunity(opportunity_id, opportunity_data)
-                success_message = "Opportunity updated successfully!"
-                redirect_route = url_for("opportunity_details", id=opportunity_id)
+                success_message = "Draft updated successfully!"
+                redirect_route = referrer_url
             elif not is_editing and status == "active":
                 # Creating and publishing
                 missing = [f for f in required_fields if not opportunity_data.get(f)]
@@ -672,9 +675,8 @@ def create_opportunity(opportunity_id=None):
                 opportunity_data["status"] = "active"
                 result = supabase_service.create_opportunity(opportunity_data)
                 success_message = "Opportunity created successfully!"
-                redirect_route = url_for("dashboard")
+                redirect_route = referrer_url
             else:
-                # Save as draft
                 opportunity_data["status"] = "draft"
                 result = supabase_service.create_opportunity(opportunity_data)
                 success_message = "Draft saved successfully!"

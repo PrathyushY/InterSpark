@@ -200,11 +200,11 @@
                                                         <h3 class="text-lg font-semibold text-gray-900 mb-3">Requirements</h3>
                                                         <ul class="space-y-2 text-gray-700">
                                                             ${data.requirements.split('\n').filter(req => req.trim()).map(req =>
-                                                                `<li class="flex items-start">
+                            `<li class="flex items-start">
                                                                     <i class="fas fa-circle text-gray-400 mr-3 mt-2 flex-shrink-0" style="font-size: 6px;"></i>
                                                                     <span>${req.trim()}</span>
                                                                 </li>`
-                                                            ).join('')}
+                        ).join('')}
                                                         </ul>
                                                     </div>
                                                 ` : ''}
@@ -233,6 +233,7 @@
                     }
                 </script>
                 <input type="hidden" name="status" id="status-field" value="active">
+                <input type="hidden" name="referrer" value="{{ request.referrer or url_for('dashboard') }}">
                 <!-- Basic Information -->
                 <script>
                     function highlightRequiredFields(missingFields) {
@@ -261,7 +262,8 @@
                             <div class="mt-1">
                                 <input type="text" name="title" id="title" required
                                        value="
-                                               {% if opportunity and opportunity.title %}{{ opportunity.title }}{% endif %}"
+
+                                           {% if opportunity and opportunity.title %}{{ opportunity.title }}{% endif %}"
                                        placeholder="e.g., Web Development Intern, Marketing Assistant"
                                        class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md{% if missing_fields and 'title' in missing_fields %} required-highlight{% endif %}">
                             </div>
@@ -330,6 +332,8 @@
                             <div class="mt-1">
                                 <input type="text" name="location" id="location"
                                        value="
+
+
                                                {% if opportunity and opportunity.location %}{{ opportunity.location }}{% endif %}"
                                        {% if missing_fields and 'location' in missing_fields %}class="required-highlight"{% endif %}
                                        placeholder="City, State or Remote"
@@ -349,6 +353,8 @@
                             <div class="mt-1">
                                 <input type="text" name="duration" id="duration"
                                        value="
+
+
                                                {% if opportunity and opportunity.duration %}{{ opportunity.duration }}{% endif %}"
                                        {% if missing_fields and 'duration' in missing_fields %}class="required-highlight"{% endif %}
                                        placeholder="e.g., Summer 2024, 3 months, Ongoing"
@@ -363,6 +369,8 @@
                             <div class="mt-1">
                                 <input type="date" name="application_deadline" id="application_deadline"
                                        value="
+
+
                                                {% if opportunity and opportunity.application_deadline %}{{ opportunity.application_deadline }}{% endif %}"
                                        {% if missing_fields and 'application_deadline' in missing_fields %}class="required-highlight"{% endif %}
                                        class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">
@@ -375,6 +383,8 @@
                             <div class="mt-1">
                                 <input type="text" name="compensation" id="compensation"
                                        value="
+
+
                                                {% if opportunity and opportunity.compensation %}{{ opportunity.compensation }}{% endif %}"
                                        {% if missing_fields and 'compensation' in missing_fields %}class="required-highlight"{% endif %}
                                        placeholder="e.g., Unpaid, $15/hour, Stipend provided, Academic credit"
@@ -450,7 +460,7 @@
                         <button type="submit"
                                 class="bg-blue-600 border border-transparent rounded-md shadow-sm py-2 px-4 inline-flex justify-center text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
                             <i class="fas {% if is_editing %}fa-save{% else %}fa-plus{% endif %} mr-2"></i>
-                            {% if is_editing %}Update Opportunity{% else %}Create Opportunity{% endif %}
+                            {% if is_editing %}Update Draft{% else %}Create Opportunity{% endif %}
                         </button>
                         {% if is_editing %}
                             <button type="button"
