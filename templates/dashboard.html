@@ -309,7 +309,7 @@
                         {% if published_opps %}
                         <div class="space-y-4">
                             {% for opportunity in published_opps %}
-                            <div class="border border-gray-200 rounded-lg p-4">
+                            <div class="border border-gray-200 rounded-lg p-4" data-opportunity-id="{{ opportunity.id }}">
                                 <div class="flex items-center justify-between mb-2">
                                     <h4 class="text-base font-semibold text-gray-900">
                                         <a href="{{ url_for('opportunity_details', id=opportunity.id) }}"
@@ -349,7 +349,7 @@
                         {% if opportunities %}
                         <div class="space-y-4">
                             {% for opportunity in opportunities %}
-                            <div class="border border-gray-200 rounded-lg p-4">
+                            <div class="border border-gray-200 rounded-lg p-4" data-opportunity-id="{{ opportunity.id }}">
                                 <div class="flex items-center justify-between mb-2">
                                     <h4 class="text-base font-semibold text-gray-900">
                                         <a href="{{ url_for('create_opportunity', opportunity_id=opportunity.id) }}"
@@ -403,7 +403,7 @@
                         <h4 class="text-md font-semibold text-gray-900 mb-2">Draft Opportunities</h4>
                         <div class="space-y-4">
                             {% for opportunity in draft_opps %}
-                            <div class="border border-yellow-200 rounded-lg p-4 bg-yellow-50">
+                            <div class="border border-yellow-200 rounded-lg p-4 bg-yellow-50" data-opportunity-id="{{ opportunity.id }}">
                                 <div class="flex items-center justify-between mb-2">
                                     <h4 class="text-base font-semibold text-gray-900">
                                         <a href="{{ url_for('create_opportunity', opportunity_id=opportunity.id) }}"
@@ -741,10 +741,9 @@
             .then(data => {
                 if (data.success) {
                     showFlashMessage('Opportunity deleted successfully', 'success');
-                    // Remove the opportunity card from the page
-                    setTimeout(() => {
-                        location.reload();
-                    }, 1000);
+                    // Remove the opportunity card from the DOM
+                    const card = document.querySelector(`[data-opportunity-id='${opportunityId}']`);
+                    if (card) card.remove();
                 } else {
                     showFlashMessage(data.error || 'Failed to delete opportunity', 'error');
                 }
