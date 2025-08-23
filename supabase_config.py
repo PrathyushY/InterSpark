@@ -702,7 +702,7 @@ class SupabaseService:
         """
         try:
             response = (
-                self.client.table("opportunities")
+                self.service_client.table("opportunities")
                 .update(opportunity_data)
                 .eq("id", opportunity_id)
                 .execute()

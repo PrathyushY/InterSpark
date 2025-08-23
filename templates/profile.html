@@ -24,8 +24,16 @@
             {% endif %}
         </div>
         {% if not is_own_profile %}
-        <!-- Save Profile Button -->
-        <div class="flex-shrink-0">
+        <!-- Contact and Save Profile Buttons -->
+        <div class="flex-shrink-0 flex space-x-3">
+            <!-- Contact Button -->
+            <a href="mailto:{{ profile.email }}?subject={{ 'Hello ' + (profile.name|urlencode) + ', from InterSpark' }}"
+                class="inline-flex items-center px-4 py-2 border border-blue-300 rounded-md text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 transition-colors">
+                <i class="fas fa-envelope mr-2"></i>
+                Contact
+            </a>
+
+            <!-- Save Profile Button -->
             <button id="save-profile-btn" onclick="toggleSaveProfile('{{ profile.id }}')"
                 class="inline-flex items-center px-4 py-2 border rounded-md text-sm font-medium transition-colors hover:bg-gray-50
                            {% if is_saved %}bg-blue-50 border-blue-300 text-blue-700{% else %}border-gray-300 text-gray-700{% endif %}">
@@ -517,6 +525,30 @@
                 setTimeout(() => alert.remove(), 300);
             }
         }, 3000);
+    }
+
+    function contactUser(email, name) {
+        // Debug logging to check if function is called
+        console.log('contactUser called with:', email, name);
+
+        if (!email) {
+            showAlert('No email address available for this user', 'error');
+            return;
+        }
+
+        // Clean up the name and email for the subject line
+        const cleanName = name || 'User';
+        const subject = encodeURIComponent(`Hello ${cleanName}, from InterSpark`);
+        const mailtoUrl = `mailto:${email}?subject=${subject}`;
+
+        console.log('Opening mailto URL:', mailtoUrl);
+
+        try {
+            window.location.href = mailtoUrl;
+        } catch (error) {
+            console.error('Error opening mailto:', error);
+            showAlert('Unable to open email client. Please contact ' + email + ' directly.', 'error');
+        }
     }
 </script>
 {% endif %}
