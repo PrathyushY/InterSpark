@@ -4,6 +4,14 @@
 
 {% block content %}
 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    {% if not is_own_profile and back_to_talent_search %}
+    <div class="mb-4">
+        <a href="{{ url_for('talent_search', search=search_query, skills=selected_skills, school=selected_school, grade=selected_grade) }}"
+           class="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <i class="fas fa-arrow-left mr-2"></i> Back to Talent Search
+        </a>
+    </div>
+    {% endif %}
     <div class="mb-8">
         <h1 class="text-2xl font-bold text-gray-900">{{ 'My Profile' if is_own_profile else profile.name ~ "'s Profile" }}</h1>
         {% if is_own_profile %}
@@ -17,7 +25,6 @@
         {% if is_own_profile %}
         <form method="POST" class="divide-y divide-gray-200">
         {% endif %}
-
             <!-- Profile Header -->
             <div class="px-4 py-5 sm:p-6">
                 <div class="flex items-center space-x-5">
@@ -213,7 +220,7 @@
                     </button>
                 </div>
                 <div class="flex space-x-3">
-                    <button type="button"
+                    <button type="reset"
                         class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-4 inline-flex justify-center text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
                         Cancel
                     </button>
@@ -224,7 +231,19 @@
                 </div>
             </div>
             {% endif %}
-
+            {% if is_own_profile %}
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        <div class="mt-4">
+                            {% for category, message in messages %}
+                                <div class="rounded-md px-4 py-2 mb-2 text-sm font-medium {% if category == 'success' %}bg-green-100 text-green-800{% elif category == 'error' %}bg-red-100 text-red-800{% else %}bg-gray-100 text-gray-800{% endif %}">
+                                    {{ message }}
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                {% endwith %}
+            {% endif %}
         {% if is_own_profile %}
         </form>
         {% endif %}
