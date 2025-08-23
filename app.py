@@ -710,25 +710,31 @@ def delete_opportunity(opportunity_id):
     try:
         # Get the opportunity to check ownership
         opportunity = supabase_service.get_opportunity_by_id(opportunity_id)
+        print(f"Delete request for opportunity_id={opportunity_id}, found: {opportunity}")
         if not opportunity:
+            print("Opportunity not found for deletion.")
             return {"success": False, "error": "Opportunity not found"}, 404
 
         # Check if user owns this opportunity
         if opportunity.get("company_id") != user_id:
+            print(f"User {user_id} does not own opportunity {opportunity_id} (company_id={opportunity.get('company_id')})")
             return {
                 "success": False,
                 "error": "You can only delete your own opportunities",
             }, 403
 
         result = supabase_service.delete_opportunity(opportunity_id)
+        print(f"Delete result for opportunity_id={opportunity_id}: {result}")
         if result["success"]:
             return {"success": True, "message": "Opportunity deleted successfully"}
         else:
+            print(f"Failed to delete opportunity: {result}")
             return {
                 "success": False,
                 "error": result.get("error", "Failed to delete opportunity"),
             }, 400
     except Exception as e:
+        print(f"Exception during opportunity delete: {e}")
         return {"success": False, "error": str(e)}, 500
 
 

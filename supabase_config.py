@@ -735,16 +735,18 @@ class SupabaseService:
         """
         try:
             response = (
-                self.client.table("opportunities")
+                self.service_client.table("opportunities")
                 .delete()
                 .eq("id", opportunity_id)
                 .execute()
             )
 
-            if response.data:
+            # Treat non-empty response.data as success
+            if response.data and isinstance(response.data, list) and len(response.data) > 0:
                 logger.info(f"Opportunity deleted successfully: {opportunity_id}")
                 return {"success": True}
             else:
+                logger.error(f"Failed to delete opportunity: {response}")
                 return {"success": False, "error": "Failed to delete opportunity"}
 
         except Exception as e:
