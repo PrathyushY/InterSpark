@@ -118,22 +118,21 @@
                 <!-- Contact Actions -->
                 <div class="flex space-x-2">
                     {% if session.user_id %}
-                    {% if session.user_type == 'organization' %}
-                    <button
-                        class="flex-1 bg-blue-600 text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                        <i class="fas fa-envelope mr-1"></i>
+                    <!-- Contact button for both organizations and students -->
+                    <a href="mailto:{{ student.email }}?subject={{ 'Hello ' + (student.name|urlencode) + ', from InterSpark' }}"
+                        class="flex-1 inline-flex items-center justify-center px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-md shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
+                        <i class="fas fa-envelope mr-2"></i>
                         Contact
-                    </button>
-                    {% endif %}
+                    </a>
                     <a href="{{ url_for('view_profile', user_id=student.id, search=search_query, skills=selected_skills, school=selected_school, grade=selected_grade) }}"
-                        class="px-3 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 flex items-center">
-                        <i class="fas fa-eye mr-1"></i>
-                        View Profile
+                        class="flex-1 inline-flex items-center justify-center px-4 py-2.5 border border-gray-300 rounded-md text-gray-700 text-sm font-medium bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors shadow-sm">
+                        <i class="fas fa-eye mr-2"></i>
+                        View
                     </a>
                     <button onclick="toggleSaveProfile('{{ student.id }}', this)"
-                        class="px-2 py-2 border rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 {% if student.is_saved %}bg-blue-50 border-blue-300 text-blue-700{% else %}border-gray-300 text-gray-700{% endif %}"
+                        class="inline-flex items-center justify-center px-3 py-2.5 border rounded-md text-sm font-medium hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors shadow-sm {% if student.is_saved %}bg-blue-50 border-blue-300 text-blue-700{% else %}bg-white border-gray-300 text-gray-700{% endif %}"
                         title="Save Profile">
-                        <i class="{% if student.is_saved %}fas fa-bookmark{% else %}far fa-bookmark{% endif %} text-sm"></i>
+                        <i class="{% if student.is_saved %}fas fa-bookmark{% else %}far fa-bookmark{% endif %}"></i>
                     </button>
                     {% else %}
                     <div class="flex-1 text-center py-2 text-sm text-gray-500">

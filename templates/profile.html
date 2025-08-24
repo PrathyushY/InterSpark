@@ -28,15 +28,14 @@
         <div class="flex-shrink-0 flex space-x-3">
             <!-- Contact Button -->
             <a href="mailto:{{ profile.email }}?subject={{ 'Hello ' + (profile.name|urlencode) + ', from InterSpark' }}"
-                class="inline-flex items-center px-4 py-2 border border-blue-300 rounded-md text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 transition-colors">
+                class="inline-flex items-center justify-center px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-md shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
                 <i class="fas fa-envelope mr-2"></i>
                 Contact
             </a>
 
             <!-- Save Profile Button -->
             <button id="save-profile-btn" onclick="toggleSaveProfile('{{ profile.id }}')"
-                class="inline-flex items-center px-4 py-2 border rounded-md text-sm font-medium transition-colors hover:bg-gray-50
-                           {% if is_saved %}bg-blue-50 border-blue-300 text-blue-700{% else %}border-gray-300 text-gray-700{% endif %}">
+                class="inline-flex items-center justify-center px-4 py-2.5 border rounded-md text-sm font-medium hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors shadow-sm {% if is_saved %}bg-blue-50 border-blue-300 text-blue-700{% else %}bg-white border-gray-300 text-gray-700{% endif %}">
                 <i class="{% if is_saved %}fas fa-bookmark{% else %}far fa-bookmark{% endif %} mr-2"></i>
                 <span id="save-profile-text">{% if is_saved %}Saved{% else %}Save Profile{% endif %}</span>
             </button>
@@ -94,7 +93,9 @@
                         <div class="mt-1">
                             <span class="block w-full sm:text-sm text-gray-900">{{ profile.email or '' }}</span>
                         </div>
+                        {% if is_own_profile %}
                         <p class="mt-1 text-sm text-gray-500">Email cannot be changed</p>
+                        {% endif %}
                     </div>
                     <div class="sm:col-span-3">
                         <label class="block text-sm font-medium text-gray-700">Phone number</label>
@@ -103,7 +104,7 @@
                             <input type="tel" name="phone" id="phone" value="{{ profile.phone or '' }}"
                                 class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">
                             {% else %}
-                            <span class="block w-full sm:text-sm text-gray-900">{{ profile.phone or '' }}</span>
+                            <span class="block w-full sm:text-sm text-gray-900">{{ profile.phone or 'Not specified' }}</span>
                             {% endif %}
                         </div>
                     </div>
@@ -115,7 +116,7 @@
                                 placeholder="City, State"
                                 class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">
                             {% else %}
-                            <span class="block w-full sm:text-sm text-gray-900">{{ profile.location or '' }}</span>
+                            <span class="block w-full sm:text-sm text-gray-900">{{ profile.location or 'Not specified' }}</span>
                             {% endif %}
                         </div>
                     </div>
@@ -174,8 +175,10 @@
                             <span class="block w-full sm:text-sm text-gray-900">{{ profile.bio or '' }}</span>
                             {% endif %}
                         </div>
+                        {% if is_own_profile %}
                         <p class="mt-1 text-sm text-gray-500">Required - Tell organizations about yourself and your
                             interests</p>
+                        {% endif %}
                     </div>
                     <div class="sm:col-span-6">
                         <label for="skills" class="block text-sm font-medium text-gray-700">Skills</label>
@@ -185,38 +188,52 @@
                                 placeholder="List your skills separated by commas (e.g., Python, JavaScript, Data Analysis)"
                                 class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">{{ profile.skills or '' }}</textarea>
                             {% else %}
-                            <span class="block w-full sm:text-sm text-gray-900">{{ profile.skills or '' }}</span>
+                            <span class="block w-full sm:text-sm text-gray-900">{{ profile.skills or 'Not specified' }}</span>
                             {% endif %}
                         </div>
+                        {% if is_own_profile %}
                         <p class="mt-2 text-sm text-gray-500">This helps organizations find students with relevant
                             skills.</p>
+                        {% endif %}
                     </div>
                     <div class="sm:col-span-2">
-                        <label for="github_url" class="block text-sm font-medium text-gray-700">GitHub URL
-                            (Optional)</label>
+                        <label for="github_url" class="block text-sm font-medium text-gray-700">GitHub URL{% if is_own_profile %}
+                            (Optional){% endif %}</label>
                         <div class="mt-1">
+                            {% if is_own_profile %}
                             <input type="url" name="github_url" id="github_url" value="{{ profile.github_url or '' }}"
                                 placeholder="https://github.com/yourusername"
                                 class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">
+                            {% else %}
+                            <span class="block w-full sm:text-sm text-gray-900">{{ profile.github_url or 'Not specified' }}</span>
+                            {% endif %}
                         </div>
                     </div>
                     <div class="sm:col-span-2">
-                        <label for="linkedin_url" class="block text-sm font-medium text-gray-700">LinkedIn URL
-                            (Optional)</label>
+                        <label for="linkedin_url" class="block text-sm font-medium text-gray-700">LinkedIn URL{% if is_own_profile %}
+                            (Optional){% endif %}</label>
                         <div class="mt-1">
+                            {% if is_own_profile %}
                             <input type="url" name="linkedin_url" id="linkedin_url"
                                 value="{{ profile.linkedin_url or '' }}"
                                 placeholder="https://linkedin.com/in/yourusername"
                                 class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">
+                            {% else %}
+                            <span class="block w-full sm:text-sm text-gray-900">{{ profile.linkedin_url or 'Not specified' }}</span>
+                            {% endif %}
                         </div>
                     </div>
                     <div class="sm:col-span-2">
-                        <label for="portfolio_url" class="block text-sm font-medium text-gray-700">Portfolio URL
-                            (Optional)</label>
+                        <label for="portfolio_url" class="block text-sm font-medium text-gray-700">Portfolio URL{% if is_own_profile %}
+                            (Optional){% endif %}</label>
                         <div class="mt-1">
+                            {% if is_own_profile %}
                             <input type="url" name="portfolio_url" id="portfolio_url"
                                 value="{{ profile.portfolio_url or '' }}" placeholder="https://yourportfolio.com"
                                 class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">
+                            {% else %}
+                            <span class="block w-full sm:text-sm text-gray-900">{{ profile.portfolio_url or 'Not specified' }}</span>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
@@ -232,18 +249,28 @@
                         <label for="description" class="block text-sm font-medium text-gray-700">Description <span
                                 class="text-red-500">*</span></label>
                         <div class="mt-1">
+                            {% if is_own_profile %}
                             <textarea name="description" id="description" rows="4" required
                                 placeholder="Describe your organization's mission, values, and what you do..."
                                 class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">{{ profile.description or '' }}</textarea>
+                            {% else %}
+                            <span class="block w-full sm:text-sm text-gray-900">{{ profile.description or '' }}</span>
+                            {% endif %}
                         </div>
+                        {% if is_own_profile %}
                         <p class="mt-1 text-sm text-gray-500">Required - Tell students about your organization</p>
+                        {% endif %}
                     </div>
                     <div class="sm:col-span-6">
                         <label for="website" class="block text-sm font-medium text-gray-700">Website</label>
                         <div class="mt-1">
+                            {% if is_own_profile %}
                             <input type="url" name="website" id="website" value="{{ profile.website or '' }}"
                                 placeholder="https://example.com"
                                 class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">
+                            {% else %}
+                            <span class="block w-full sm:text-sm text-gray-900">{{ profile.website or 'Not specified' }}</span>
+                            {% endif %}
                         </div>
                     </div>
                 </div>

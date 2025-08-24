@@ -98,9 +98,8 @@ def login():
     if request.method == "POST":
         email = request.form["email"]
         password = request.form["password"]
-        user_type = request.form.get("user_type", "student")
 
-        # Authenticate with Supabase
+        # Authenticate with Supabase - no longer need user_type selection
         try:
             auth_result = supabase_service.authenticate_user(email, password)
 
@@ -109,14 +108,13 @@ def login():
                 profile = auth_result["profile"]
 
                 print(f"DEBUG - Login attempt:")
-                print(f"  Requested user_type: '{user_type}'")
                 print(f"  Profile exists: {profile is not None}")
                 if profile:
                     print(f"  Profile user_type: '{profile.get('user_type')}'")
                     print(f"  Profile name: '{profile.get('name')}'")
 
-                # Check if user type matches
-                if profile and profile.get("user_type") == user_type:
+                # Check if profile exists and has user_type
+                if profile and profile.get("user_type"):
                     session["user_id"] = user["id"]
                     session["user_type"] = profile["user_type"]
                     session["user_name"] = profile["name"]
@@ -124,55 +122,25 @@ def login():
 
                     flash("Login successful!", "success")
                     return redirect(url_for("dashboard"))
-                elif (
-                    profile
-                    and profile.get("user_type") == "student"
-                    and profile.get("name") == "User"
-                ):
-                    # This is a newly created default profile, let's update it with the selected user type
-                    try:
-                        update_result = supabase_service.update_profile(
-                            user["id"], {"user_type": user_type}
-                        )
-                        if update_result["success"]:
-                            session["user_id"] = user["id"]
-                            session["user_type"] = user_type
-                            session["user_name"] = profile["name"]
-                            session["user_email"] = profile["email"]
-
-                            flash(
-                                "Login successful! Please complete your profile.",
-                                "success",
-                            )
-                            return redirect(url_for("profile"))
-                        else:
-                            flash(
-                                "Login successful, but there was an issue updating your profile.",
-                                "warning",
-                            )
-                    except Exception as update_error:
-                        print(f"Error updating profile: {update_error}")
-                        flash(
-                            "Login successful, but there was an issue updating your profile.",
-                            "warning",
-                        )
-
-                    # Fall back to basic login even if update failed
+                elif profile and profile.get("name") == "User":
+                    # This is a newly created default profile, redirect to complete profile
                     session["user_id"] = user["id"]
-                    session["user_type"] = user_type  # Use the selected type
+                    session["user_type"] = "student"  # Default to student
                     session["user_name"] = profile["name"]
                     session["user_email"] = profile["email"]
-                    return redirect(url_for("dashboard"))
+
+                    flash("Please complete your profile to continue.", "info")
+                    return redirect(url_for("profile"))
                 else:
                     if not profile:
-                        flash(
-                            "User profile not found. Please contact support.", "error"
-                        )
+                        flash("User profile not found. Please contact support.", "error")
                     else:
-                        flash(
-                            f"Invalid user type selected. Your account is registered as '{profile.get('user_type')}'",
-                            "error",
-                        )
+                        flash("Profile incomplete. Please complete your profile.", "warning")
+                        session["user_id"] = user["id"]
+                        session["user_type"] = profile.get("user_type", "student")
+                        session["user_name"] = profile.get("name", "User")
+                        session["user_email"] = profile.get("email", email)
+                        return redirect(url_for("profile"))
             else:
                 flash(auth_result.get("error", "Invalid credentials"), "error")
 
