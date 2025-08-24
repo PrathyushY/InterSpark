@@ -14,33 +14,35 @@
     <div class="bg-white p-6 rounded-lg shadow-sm mb-8">
         <h3 class="text-lg font-medium text-gray-900 mb-4">Filter Opportunities</h3>
         <form class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <div>
-                <label for="type" class="block text-sm font-medium text-gray-700 mb-2">Type</label>
-                <select id="type" name="type"
-                    class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
-                    <option value="">All Types</option>
-                    <option value="internship">Internship</option>
-                    <option value="volunteer">Volunteer</option>
-                </select>
-            </div>
-            <div>
-                <label for="category" class="block text-sm font-medium text-gray-700 mb-2">Category</label>
-                <select id="category" name="category"
-                    class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
-                    <option value="">All Categories</option>
-                    <option value="technology">Technology</option>
-                    <option value="environment">Environment</option>
-                    <option value="healthcare">Healthcare</option>
-                    <option value="education">Education</option>
-                    <option value="marketing">Marketing</option>
-                    <option value="science">Science</option>
-                </select>
-            </div>
-            <div>
-                <label for="location" class="block text-sm font-medium text-gray-700 mb-2">Location</label>
-                <input type="text" id="location" name="location" placeholder="Enter city or state"
-                    class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
-            </div>
+                <div>
+                    <label for="type" class="block text-sm font-medium text-gray-700 mb-2">Type</label>
+                    <select id="type" name="type"
+                        class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                        <option value="" {% if not selected_type %}selected{% endif %}>All Types</option>
+                        <option value="Internship" {% if selected_type == 'Internship' %}selected{% endif %}>Internship</option>
+                        <option value="Volunteer" {% if selected_type == 'Volunteer' %}selected{% endif %}>Volunteer</option>
+                        <option value="Full Time" {% if selected_type == 'Full Time' %}selected{% endif %}>Full Time</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="category" class="block text-sm font-medium text-gray-700 mb-2">Category</label>
+                    <select id="category" name="category"
+                        class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                        <option value="" {% if not selected_category %}selected{% endif %}>All Categories</option>
+                        <option value="Technology" {% if selected_category == 'Technology' %}selected{% endif %}>Technology</option>
+                        <option value="Environment" {% if selected_category == 'Environment' %}selected{% endif %}>Environment</option>
+                        <option value="Healthcare" {% if selected_category == 'Healthcare' %}selected{% endif %}>Healthcare</option>
+                        <option value="Education" {% if selected_category == 'Education' %}selected{% endif %}>Education</option>
+                        <option value="Marketing" {% if selected_category == 'Marketing' %}selected{% endif %}>Marketing</option>
+                        <option value="Science" {% if selected_category == 'Science' %}selected{% endif %}>Science</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="location" class="block text-sm font-medium text-gray-700 mb-2">Location</label>
+                    <input type="text" id="location" name="location" placeholder="Enter city or state"
+                        value="{{ selected_location }}"
+                        class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                </div>
             <div class="flex items-end">
                 <button type="submit"
                     class="w-full bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
@@ -51,6 +53,7 @@
     </div>
 
     <!-- Opportunities Grid -->
+
     {% if opportunities %}
     <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {% for opportunity in opportunities %}
@@ -68,54 +71,62 @@
                 <div class="flex items-center justify-between mb-3">
                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
                             {% if opportunity.type == 'Internship' %}bg-blue-100 text-blue-800
+                            {% elif opportunity.type == 'Full Time' %}bg-purple-100 text-purple-800
                             {% else %}bg-green-100 text-green-800{% endif %}">
-                        {{ opportunity.type }}
+                        {{ opportunity.type if opportunity.type else 'Draft' }}
                     </span>
-                    <span class="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">{{ opportunity.category }}</span>
                 </div>
+                {% if opportunity.category %}
+                <div class="mb-2">
+                    <span class="inline-block bg-gray-200 text-gray-700 text-xs px-2 py-1 rounded">{{ opportunity.category|capitalize }}</span>
+                </div>
+                {% endif %}
 
                 <h3 class="text-lg font-semibold text-gray-900 mb-2 hover:text-blue-600">
-                    <a href="{{ url_for('opportunity_details', id=opportunity.id) }}">
-                        {{ opportunity.title }}
-                    </a>
+                        <a href="{{ url_for('opportunity_details', id=opportunity.id) }}?type={{ selected_type }}&category={{ selected_category }}&location={{ selected_location }}&search={{ search_query }}">
+                            {{ opportunity.title if opportunity.title else 'Untitled' }}
+                        </a>
                 </h3>
 
                 <div class="flex items-center mb-2">
-                    {% if opportunity.organization.logo %}
-                    <img src="{{ opportunity.organization.logo }}" alt="{{ opportunity.organization.name }}"
+                    {% if opportunity.profiles and opportunity.profiles.profile_image %}
+                    <img src="{{ opportunity.profiles.profile_image }}"
+                        alt="{{ opportunity.profiles.name or opportunity.profiles.organization_name }}"
                         class="w-6 h-6 rounded-full mr-2">
                     {% endif %}
-                    <p class="text-sm text-gray-600 font-medium">{{ opportunity.organization.name }}</p>
+                    <p class="text-sm text-gray-600 font-medium">{{ opportunity.profiles.name or
+                        opportunity.profiles.organization_name or 'Organization' }}</p>
                 </div>
 
                 <div class="space-y-1 mb-4 text-sm text-gray-500">
                     <div class="flex items-center">
                         <i class="fas fa-map-marker-alt mr-2 w-4"></i>
-                        <span>{{ opportunity.location }}</span>
+                        <span>{{ opportunity.location if opportunity.location else 'Location not specified' }}</span>
                     </div>
                     <div class="flex items-center">
                         <i class="fas fa-clock mr-2 w-4"></i>
-                        <span>{{ opportunity.hours }}</span>
+                        <span>{{ opportunity.duration if opportunity.duration else 'Duration not specified' }}</span>
                     </div>
                     <div class="flex items-center">
                         <i class="fas fa-calendar mr-2 w-4"></i>
-                        <span>{{ opportunity.date }}</span>
+                        <span>{{ opportunity.created_at | format_date }}</span>
                     </div>
                 </div>
 
                 <p class="text-gray-700 text-sm mb-4 line-clamp-3">
-                    {{ opportunity.description[:150] }}{% if opportunity.description|length > 150 %}...{% endif %}
+                    {{ opportunity.description[:150] if opportunity.description else '' }}{% if opportunity.description and opportunity.description|length > 150 %}...{% endif %}
                 </p>
 
                 <div class="flex items-center justify-between">
                     <div class="text-sm text-gray-500">
                         <i class="fas fa-exclamation-circle mr-1"></i>
-                        Deadline: {{ opportunity.deadline }}
+                        Deadline: {{ opportunity.application_deadline | format_date if opportunity.application_deadline else 'No deadline' }}
                     </div>
                     <a href="{{ url_for('opportunity_details', id=opportunity.id) }}"
-                        class="text-blue-600 hover:text-blue-800 font-medium text-sm">
-                        Learn More →
-                    </a>
+                            class="text-blue-600 hover:text-blue-800 font-medium text-sm"
+                            href="{{ url_for('opportunity_details', id=opportunity.id) }}?type={{ selected_type }}&category={{ selected_category }}&location={{ selected_location }}&search={{ search_query }}">
+                            Learn More →
+                        </a>
                 </div>
             </div>
         </div>
@@ -170,6 +181,7 @@
     .line-clamp-3 {
         display: -webkit-box;
         -webkit-line-clamp: 3;
+        line-clamp: 3;
         -webkit-box-orient: vertical;
         overflow: hidden;
     }

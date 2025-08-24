@@ -152,13 +152,13 @@
                                 <h4 class="text-base font-semibold text-gray-900">
                                     <a href="{{ url_for('opportunity_details', id=opportunity.id) }}"
                                         class="hover:text-blue-600">
-                                        {{ opportunity.title }}
+                                        {{ opportunity.title if opportunity.title else 'Untitled' }}
                                     </a>
                                 </h4>
                                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
                                             {% if opportunity.type == 'Internship' %}bg-blue-100 text-blue-800
                                             {% else %}bg-green-100 text-green-800{% endif %}">
-                                    {{ opportunity.type }}
+                                    {{ opportunity.type if opportunity.type else 'Draft' }}
                                 </span>
                             </div>
                             <p class="text-sm text-gray-600 mb-1">
@@ -170,10 +170,9 @@
                                 {% endif %}
                             </p>
                             <p class="text-sm text-gray-500 mb-2">
-                                <i class="fas fa-map-marker-alt mr-1"></i>{{ opportunity.location }}
+                                <i class="fas fa-map-marker-alt mr-1"></i>{{ opportunity.location if opportunity.location else 'Location not specified' }}
                             </p>
-                            <p class="text-sm text-gray-700">{{ opportunity.description[:120] }}{% if
-                                opportunity.description|length > 120 %}...{% endif %}</p>
+                            <p class="text-sm text-gray-700">{{ opportunity.description[:120] if opportunity.description else '' }}{% if opportunity.description and opportunity.description|length > 120 %}...{% endif %}</p>
                         </div>
                         {% endfor %}
                     </div>
@@ -188,6 +187,108 @@
                     {% endif %}
                 </div>
             </div>
+
+            <!-- Saved Opportunities -->
+            {% if saved_opportunities %}
+            <div id="saved-opportunities-container" class="bg-white shadow rounded-lg mt-8">
+                <div class="px-4 py-5 sm:p-6">
+                    <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">
+                        <i class="fas fa-bookmark text-blue-500 mr-2"></i>
+                        Saved Opportunities
+                    </h3>
+                    <div class="space-y-4">
+                        {% for saved in saved_opportunities %}
+                        {% set opportunity = saved.opportunities %}
+                        <div class="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors">
+                            <div class="flex items-center justify-between mb-2">
+                                <h4 class="text-base font-semibold text-gray-900">
+                                    <a href="{{ url_for('opportunity_details', id=opportunity.id) }}"
+                                        class="hover:text-blue-600">
+                                        {{ opportunity.title }}
+                                    </a>
+                                </h4>
+                                <div class="flex items-center space-x-2">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
+                                                {% if opportunity.type == 'Internship' %}bg-blue-100 text-blue-800
+                                                {% else %}bg-green-100 text-green-800{% endif %}">
+                                        {{ opportunity.type }}
+                                    </span>
+                                    <button onclick="unsaveOpportunity('{{ opportunity.id }}', this)"
+                                        class="text-red-500 hover:text-red-700" title="Remove from saved">
+                                        <i class="fas fa-times text-sm"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <p class="text-sm text-gray-600 mb-1">
+                                {% if opportunity.profiles %}
+                                {{ opportunity.profiles.name or opportunity.profiles.organization_name or 'Organization'
+                                }}
+                                {% else %}
+                                Organization
+                                {% endif %}
+                            </p>
+                            <p class="text-sm text-gray-500 mb-2">
+                                <i class="fas fa-map-marker-alt mr-1"></i>{{ opportunity.location }}
+                            </p>
+                            <p class="text-sm text-gray-700">{{ opportunity.description[:120] }}{% if
+                                opportunity.description|length > 120 %}...{% endif %}</p>
+                            <p class="text-xs text-gray-400 mt-2">
+                                Saved {{ saved.created_at | format_date }}
+                            </p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Saved Profiles for Students -->
+            {% if user.user_type == 'student' and saved_profiles %}
+            <div id="saved-profiles-container" class="bg-white shadow rounded-lg mt-8">
+                <div class="px-4 py-5 sm:p-6">
+                    <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">
+                        <i class="fas fa-bookmark text-green-500 mr-2"></i>
+                        Saved Profiles
+                    </h3>
+                    <div class="space-y-4">
+                        {% for saved in saved_profiles %}
+                        {% set profile = saved.profiles %}
+                        <div class="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors">
+                            <div class="flex items-center justify-between mb-2">
+                                <h4 class="text-base font-semibold text-gray-900">
+                                    <a href="{{ url_for('view_profile', user_id=profile.id) }}"
+                                        class="hover:text-blue-600">
+                                        {{ profile.name }}
+                                    </a>
+                                </h4>
+                                <button onclick="unsaveProfileFunction('{{ profile.id }}', this)"
+                                    class="text-red-500 hover:text-red-700" title="Remove from saved">
+                                    <i class="fas fa-times text-sm"></i>
+                                </button>
+                            </div>
+                            {% if profile.user_type == 'student' %}
+                            <p class="text-sm text-gray-600 mb-1">
+                                {% if profile.grade %}Grade {{ profile.grade }}{% endif %}
+                                {% if profile.school %}{% if profile.grade %} at {% endif %}{{ profile.school }}{% endif
+                                %}
+                            </p>
+                            {% elif profile.user_type == 'organization' %}
+                            <p class="text-sm text-gray-600 mb-1">
+                                Organization
+                                {% if profile.location %} • {{ profile.location }}{% endif %}
+                            </p>
+                            {% endif %}
+                            <p class="text-sm text-gray-700">{{ (profile.bio or profile.description or '')[:120] }}{% if
+                                (profile.bio or profile.description or '')|length > 120 %}...{% endif %}</p>
+                            <p class="text-xs text-gray-400 mt-2">
+                                Saved {{ saved.created_at | format_date }}
+                            </p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
             {% else %}
             <!-- Organization's Opportunities -->
             <div class="bg-white shadow rounded-lg">
@@ -202,10 +303,204 @@
                             Add New
                         </a>
                     </div>
-                    {% if opportunities %}
+                    {% set published_opps = opportunities | selectattr('status', 'equalto', 'active') | list %}
+                    {% set draft_opps = opportunities | selectattr('status', 'equalto', 'draft') | list %}
+                    {% if published_opps or draft_opps %}
+                        {% if published_opps %}
+                        <div class="space-y-4">
+                            {% for opportunity in published_opps %}
+                            <div class="border border-gray-200 rounded-lg p-4" data-opportunity-id="{{ opportunity.id }}">
+                                <div class="flex items-center justify-between mb-2">
+                                    <h4 class="text-base font-semibold text-gray-900">
+                                        <a href="{{ url_for('opportunity_details', id=opportunity.id) }}"
+                                            class="hover:text-blue-600">
+                                            {{ opportunity.title }}
+                                        </a>
+                                    </h4>
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
+                                                {% if opportunity.type == 'Internship' %}bg-blue-100 text-blue-800
+                                                {% else %}bg-green-100 text-green-800{% endif %}">
+                                        {{ opportunity.type }}
+                                    </span>
+                                </div>
+                                <p class="text-sm text-gray-500 mb-2">
+                                    <i class="fas fa-map-marker-alt mr-1"></i>{{ opportunity.location }}
+                                    <span class="ml-4"><i class="fas fa-calendar mr-1"></i>{{ opportunity.created_at |
+                                        format_date }}</span>
+                                </p>
+                                <p class="text-sm text-gray-700">{{ opportunity.description[:120] }}{% if
+                                    opportunity.description|length > 120 %}...{% endif %}</p>
+                                <div class="mt-3 flex space-x-2">
+                                    <a href="{{ url_for('create_opportunity', opportunity_id=opportunity.id) }}"
+                                        class="text-sm text-blue-600 hover:text-blue-800">
+                                        <i class="fas fa-edit mr-1"></i>Edit
+                                    </a>
+                                    <button
+                                        onclick="confirmDeleteOpportunity('{{ opportunity.id }}', '{{ opportunity.title|escape }}')"
+                                        class="text-sm text-red-600 hover:text-red-800">
+                                        <i class="fas fa-trash mr-1"></i>Delete
+                                    </button>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    {% else %}
+                        {% if opportunities %}
+                        <div class="space-y-4">
+                            {% for opportunity in opportunities %}
+                            <div class="border border-gray-200 rounded-lg p-4" data-opportunity-id="{{ opportunity.id }}">
+                                <div class="flex items-center justify-between mb-2">
+                                    <h4 class="text-base font-semibold text-gray-900">
+                                        <a href="{{ url_for('create_opportunity', opportunity_id=opportunity.id) }}"
+                                            class="hover:text-blue-600">
+                                            {{ opportunity.title or 'Untitled' }}
+                                        </a>
+                                    </h4>
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
+                                                {% if opportunity.status == 'draft' %}bg-yellow-200 text-yellow-800
+                                                {% elif opportunity.type == 'Internship' %}bg-blue-100 text-blue-800
+                                                {% else %}bg-green-100 text-green-800{% endif %}">
+                                        {{ opportunity.type or 'Draft' }}
+                                    </span>
+                                </div>
+                                <p class="text-sm text-gray-500 mb-2">
+                                    <i class="fas fa-map-marker-alt mr-1"></i>{{ opportunity.location }}
+                                    <span class="ml-4"><i class="fas fa-calendar mr-1"></i>{{ opportunity.created_at |
+                                        format_date }}</span>
+                                </p>
+                                <p class="text-sm text-gray-700">{{ opportunity.description[:120] }}{% if
+                                    opportunity.description|length > 120 %}...{% endif %}</p>
+                                <div class="mt-3 flex space-x-2">
+                                    <a href="{{ url_for('create_opportunity', opportunity_id=opportunity.id) }}"
+                                        class="text-sm text-blue-600 hover:text-blue-800">
+                                        <i class="fas fa-edit mr-1"></i>Edit
+                                    </a>
+                                    <button
+                                        onclick="confirmDeleteOpportunity('{{ opportunity.id }}', '{{ opportunity.title|escape }}')"
+                                        class="text-sm text-red-600 hover:text-red-800">
+                                        <i class="fas fa-trash mr-1"></i>Delete
+                                    </button>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <div class="text-center py-6">
+                            <i class="fas fa-briefcase text-gray-400 text-4xl mb-4"></i>
+                            <h3 class="text-lg font-medium text-gray-900 mb-2">No opportunities yet</h3>
+                            <p class="text-gray-500 mb-4">Create your first opportunity to start connecting with talented
+                                students.</p>
+                            <a href="{{ url_for('create_opportunity') }}"
+                                class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
+                                Create Opportunity
+                            </a>
+                        </div>
+                        {% endif %}
+                    {% endif %}
+                    {% if draft_opps %}
+                    <div class="mt-8">
+                        <h4 class="text-md font-semibold text-gray-900 mb-2">Draft Opportunities</h4>
+                        <div class="space-y-4">
+                            {% for opportunity in draft_opps %}
+                            <div class="border border-yellow-200 rounded-lg p-4 bg-yellow-50" data-opportunity-id="{{ opportunity.id }}">
+                                <div class="flex items-center justify-between mb-2">
+                                    <h4 class="text-base font-semibold text-gray-900">
+                                        <a href="{{ url_for('create_opportunity', opportunity_id=opportunity.id) }}"
+                                            class="hover:text-blue-600">
+                                            {{ opportunity.title or 'Untitled Draft' }}
+                                        </a>
+                                    </h4>
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-200 text-yellow-800">
+                                        Draft
+                                    </span>
+                                </div>
+                                <p class="text-sm text-gray-500 mb-2">
+                                    <i class="fas fa-map-marker-alt mr-1"></i>{{ opportunity.location }}
+                                    <span class="ml-4"><i class="fas fa-calendar mr-1"></i>{{ opportunity.created_at |
+                                        format_date }}</span>
+                                </p>
+                                <p class="text-sm text-gray-700">{{ opportunity.description[:120] }}{% if
+                                    opportunity.description|length > 120 %}...{% endif %}</p>
+                                <div class="mt-3 flex space-x-2">
+                                    <a href="{{ url_for('create_opportunity', opportunity_id=opportunity.id) }}"
+                                        class="text-sm text-blue-600 hover:text-blue-800">
+                                        <i class="fas fa-edit mr-1"></i>Edit
+                                    </a>
+                                    <button
+                                        onclick="confirmDeleteOpportunity('{{ opportunity.id }}', '{{ opportunity.title|escape }}')"
+                                        class="text-sm text-red-600 hover:text-red-800">
+                                        <i class="fas fa-trash mr-1"></i>Delete
+                                    </button>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Saved Profiles -->
+            {% if saved_profiles %}
+            <div id="saved-profiles-container" class="bg-white shadow rounded-lg mt-8">
+                <div class="px-4 py-5 sm:p-6">
+                    <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">
+                        <i class="fas fa-bookmark text-blue-500 mr-2"></i>
+                        Saved Profiles
+                    </h3>
                     <div class="space-y-4">
-                        {% for opportunity in opportunities %}
-                        <div class="border border-gray-200 rounded-lg p-4">
+                        {% for saved in saved_profiles %}
+                        {% set profile = saved.profiles %}
+                        <div class="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors">
+                            <div class="flex items-center justify-between mb-2">
+                                <h4 class="text-base font-semibold text-gray-900">
+                                    <a href="{{ url_for('view_profile', user_id=profile.id) }}"
+                                        class="hover:text-blue-600">
+                                        {{ profile.name }}
+                                    </a>
+                                </h4>
+                                <button onclick="unsaveProfileFunction('{{ profile.id }}', this)"
+                                    class="text-red-500 hover:text-red-700" title="Remove from saved">
+                                    <i class="fas fa-times text-sm"></i>
+                                </button>
+                            </div>
+                            {% if profile.user_type == 'student' %}
+                            <p class="text-sm text-gray-600 mb-1">
+                                {% if profile.grade %}Grade {{ profile.grade }}{% endif %}
+                                {% if profile.school %}{% if profile.grade %} at {% endif %}{{ profile.school }}{% endif
+                                %}
+                            </p>
+                            {% elif profile.user_type == 'organization' %}
+                            <p class="text-sm text-gray-600 mb-1">
+                                Organization
+                                {% if profile.location %} • {{ profile.location }}{% endif %}
+                            </p>
+                            {% endif %}
+                            <p class="text-sm text-gray-700">{{ (profile.bio or profile.description or '')[:120] }}{% if
+                                (profile.bio or profile.description or '')|length > 120 %}...{% endif %}</p>
+                            <p class="text-xs text-gray-400 mt-2">
+                                Saved {{ saved.created_at | format_date }}
+                            </p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Saved Opportunities for Organizations -->
+            {% if saved_opportunities %}
+            <div id="saved-opportunities-container" class="bg-white shadow rounded-lg mt-8">
+                <div class="px-4 py-5 sm:p-6">
+                    <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">
+                        <i class="fas fa-bookmark text-green-500 mr-2"></i>
+                        Saved Opportunities
+                    </h3>
+                    <div class="space-y-4">
+                        {% for saved in saved_opportunities %}
+                        {% set opportunity = saved.opportunities %}
+                        <div class="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors">
                             <div class="flex items-center justify-between mb-2">
                                 <h4 class="text-base font-semibold text-gray-900">
                                     <a href="{{ url_for('opportunity_details', id=opportunity.id) }}"
@@ -213,39 +508,40 @@
                                         {{ opportunity.title }}
                                     </a>
                                 </h4>
-                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
-                                            {% if opportunity.type == 'Internship' %}bg-blue-100 text-blue-800
-                                            {% else %}bg-green-100 text-green-800{% endif %}">
-                                    {{ opportunity.type }}
-                                </span>
+                                <div class="flex items-center space-x-2">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
+                                                {% if opportunity.type == 'Internship' %}bg-blue-100 text-blue-800
+                                                {% else %}bg-green-100 text-green-800{% endif %}">
+                                        {{ opportunity.type }}
+                                    </span>
+                                    <button onclick="unsaveOpportunity('{{ opportunity.id }}', this)"
+                                        class="text-red-500 hover:text-red-700" title="Remove from saved">
+                                        <i class="fas fa-times text-sm"></i>
+                                    </button>
+                                </div>
                             </div>
+                            <p class="text-sm text-gray-600 mb-1">
+                                {% if opportunity.profiles %}
+                                {{ opportunity.profiles.name or opportunity.profiles.organization_name or 'Organization'
+                                }}
+                                {% else %}
+                                Organization
+                                {% endif %}
+                            </p>
                             <p class="text-sm text-gray-500 mb-2">
                                 <i class="fas fa-map-marker-alt mr-1"></i>{{ opportunity.location }}
-                                <span class="ml-4"><i class="fas fa-calendar mr-1"></i>{{ opportunity.date }}</span>
                             </p>
                             <p class="text-sm text-gray-700">{{ opportunity.description[:120] }}{% if
                                 opportunity.description|length > 120 %}...{% endif %}</p>
-                            <div class="mt-3 flex space-x-2">
-                                <button class="text-sm text-blue-600 hover:text-blue-800">Edit</button>
-                                <button class="text-sm text-red-600 hover:text-red-800">Delete</button>
-                            </div>
+                            <p class="text-xs text-gray-400 mt-2">
+                                Saved {{ saved.created_at | format_date }}
+                            </p>
                         </div>
                         {% endfor %}
                     </div>
-                    {% else %}
-                    <div class="text-center py-6">
-                        <i class="fas fa-briefcase text-gray-400 text-4xl mb-4"></i>
-                        <h3 class="text-lg font-medium text-gray-900 mb-2">No opportunities yet</h3>
-                        <p class="text-gray-500 mb-4">Create your first opportunity to start connecting with talented
-                            students.</p>
-                        <a href="{{ url_for('create_opportunity') }}"
-                            class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
-                            Create Opportunity
-                        </a>
-                    </div>
-                    {% endif %}
                 </div>
             </div>
+            {% endif %}
             {% endif %}
         </div>
 
@@ -305,4 +601,157 @@
         </div>
     </div>
 </div>
+
+<script>
+    // Function to show flash message
+    function showFlashMessage(message, category = 'info') {
+        const alert = document.createElement('div');
+        alert.className = `alert alert-${category} alert-flash fixed top-4 left-1/2 transform -translate-x-1/2 z-50 px-4 py-3 rounded-md shadow-md max-w-md w-full mx-4`;
+
+        const categoryStyles = {
+            'success': 'bg-green-50 text-green-800 border border-green-200',
+            'error': 'bg-red-50 text-red-800 border border-red-200',
+            'info': 'bg-blue-50 text-blue-800 border border-blue-200'
+        };
+
+        alert.className += ` ${categoryStyles[category] || categoryStyles.info}`;
+
+        alert.innerHTML = `
+        ${message}
+        <button onclick="dismissAlert(this)" class="float-right ml-4 text-lg leading-none">&times;</button>
+    `;
+
+        document.body.appendChild(alert);
+
+        // Auto dismiss after 5 seconds
+        setTimeout(() => {
+            if (alert.parentNode) {
+                dismissAlert(alert.querySelector('button'));
+            }
+        }, 5000);
+    }
+
+    // Unsave opportunity function
+    function unsaveOpportunity(opportunityId, element) {
+        fetch(`/unsave_opportunity/${opportunityId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Remove the opportunity card from the page
+                    const card = element.closest('.border');
+                    if (card) {
+                        card.style.transition = 'opacity 0.3s ease';
+                        card.style.opacity = '0';
+                        setTimeout(() => {
+                            card.remove();
+
+                            // Check if no more saved opportunities
+                            const container = document.querySelector('#saved-opportunities-container .space-y-4');
+                            if (container && container.children.length === 0) {
+                                const section = document.querySelector('#saved-opportunities-container');
+                                if (section) section.remove();
+                            }
+                        }, 300);
+                    }
+                    showFlashMessage('Opportunity removed from saved items', 'success');
+                } else {
+                    showFlashMessage(data.error || 'Failed to unsave opportunity', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showFlashMessage('An error occurred', 'error');
+            });
+    }
+
+    // Unsave profile function
+    function unsaveProfileFunction(profileId, element) {
+        fetch(`/unsave_profile/${profileId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Remove the profile card from the page
+                    const card = element.closest('.border');
+                    if (card) {
+                        card.style.transition = 'opacity 0.3s ease';
+                        card.style.opacity = '0';
+                        setTimeout(() => {
+                            card.remove();
+
+                            // Check if no more saved profiles
+                            const container = document.querySelector('#saved-profiles-container .space-y-4');
+                            if (container && container.children.length === 0) {
+                                const section = document.querySelector('#saved-profiles-container');
+                                if (section) section.remove();
+                            }
+                        }, 300);
+                    }
+                    showFlashMessage('Profile removed from saved items', 'success');
+                } else {
+                    showFlashMessage(data.error || 'Failed to unsave profile', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showFlashMessage('An error occurred', 'error');
+            });
+    }
+
+    // Dismiss alert function
+    function dismissAlert(button) {
+        const alert = button.closest('.alert');
+        if (alert) {
+            alert.style.transition = 'transform 0.3s ease, opacity 0.3s ease';
+            alert.style.transform = 'translateX(-50%) translateY(-20px)';
+            alert.style.opacity = '0';
+            setTimeout(() => {
+                if (alert.parentNode) {
+                    alert.remove();
+                }
+            }, 300);
+        }
+    }
+
+    // Confirm delete opportunity
+    function confirmDeleteOpportunity(opportunityId, title) {
+        if (confirm(`Are you sure you want to delete "${title}"? This action cannot be undone.`)) {
+            deleteOpportunity(opportunityId);
+        }
+    }
+
+    // Delete opportunity function
+    function deleteOpportunity(opportunityId) {
+        fetch(`/delete_opportunity/${opportunityId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showFlashMessage('Opportunity deleted successfully', 'success');
+                    // Remove the opportunity card from the DOM
+                    const card = document.querySelector(`[data-opportunity-id='${opportunityId}']`);
+                    if (card) card.remove();
+                } else {
+                    showFlashMessage(data.error || 'Failed to delete opportunity', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showFlashMessage('An error occurred', 'error');
+            });
+    }
+</script>
 {% endblock %}

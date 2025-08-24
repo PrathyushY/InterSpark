@@ -4,13 +4,49 @@
 
 {% block content %}
 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-    <div class="mb-8">
-        <h1 class="text-2xl font-bold text-gray-900">My Profile</h1>
-        <p class="mt-1 text-gray-500">Manage your account information and preferences</p>
+    {% if not is_own_profile and back_to_talent_search %}
+    <div class="mb-4">
+        <a href="{{ url_for('talent_search', search=search_query, skills=selected_skills, school=selected_school, grade=selected_grade) }}"
+            class="inline-flex items-center text-blue-600 hover:text-blue-800">
+            <i class="fas fa-arrow-left mr-2"></i>Back to Talent Search
+        </a>
+    </div>
+    {% endif %}
+    <div class="mb-8 flex items-center justify-between">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">{{ 'My Profile' if is_own_profile else profile.name ~ "'s
+                Profile"
+                }}</h1>
+            {% if is_own_profile %}
+            <p class="mt-1 text-gray-500">Manage your account information and preferences</p>
+            {% else %}
+            <p class="mt-1 text-gray-500">Viewing profile information</p>
+            {% endif %}
+        </div>
+        {% if not is_own_profile %}
+        <!-- Contact and Save Profile Buttons -->
+        <div class="flex-shrink-0 flex space-x-3">
+            <!-- Contact Button -->
+            <a href="mailto:{{ profile.email }}?subject={{ 'Hello ' + (profile.name|urlencode) + ', from InterSpark' }}"
+                class="inline-flex items-center justify-center px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-md shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
+                <i class="fas fa-envelope mr-2"></i>
+                Contact
+            </a>
+
+            <!-- Save Profile Button -->
+            <button id="save-profile-btn" onclick="toggleSaveProfile('{{ profile.id }}')"
+                class="inline-flex items-center justify-center px-4 py-2.5 border rounded-md text-sm font-medium hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors shadow-sm {% if is_saved %}bg-blue-50 border-blue-300 text-blue-700{% else %}bg-white border-gray-300 text-gray-700{% endif %}">
+                <i class="{% if is_saved %}fas fa-bookmark{% else %}far fa-bookmark{% endif %} mr-2"></i>
+                <span id="save-profile-text">{% if is_saved %}Saved{% else %}Save Profile{% endif %}</span>
+            </button>
+        </div>
+        {% endif %}
     </div>
 
     <div class="bg-white shadow rounded-lg">
+        {% if is_own_profile %}
         <form method="POST" class="divide-y divide-gray-200">
+            {% endif %}
             <!-- Profile Header -->
             <div class="px-4 py-5 sm:p-6">
                 <div class="flex items-center space-x-5">
@@ -39,38 +75,49 @@
                 <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">Basic Information</h3>
                 <div class="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
                     <div class="sm:col-span-3">
-                        <label for="full_name" class="block text-sm font-medium text-gray-700">
-                            {% if user_type == 'student' %}Full Name{% else %}Organization Name{% endif %}
+                        <label class="block text-sm font-medium text-gray-700">
+                            {% if user_type == 'student' %}Full Name{% else %}Organization Name{% endif %} <span
+                                class="text-red-500">*</span>
                         </label>
                         <div class="mt-1">
+                            {% if is_own_profile %}
                             <input type="text" name="full_name" id="full_name" value="{{ profile.name or '' }}" required
                                 class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">
+                            {% else %}
+                            <span class="block w-full sm:text-sm text-gray-900">{{ profile.name or '' }}</span>
+                            {% endif %}
                         </div>
                     </div>
-
                     <div class="sm:col-span-3">
-                        <label for="email" class="block text-sm font-medium text-gray-700">Email address</label>
+                        <label class="block text-sm font-medium text-gray-700">Email address</label>
                         <div class="mt-1">
-                            <input type="email" name="email" id="email" value="{{ profile.email or '' }}" readonly
-                                class="shadow-sm bg-gray-50 block w-full sm:text-sm border-gray-300 rounded-md">
+                            <span class="block w-full sm:text-sm text-gray-900">{{ profile.email or '' }}</span>
                         </div>
+                        {% if is_own_profile %}
                         <p class="mt-1 text-sm text-gray-500">Email cannot be changed</p>
+                        {% endif %}
                     </div>
-
                     <div class="sm:col-span-3">
-                        <label for="phone" class="block text-sm font-medium text-gray-700">Phone number</label>
+                        <label class="block text-sm font-medium text-gray-700">Phone number</label>
                         <div class="mt-1">
+                            {% if is_own_profile %}
                             <input type="tel" name="phone" id="phone" value="{{ profile.phone or '' }}"
                                 class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">
+                            {% else %}
+                            <span class="block w-full sm:text-sm text-gray-900">{{ profile.phone or 'Not specified' }}</span>
+                            {% endif %}
                         </div>
                     </div>
-
                     <div class="sm:col-span-3">
-                        <label for="location" class="block text-sm font-medium text-gray-700">Location</label>
+                        <label class="block text-sm font-medium text-gray-700">Location</label>
                         <div class="mt-1">
+                            {% if is_own_profile %}
                             <input type="text" name="location" id="location" value="{{ profile.location or '' }}"
                                 placeholder="City, State"
                                 class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">
+                            {% else %}
+                            <span class="block w-full sm:text-sm text-gray-900">{{ profile.location or 'Not specified' }}</span>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
@@ -82,18 +129,24 @@
                 <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">Student Information</h3>
                 <div class="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
                     <div class="sm:col-span-3">
-                        <label for="school" class="block text-sm font-medium text-gray-700">School</label>
+                        <label class="block text-sm font-medium text-gray-700">School <span
+                                class="text-red-500">*</span></label>
                         <div class="mt-1">
-                            <input type="text" name="school" id="school" value="{{ profile.school or '' }}"
+                            {% if is_own_profile %}
+                            <input type="text" name="school" id="school" value="{{ profile.school or '' }}" required
                                 placeholder="e.g., Lincoln High School"
                                 class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">
+                            {% else %}
+                            <span class="block w-full sm:text-sm text-gray-900">{{ profile.school or '' }}</span>
+                            {% endif %}
                         </div>
                     </div>
-
                     <div class="sm:col-span-3">
-                        <label for="grade" class="block text-sm font-medium text-gray-700">Grade</label>
+                        <label class="block text-sm font-medium text-gray-700">Grade <span
+                                class="text-red-500">*</span></label>
                         <div class="mt-1">
-                            <select name="grade" id="grade"
+                            {% if is_own_profile %}
+                            <select name="grade" id="grade" required
                                 class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">
                                 <option value="">Select Grade</option>
                                 <option value="9th Grade" {% if profile.grade=='9th Grade' %}selected{% endif %}>9th
@@ -105,57 +158,82 @@
                                 <option value="12th Grade" {% if profile.grade=='12th Grade' %}selected{% endif %}>12th
                                     Grade</option>
                             </select>
+                            {% else %}
+                            <span class="block w-full sm:text-sm text-gray-900">{{ profile.grade or '' }}</span>
+                            {% endif %}
                         </div>
                     </div>
-
                     <div class="sm:col-span-6">
-                        <label for="bio" class="block text-sm font-medium text-gray-700">Bio</label>
+                        <label class="block text-sm font-medium text-gray-700">Bio <span
+                                class="text-red-500">*</span></label>
                         <div class="mt-1">
-                            <textarea name="bio" id="bio" rows="4"
+                            {% if is_own_profile %}
+                            <textarea name="bio" id="bio" rows="4" required
                                 placeholder="Tell us about yourself, your interests, and what kind of opportunities you're looking for..."
                                 class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">{{ profile.bio or '' }}</textarea>
+                            {% else %}
+                            <span class="block w-full sm:text-sm text-gray-900">{{ profile.bio or '' }}</span>
+                            {% endif %}
                         </div>
+                        {% if is_own_profile %}
+                        <p class="mt-1 text-sm text-gray-500">Required - Tell organizations about yourself and your
+                            interests</p>
+                        {% endif %}
                     </div>
-
                     <div class="sm:col-span-6">
                         <label for="skills" class="block text-sm font-medium text-gray-700">Skills</label>
                         <div class="mt-1">
+                            {% if is_own_profile %}
                             <textarea name="skills" id="skills" rows="2"
                                 placeholder="List your skills separated by commas (e.g., Python, JavaScript, Data Analysis)"
                                 class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">{{ profile.skills or '' }}</textarea>
+                            {% else %}
+                            <span class="block w-full sm:text-sm text-gray-900">{{ profile.skills or 'Not specified' }}</span>
+                            {% endif %}
                         </div>
+                        {% if is_own_profile %}
                         <p class="mt-2 text-sm text-gray-500">This helps organizations find students with relevant
                             skills.</p>
+                        {% endif %}
                     </div>
-
                     <div class="sm:col-span-2">
-                        <label for="github_url" class="block text-sm font-medium text-gray-700">GitHub URL
-                            (Optional)</label>
+                        <label for="github_url" class="block text-sm font-medium text-gray-700">GitHub URL{% if is_own_profile %}
+                            (Optional){% endif %}</label>
                         <div class="mt-1">
+                            {% if is_own_profile %}
                             <input type="url" name="github_url" id="github_url" value="{{ profile.github_url or '' }}"
                                 placeholder="https://github.com/yourusername"
                                 class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">
+                            {% else %}
+                            <span class="block w-full sm:text-sm text-gray-900">{{ profile.github_url or 'Not specified' }}</span>
+                            {% endif %}
                         </div>
                     </div>
-
                     <div class="sm:col-span-2">
-                        <label for="linkedin_url" class="block text-sm font-medium text-gray-700">LinkedIn URL
-                            (Optional)</label>
+                        <label for="linkedin_url" class="block text-sm font-medium text-gray-700">LinkedIn URL{% if is_own_profile %}
+                            (Optional){% endif %}</label>
                         <div class="mt-1">
+                            {% if is_own_profile %}
                             <input type="url" name="linkedin_url" id="linkedin_url"
                                 value="{{ profile.linkedin_url or '' }}"
                                 placeholder="https://linkedin.com/in/yourusername"
                                 class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">
+                            {% else %}
+                            <span class="block w-full sm:text-sm text-gray-900">{{ profile.linkedin_url or 'Not specified' }}</span>
+                            {% endif %}
                         </div>
                     </div>
-
                     <div class="sm:col-span-2">
-                        <label for="portfolio_url" class="block text-sm font-medium text-gray-700">Portfolio URL
-                            (Optional)</label>
+                        <label for="portfolio_url" class="block text-sm font-medium text-gray-700">Portfolio URL{% if is_own_profile %}
+                            (Optional){% endif %}</label>
                         <div class="mt-1">
+                            {% if is_own_profile %}
                             <input type="url" name="portfolio_url" id="portfolio_url"
                                 value="{{ profile.portfolio_url or '' }}" placeholder="https://yourportfolio.com"
                                 class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">
+                            {% else %}
+                            <span class="block w-full sm:text-sm text-gray-900">{{ profile.portfolio_url or 'Not specified' }}</span>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
@@ -168,20 +246,31 @@
                 <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">Organization Information</h3>
                 <div class="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
                     <div class="sm:col-span-6">
-                        <label for="description" class="block text-sm font-medium text-gray-700">Description</label>
+                        <label for="description" class="block text-sm font-medium text-gray-700">Description <span
+                                class="text-red-500">*</span></label>
                         <div class="mt-1">
-                            <textarea name="description" id="description" rows="4"
+                            {% if is_own_profile %}
+                            <textarea name="description" id="description" rows="4" required
                                 placeholder="Describe your organization's mission, values, and what you do..."
                                 class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">{{ profile.description or '' }}</textarea>
+                            {% else %}
+                            <span class="block w-full sm:text-sm text-gray-900">{{ profile.description or '' }}</span>
+                            {% endif %}
                         </div>
+                        {% if is_own_profile %}
+                        <p class="mt-1 text-sm text-gray-500">Required - Tell students about your organization</p>
+                        {% endif %}
                     </div>
-
                     <div class="sm:col-span-6">
                         <label for="website" class="block text-sm font-medium text-gray-700">Website</label>
                         <div class="mt-1">
+                            {% if is_own_profile %}
                             <input type="url" name="website" id="website" value="{{ profile.website or '' }}"
                                 placeholder="https://example.com"
                                 class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">
+                            {% else %}
+                            <span class="block w-full sm:text-sm text-gray-900">{{ profile.website or 'Not specified' }}</span>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
@@ -189,6 +278,7 @@
             {% endif %}
 
             <!-- Actions -->
+            {% if is_own_profile %}
             <div class="px-4 py-4 sm:px-6 flex justify-between">
                 <div>
                     <button type="button"
@@ -197,51 +287,296 @@
                     </button>
                 </div>
                 <div class="flex space-x-3">
-                    <button type="button"
+                    <button type="reset"
                         class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-4 inline-flex justify-center text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
                         Cancel
                     </button>
-                    <button type="submit"
+                    <button type="submit" id="save-profile-btn"
                         class="bg-blue-600 border border-transparent rounded-md shadow-sm py-2 px-4 inline-flex justify-center text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
                         Save Changes
                     </button>
                 </div>
             </div>
+
+            <script>
+                document.getElementById('save-profile-btn').addEventListener('click', function (e) {
+                    const userType = '{{ user_type }}';
+                    const fullName = document.getElementById('full_name').value.trim();
+
+                    // Check required fields for all users
+                    if (!fullName || fullName === 'User') {
+                        e.preventDefault();
+                        alert('Please enter your {{ "full name" if user_type == "student" else "organization name" }}.');
+                        document.getElementById('full_name').focus();
+                        return false;
+                    }
+
+                    // Additional validation for students
+                    if (userType === 'student') {
+                        const school = document.getElementById('school').value.trim();
+                        const grade = document.getElementById('grade').value;
+                        const bio = document.getElementById('bio').value.trim();
+
+                        if (!school) {
+                            e.preventDefault();
+                            alert('Please enter your school name.');
+                            document.getElementById('school').focus();
+                            return false;
+                        }
+
+                        if (!grade) {
+                            e.preventDefault();
+                            alert('Please select your grade.');
+                            document.getElementById('grade').focus();
+                            return false;
+                        }
+
+                        if (!bio) {
+                            e.preventDefault();
+                            alert('Please write a bio about yourself. This helps organizations find the right students.');
+                            document.getElementById('bio').focus();
+                            return false;
+                        }
+                    }
+
+                    // Additional validation for organizations
+                    if (userType === 'organization') {
+                        const description = document.getElementById('description').value.trim();
+
+                        if (!description) {
+                            e.preventDefault();
+                            alert('Please write a description of your organization.');
+                            document.getElementById('description').focus();
+                            return false;
+                        }
+                    }
+                });
+            </script>
+            {% endif %}
+            {% if is_own_profile %}
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            <div class="mt-4">
+                {% for category, message in messages %}
+                <div
+                    class="rounded-md px-4 py-2 mb-2 text-sm font-medium {% if category == 'success' %}bg-green-100 text-green-800{% elif category == 'error' %}bg-red-100 text-red-800{% else %}bg-gray-100 text-gray-800{% endif %}">
+                    {{ message }}
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+            {% endwith %}
+            {% endif %}
+            {% if is_own_profile %}
         </form>
+        {% endif %}
     </div>
 
-    <!-- Additional Information -->
-    {% if user_type == 'student' %}
-    <div class="mt-8 bg-blue-50 rounded-lg p-6">
-        <h3 class="text-lg font-medium text-gray-900 mb-2">Complete Your Profile</h3>
-        <p class="text-gray-600 mb-4">A complete profile helps organizations find the right students for their
-            opportunities.</p>
+    <!-- Profile Completion Status -->
+    {% if user_type == 'student' and is_own_profile %}
+    <div
+        class="mt-8 {% if profile.name and profile.name != 'User' and profile.bio and profile.school and profile.grade %}bg-green-50 border-green-200{% else %}bg-yellow-50 border-yellow-200{% endif %} border rounded-lg p-6">
+        <h3 class="text-lg font-medium text-gray-900 mb-2">
+            {% if profile.name and profile.name != 'User' and profile.bio and profile.school and profile.grade %}
+            Profile Complete! 🎉
+            {% else %}
+            Complete Your Required Profile
+            {% endif %}
+        </h3>
+        <p class="text-gray-600 mb-4">
+            {% if profile.name and profile.name != 'User' and profile.bio and profile.school and profile.grade %}
+            Your profile is complete and visible to organizations looking for students like you.
+            {% else %}
+            The following fields are required to use InterSpark and help organizations find you.
+            {% endif %}
+        </p>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div class="flex items-center">
-                <i class="fas fa-check-circle text-green-500 mr-2"></i>
-                <span class="text-sm text-gray-700">Basic information completed</span>
+                <i
+                    class="fas fa-{% if profile.name and profile.name != 'User' %}check-circle text-green-500{% else %}exclamation-circle text-yellow-500{% endif %} mr-2"></i>
+                <span class="text-sm text-gray-700">Full Name {% if not profile.name or profile.name == 'User'
+                    %}(required){% endif %}</span>
             </div>
             <div class="flex items-center">
                 <i
-                    class="fas fa-{% if profile.bio %}check-circle text-green-500{% else %}circle text-gray-400{% endif %} mr-2"></i>
-                <span class="text-sm text-gray-700">Bio {% if not profile.bio %}(add to improve visibility){% endif
-                    %}</span>
+                    class="fas fa-{% if profile.school %}check-circle text-green-500{% else %}exclamation-circle text-yellow-500{% endif %} mr-2"></i>
+                <span class="text-sm text-gray-700">School {% if not profile.school %}(required){% endif %}</span>
+            </div>
+            <div class="flex items-center">
+                <i
+                    class="fas fa-{% if profile.grade %}check-circle text-green-500{% else %}exclamation-circle text-yellow-500{% endif %} mr-2"></i>
+                <span class="text-sm text-gray-700">Grade {% if not profile.grade %}(required){% endif %}</span>
+            </div>
+            <div class="flex items-center">
+                <i
+                    class="fas fa-{% if profile.bio %}check-circle text-green-500{% else %}exclamation-circle text-yellow-500{% endif %} mr-2"></i>
+                <span class="text-sm text-gray-700">Bio {% if not profile.bio %}(required){% endif %}</span>
             </div>
             <div class="flex items-center">
                 <i
                     class="fas fa-{% if profile.skills %}check-circle text-green-500{% else %}circle text-gray-400{% endif %} mr-2"></i>
-                <span class="text-sm text-gray-700">Skills {% if not profile.skills %}(help organizations find you){%
-                    endif %}</span>
+                <span class="text-sm text-gray-700">Skills (optional but recommended)</span>
+            </div>
+        </div>
+        {% if not (profile.name and profile.name != 'User' and profile.bio and profile.school and profile.grade) %}
+        <div class="mt-4 p-3 bg-white rounded-md border border-yellow-300">
+            <p class="text-sm text-yellow-800">
+                <strong>Note:</strong> You cannot access other parts of InterSpark until all required fields are
+                completed.
+            </p>
+        </div>
+        {% endif %}
+    </div>
+    {% elif user_type == 'organization' and is_own_profile %}
+    <div
+        class="mt-8 {% if profile.name and profile.name != 'User' and profile.description %}bg-green-50 border-green-200{% else %}bg-yellow-50 border-yellow-200{% endif %} border rounded-lg p-6">
+        <h3 class="text-lg font-medium text-gray-900 mb-2">
+            {% if profile.name and profile.name != 'User' and profile.description %}
+            Profile Complete! 🎉
+            {% else %}
+            Complete Your Required Profile
+            {% endif %}
+        </h3>
+        <p class="text-gray-600 mb-4">
+            {% if profile.name and profile.name != 'User' and profile.description %}
+            Your profile is complete. You can now post opportunities and find talented students.
+            {% else %}
+            The following fields are required to use InterSpark and attract talented students.
+            {% endif %}
+        </p>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div class="flex items-center">
+                <i
+                    class="fas fa-{% if profile.name and profile.name != 'User' %}check-circle text-green-500{% else %}exclamation-circle text-yellow-500{% endif %} mr-2"></i>
+                <span class="text-sm text-gray-700">Organization Name {% if not profile.name or profile.name == 'User'
+                    %}(required){% endif %}</span>
             </div>
             <div class="flex items-center">
                 <i
-                    class="fas fa-{% if profile.school %}check-circle text-green-500{% else %}circle text-gray-400{% endif %} mr-2"></i>
-                <span class="text-sm text-gray-700">School information {% if not profile.school %}(optional){%
-                    endif
+                    class="fas fa-{% if profile.description %}check-circle text-green-500{% else %}exclamation-circle text-yellow-500{% endif %} mr-2"></i>
+                <span class="text-sm text-gray-700">Description {% if not profile.description %}(required){% endif
                     %}</span>
             </div>
+            <div class="flex items-center">
+                <i
+                    class="fas fa-{% if profile.website %}check-circle text-green-500{% else %}circle text-gray-400{% endif %} mr-2"></i>
+                <span class="text-sm text-gray-700">Website (optional but recommended)</span>
+            </div>
+            <div class="flex items-center">
+                <i
+                    class="fas fa-{% if profile.location %}check-circle text-green-500{% else %}circle text-gray-400{% endif %} mr-2"></i>
+                <span class="text-sm text-gray-700">Location (optional but recommended)</span>
+            </div>
         </div>
+        {% if not (profile.name and profile.name != 'User' and profile.description) %}
+        <div class="mt-4 p-3 bg-white rounded-md border border-yellow-300">
+            <p class="text-sm text-yellow-800">
+                <strong>Note:</strong> You cannot access other parts of InterSpark until all required fields are
+                completed.
+            </p>
+        </div>
+        {% endif %}
     </div>
     {% endif %}
 </div>
+
+{% if not is_own_profile %}
+<script>
+    let isProfileSaved = {{ 'true' if is_saved else 'false' }};
+
+    async function toggleSaveProfile(profileId) {
+        const btn = document.getElementById('save-profile-btn');
+        const saveText = document.getElementById('save-profile-text');
+        const icon = btn.querySelector('i');
+
+        // Disable button during request
+        btn.disabled = true;
+
+        try {
+            const url = isProfileSaved ? `/unsave_profile/${profileId}` : `/save_profile/${profileId}`;
+            const response = await fetch(url, { method: 'POST' });
+            const data = await response.json();
+
+            if (data.success) {
+                // Toggle state
+                isProfileSaved = !isProfileSaved;
+
+                // Update UI
+                if (isProfileSaved) {
+                    icon.className = 'fas fa-bookmark mr-2';
+                    saveText.textContent = 'Saved';
+                    btn.className = btn.className.replace('border-gray-300 text-gray-700', 'bg-blue-50 border-blue-300 text-blue-700');
+                } else {
+                    icon.className = 'far fa-bookmark mr-2';
+                    saveText.textContent = 'Save Profile';
+                    btn.className = btn.className.replace('bg-blue-50 border-blue-300 text-blue-700', 'border-gray-300 text-gray-700');
+                }
+
+                // Show success message
+                showAlert(data.message, 'success');
+            } else {
+                showAlert(data.error || 'Failed to update saved status', 'error');
+            }
+        } catch (error) {
+            showAlert('An error occurred. Please try again.', 'error');
+            console.error('Save profile error:', error);
+        } finally {
+            btn.disabled = false;
+        }
+    }
+
+    function showAlert(message, type) {
+        // Create alert element
+        const alert = document.createElement('div');
+        alert.className = `alert alert-${type} p-4 rounded-lg shadow-lg relative backdrop-blur-sm fixed top-4 left-1/2 transform -translate-x-1/2 z-50 max-w-md
+                          ${type === 'error' ? 'bg-red-50/95 border border-red-200 text-red-700' : 'bg-green-50/95 border border-green-200 text-green-700'}`;
+        alert.style.animation = 'slideDown 0.3s ease-out';
+        alert.innerHTML = `
+            <div class="flex justify-between items-center">
+                <div class="flex items-center">
+                    <i class="fas fa-${type === 'error' ? 'exclamation-circle text-red-400' : 'check-circle text-green-400'} mr-3"></i>
+                    <span class="text-sm font-medium">${message}</span>
+                </div>
+                <button onclick="this.parentElement.parentElement.remove()" class="ml-4 text-${type === 'error' ? 'red' : 'green'}-500 hover:text-${type === 'error' ? 'red' : 'green'}-700">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        `;
+
+        document.body.appendChild(alert);
+
+        // Auto-remove after 3 seconds
+        setTimeout(() => {
+            if (alert.parentNode) {
+                alert.style.animation = 'slideUp 0.3s ease-out forwards';
+                setTimeout(() => alert.remove(), 300);
+            }
+        }, 3000);
+    }
+
+    function contactUser(email, name) {
+        // Debug logging to check if function is called
+        console.log('contactUser called with:', email, name);
+
+        if (!email) {
+            showAlert('No email address available for this user', 'error');
+            return;
+        }
+
+        // Clean up the name and email for the subject line
+        const cleanName = name || 'User';
+        const subject = encodeURIComponent(`Hello ${cleanName}, from InterSpark`);
+        const mailtoUrl = `mailto:${email}?subject=${subject}`;
+
+        console.log('Opening mailto URL:', mailtoUrl);
+
+        try {
+            window.location.href = mailtoUrl;
+        } catch (error) {
+            console.error('Error opening mailto:', error);
+            showAlert('Unable to open email client. Please contact ' + email + ' directly.', 'error');
+        }
+    }
+</script>
+{% endif %}
 {% endblock %}

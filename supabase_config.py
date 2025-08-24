@@ -23,15 +23,70 @@ class SupabaseService:
     def __init__(self):
         """Initialize Supabase client with environment variables."""
         self.url = os.getenv("SUPABASE_URL")
-        self.key = os.getenv("SUPABASE_PUBLIC_KEY")
+        self.public_key = os.getenv("SUPABASE_PUBLIC_KEY")
+        self.service_key = os.getenv("SUPABASE_SECRET_KEY")
 
-        if not self.url or not self.key:
+        if not self.url or not self.public_key:
             raise ValueError(
                 "SUPABASE_URL and SUPABASE_PUBLIC_KEY must be set in environment variables"
             )
 
-        self.client: Client = create_client(self.url, self.key)
+        # Public client for authentication operations
+        self.client: Client = create_client(self.url, self.public_key)
+
+        # Service client for administrative operations (bypasses RLS)
+        if self.service_key:
+            self.service_client: Client = create_client(self.url, self.service_key)
+        else:
+            self.service_client = self.client  # Fallback to public client
+
         logger.info("Supabase client initialized successfully")
+
+    def is_profile_complete(
+        self, profile: Dict[str, Any], user_type: str = None
+    ) -> Dict[str, Any]:
+        """
+        Check if a user profile has all required fields completed.
+
+        Args:
+            profile: User profile data
+            user_type: Optional user type override
+
+        Returns:
+            Dictionary with 'complete' boolean and 'missing_fields' list
+        """
+        if not profile:
+            return {"complete": False, "missing_fields": ["Profile not found"]}
+
+        user_type = user_type or profile.get("user_type", "student")
+        missing_fields = []
+
+        # Required fields for all users
+        if (
+            not profile.get("name")
+            or profile.get("name").strip() == ""
+            or profile.get("name") == "User"
+        ):
+            missing_fields.append("name")
+
+        # Additional required fields for students
+        if user_type == "student":
+            if not profile.get("bio") or profile.get("bio").strip() == "":
+                missing_fields.append("bio")
+            if not profile.get("school") or profile.get("school").strip() == "":
+                missing_fields.append("school")
+            if not profile.get("grade") or profile.get("grade").strip() == "":
+                missing_fields.append("grade")
+
+        # Additional required fields for organizations
+        elif user_type == "organization":
+            if (
+                not profile.get("description")
+                or profile.get("description").strip() == ""
+            ):
+                missing_fields.append("description")
+
+        return {"complete": len(missing_fields) == 0, "missing_fields": missing_fields}
 
     # Authentication Methods
     def create_user(
@@ -66,8 +121,8 @@ class SupabaseService:
             if response.user:
                 logger.info(f"User created successfully in auth: {response.user.id}")
 
-                # Explicitly create profile in profiles table
-                # The trigger should handle this, but let's ensure it exists
+                # Explicitly create profile in profiles table with all the provided data
+                # The trigger should handle this, but let's ensure it exists with complete data
                 profile_data = {
                     "id": response.user.id,
                     "email": response.user.email,
@@ -75,22 +130,65 @@ class SupabaseService:
                     "user_type": user_data.get("user_type", "student"),
                 }
 
+                # Add user type-specific fields
+                if user_data.get("user_type") == "student":
+                    profile_data.update(
+                        {
+                            "school": user_data.get("school", ""),
+                            "grade": user_data.get("grade", ""),
+                            "bio": user_data.get("bio", ""),
+                        }
+                    )
+                elif user_data.get("user_type") == "organization":
+                    profile_data.update(
+                        {
+                            "description": user_data.get("description", ""),
+                            "organization_name": user_data.get(
+                                "organization_name", user_data.get("name", "")
+                            ),
+                        }
+                    )
+
                 try:
-                    # Try to create the profile directly
+                    # Try to create the profile directly with all the data
                     profile_response = (
-                        self.client.table("profiles").insert(profile_data).execute()
+                        self.service_client.table("profiles")
+                        .insert(profile_data)
+                        .execute()
                     )
                     if profile_response.data:
-                        logger.info(f"Profile created successfully: {response.user.id}")
+                        logger.info(
+                            f"Complete profile created successfully: {response.user.id}"
+                        )
                     else:
                         logger.warning(
                             f"Profile creation may have failed, but user was created: {response.user.id}"
                         )
                 except Exception as profile_error:
                     # This might fail if the trigger already created it, which is fine
+                    # But we should try to update it with the additional data
                     logger.info(
-                        f"Profile creation via insert failed (trigger may have handled it): {str(profile_error)}"
+                        f"Profile creation via insert failed, trying update: {str(profile_error)}"
                     )
+                    try:
+                        # Remove 'id' from profile_data for update
+                        update_data = {
+                            k: v for k, v in profile_data.items() if k != "id"
+                        }
+                        update_response = (
+                            self.service_client.table("profiles")
+                            .update(update_data)
+                            .eq("id", response.user.id)
+                            .execute()
+                        )
+                        if update_response.data:
+                            logger.info(
+                                f"Profile updated with complete data: {response.user.id}"
+                            )
+                    except Exception as update_error:
+                        logger.warning(
+                            f"Could not update profile with complete data: {str(update_error)}"
+                        )
 
                 return {
                     "success": True,
@@ -270,7 +368,7 @@ class SupabaseService:
             }
 
             profile_response = (
-                self.client.table("profiles").insert(profile_data).execute()
+                self.service_client.table("profiles").insert(profile_data).execute()
             )
             if profile_response.data and len(profile_response.data) > 0:
                 logger.info(f"Created missing profile for user: {user_id}")
@@ -343,12 +441,19 @@ class SupabaseService:
             Success/error response
         """
         try:
+            print(f"DEBUG - Supabase update_profile called:")
+            print(f"  User ID: {user_id}")
+            print(f"  Profile data to update: {profile_data}")
+
             response = (
-                self.client.table("profiles")
+                self.service_client.table("profiles")
                 .update(profile_data)
                 .eq("id", user_id)
                 .execute()
             )
+
+            print(f"DEBUG - Supabase response: {response}")
+            print(f"DEBUG - Response data: {response.data}")
 
             if response.data:
                 logger.info(f"Profile updated successfully for user: {user_id}")
@@ -358,6 +463,7 @@ class SupabaseService:
 
         except Exception as e:
             logger.error(f"Error updating profile: {str(e)}")
+            print(f"DEBUG - Exception in update_profile: {str(e)}")
             return {"success": False, "error": str(e)}
 
     def search_students(
@@ -454,7 +560,7 @@ class SupabaseService:
             return []
 
     def search_opportunities(
-        self, search_query: str = "", opportunity_type: str = "", location: str = ""
+        self, search_query: str = "", opportunity_type: str = "", category: str = "", location: str = ""
     ) -> List[Dict[str, Any]]:
         """
         Search opportunities with text and filters.
@@ -462,6 +568,7 @@ class SupabaseService:
         Args:
             search_query: Text to search in title and description
             opportunity_type: Filter by opportunity type
+            category: Filter by category
             location: Filter by location
 
         Returns:
@@ -482,6 +589,10 @@ class SupabaseService:
             # Apply type filter
             if opportunity_type:
                 query = query.eq("type", opportunity_type)
+
+            # Apply category filter
+            if category:
+                query = query.eq("category", category)
 
             # Apply location filter
             if location:
@@ -564,7 +675,9 @@ class SupabaseService:
         """
         try:
             response = (
-                self.client.table("opportunities").insert(opportunity_data).execute()
+                self.service_client.table("opportunities")
+                .insert(opportunity_data)
+                .execute()
             )
 
             if response.data:
@@ -579,11 +692,72 @@ class SupabaseService:
             logger.error(f"Error creating opportunity: {str(e)}")
             return {"success": False, "error": str(e)}
 
+    def update_opportunity(
+        self, opportunity_id: int, opportunity_data: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """
+        Update an existing opportunity.
+
+        Args:
+            opportunity_id: The ID of the opportunity to update
+            opportunity_data: Dictionary containing opportunity data
+
+        Returns:
+            Dictionary with success status and result
+        """
+        try:
+            response = (
+                self.service_client.table("opportunities")
+                .update(opportunity_data)
+                .eq("id", opportunity_id)
+                .execute()
+            )
+
+            if response.data:
+                logger.info(f"Opportunity updated successfully: {opportunity_id}")
+                return {"success": True, "data": response.data[0]}
+            else:
+                return {"success": False, "error": "Failed to update opportunity"}
+
+        except Exception as e:
+            logger.error(f"Error updating opportunity: {str(e)}")
+            return {"success": False, "error": str(e)}
+
+    def delete_opportunity(self, opportunity_id: int) -> Dict[str, Any]:
+        """
+        Delete an opportunity.
+
+        Args:
+            opportunity_id: The ID of the opportunity to delete
+
+        Returns:
+            Dictionary with success status and result
+        """
+        try:
+            response = (
+                self.service_client.table("opportunities")
+                .delete()
+                .eq("id", opportunity_id)
+                .execute()
+            )
+
+            # Treat non-empty response.data as success
+            if response.data and isinstance(response.data, list) and len(response.data) > 0:
+                logger.info(f"Opportunity deleted successfully: {opportunity_id}")
+                return {"success": True}
+            else:
+                logger.error(f"Failed to delete opportunity: {response}")
+                return {"success": False, "error": "Failed to delete opportunity"}
+
+        except Exception as e:
+            logger.error(f"Error deleting opportunity: {str(e)}")
+            return {"success": False, "error": str(e)}
+
     def get_organization_opportunities(
         self, organization_id: str
     ) -> List[Dict[str, Any]]:
         """
-        Get all opportunities for a specific organization.
+        Get all opportunities for a specific organization, including drafts and all statuses.
 
         Args:
             organization_id: The organization's user ID
@@ -604,7 +778,7 @@ class SupabaseService:
 
         except Exception as e:
             logger.error(f"Error getting organization opportunities: {str(e)}")
-            return []  # Application Management Methods (for future use)
+            return []
 
     def get_applications(self, user_id: str, user_type: str) -> List[Dict[str, Any]]:
         """
@@ -640,6 +814,253 @@ class SupabaseService:
         except Exception as e:
             logger.error(f"Error getting applications: {str(e)}")
             return []
+
+    # Bookmark/Saved Items Management Methods
+    def save_opportunity(self, user_id: str, opportunity_id: int) -> Dict[str, Any]:
+        """
+        Save/bookmark an opportunity for a user.
+
+        Args:
+            user_id: The user's ID
+            opportunity_id: The opportunity's ID
+
+        Returns:
+            Success/error response
+        """
+        try:
+            # Try to save the opportunity - if it already exists, handle gracefully
+            response = (
+                self.service_client.table("saved_opportunities")
+                .insert({"user_id": user_id, "opportunity_id": opportunity_id})
+                .execute()
+            )
+
+            if response.data:
+                logger.info(f"Opportunity {opportunity_id} saved by user {user_id}")
+                return {"success": True, "message": "Opportunity saved successfully"}
+            else:
+                return {"success": False, "error": "Failed to save opportunity"}
+
+        except Exception as e:
+            # Check if it's a duplicate key constraint error
+            error_str = str(e)
+            if (
+                "duplicate key value violates unique constraint" in error_str
+                or "23505" in error_str
+            ):
+                logger.info(
+                    f"Opportunity {opportunity_id} already saved by user {user_id}"
+                )
+                return {
+                    "success": True,
+                    "message": "Opportunity already saved",
+                    "already_saved": True,
+                }
+
+            logger.error(f"Error saving opportunity: {str(e)}")
+            return {"success": False, "error": str(e)}
+
+    def unsave_opportunity(self, user_id: str, opportunity_id: int) -> Dict[str, Any]:
+        """
+        Remove an opportunity from user's saved list.
+
+        Args:
+            user_id: The user's ID
+            opportunity_id: The opportunity's ID
+
+        Returns:
+            Success/error response
+        """
+        try:
+            response = (
+                self.service_client.table("saved_opportunities")
+                .delete()
+                .eq("user_id", user_id)
+                .eq("opportunity_id", opportunity_id)
+                .execute()
+            )
+
+            logger.info(
+                f"Opportunity {opportunity_id} removed from saved by user {user_id}"
+            )
+            return {"success": True, "message": "Opportunity removed from saved items"}
+
+        except Exception as e:
+            logger.error(f"Error removing saved opportunity: {str(e)}")
+            return {"success": False, "error": str(e)}
+
+    def save_profile(self, user_id: str, profile_id: str) -> Dict[str, Any]:
+        """
+        Save/bookmark a student profile for an organization.
+
+        Args:
+            user_id: The organization's user ID
+            profile_id: The student profile's ID
+
+        Returns:
+            Success/error response
+        """
+        try:
+            # Try to save the profile - if it already exists, handle gracefully
+            response = (
+                self.service_client.table("saved_profiles")
+                .insert({"user_id": user_id, "profile_id": profile_id})
+                .execute()
+            )
+
+            if response.data:
+                logger.info(f"Profile {profile_id} saved by user {user_id}")
+                return {"success": True, "message": "Profile saved successfully"}
+            else:
+                return {"success": False, "error": "Failed to save profile"}
+
+        except Exception as e:
+            # Check if it's a duplicate key constraint error
+            error_str = str(e)
+            if (
+                "duplicate key value violates unique constraint" in error_str
+                or "23505" in error_str
+            ):
+                logger.info(f"Profile {profile_id} already saved by user {user_id}")
+                return {
+                    "success": True,
+                    "message": "Profile already saved",
+                    "already_saved": True,
+                }
+
+            logger.error(f"Error saving profile: {str(e)}")
+            return {"success": False, "error": str(e)}
+
+    def unsave_profile(self, user_id: str, profile_id: str) -> Dict[str, Any]:
+        """
+        Remove a profile from user's saved list.
+
+        Args:
+            user_id: The user's ID
+            profile_id: The profile's ID
+
+        Returns:
+            Success/error response
+        """
+        try:
+            response = (
+                self.service_client.table("saved_profiles")
+                .delete()
+                .eq("user_id", user_id)
+                .eq("profile_id", profile_id)
+                .execute()
+            )
+
+            logger.info(f"Profile {profile_id} removed from saved by user {user_id}")
+            return {"success": True, "message": "Profile removed from saved items"}
+
+        except Exception as e:
+            logger.error(f"Error removing saved profile: {str(e)}")
+            return {"success": False, "error": str(e)}
+
+    def get_saved_opportunities(self, user_id: str) -> List[Dict[str, Any]]:
+        """
+        Get all saved opportunities for a user.
+
+        Args:
+            user_id: The user's ID
+
+        Returns:
+            List of saved opportunity records with opportunity details
+        """
+        try:
+            response = (
+                self.service_client.table("saved_opportunities")
+                .select(
+                    "*, opportunities(*, profiles!company_id(name, organization_name, email))"
+                )
+                .eq("user_id", user_id)
+                .order("created_at", desc=True)
+                .execute()
+            )
+
+            return response.data if response.data else []
+
+        except Exception as e:
+            logger.error(f"Error getting saved opportunities: {str(e)}")
+            return []
+
+    def get_saved_profiles(self, user_id: str) -> List[Dict[str, Any]]:
+        """
+        Get all saved profiles for an organization.
+
+        Args:
+            user_id: The organization's user ID
+
+        Returns:
+            List of saved profile records with profile details
+        """
+        try:
+            response = (
+                self.service_client.table("saved_profiles")
+                .select("*, profiles(*)")
+                .eq("user_id", user_id)
+                .order("created_at", desc=True)
+                .execute()
+            )
+
+            return response.data if response.data else []
+
+        except Exception as e:
+            logger.error(f"Error getting saved profiles: {str(e)}")
+            return []
+
+    def is_opportunity_saved(self, user_id: str, opportunity_id: int) -> bool:
+        """
+        Check if an opportunity is already saved by a user.
+
+        Args:
+            user_id: The user's ID
+            opportunity_id: The opportunity's ID
+
+        Returns:
+            True if saved, False otherwise
+        """
+        try:
+            response = (
+                self.service_client.table("saved_opportunities")
+                .select("id")
+                .eq("user_id", user_id)
+                .eq("opportunity_id", opportunity_id)
+                .execute()
+            )
+
+            return response.data and len(response.data) > 0
+
+        except Exception as e:
+            logger.error(f"Error checking saved opportunity: {str(e)}")
+            return False
+
+    def is_profile_saved(self, user_id: str, profile_id: str) -> bool:
+        """
+        Check if a profile is already saved by a user.
+
+        Args:
+            user_id: The user's ID
+            profile_id: The profile's ID
+
+        Returns:
+            True if saved, False otherwise
+        """
+        try:
+            response = (
+                self.service_client.table("saved_profiles")
+                .select("id")
+                .eq("user_id", user_id)
+                .eq("profile_id", profile_id)
+                .execute()
+            )
+
+            return response.data and len(response.data) > 0
+
+        except Exception as e:
+            logger.error(f"Error checking saved profile: {str(e)}")
+            return False
 
 
 # Global instance
