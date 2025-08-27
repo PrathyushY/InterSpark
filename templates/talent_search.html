@@ -16,22 +16,46 @@
         <form class="space-y-4">
             <div class="flex flex-col sm:flex-row gap-4">
                 <div class="flex-1">
-                    <label for="search" class="block text-sm font-medium text-gray-700 mb-2">Search</label>
-                    <input type="text" id="search" name="search" value="{{ search_query or '' }}"
-                        placeholder="Search by name, interests, or skills..."
-                        class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                    <label for="search" class="block text-sm font-medium text-gray-700 mb-2">
+                        Search
+                        <span class="text-xs text-gray-500">(supports AND, OR, phrases in quotes)</span>
+                    </label>
+                    <div class="relative">
+                        <input type="text" id="search" name="search" value="{{ search_query or '' }}"
+                            placeholder="e.g., &quot;web development&quot; OR python AND react"
+                            class="block w-full px-3 py-2 pr-10 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                        <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                            <i class="fas fa-search text-gray-400"></i>
+                        </div>
+                    </div>
+                    <div class="mt-1 text-xs text-gray-500">
+                        💡 Try: <code>"machine learning"</code>, <code>python OR javascript</code>,
+                        <code>react AND node</code>
+                    </div>
                 </div>
                 <div class="sm:w-40">
                     <label for="skills" class="block text-sm font-medium text-gray-700 mb-2">Skills</label>
-                    <input type="text" id="skills" name="skills" value="{{ selected_skills or '' }}"
-                        placeholder="e.g., Python, Design"
-                        class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                    <div class="relative">
+                        <input type="text" id="skills" name="skills" value="{{ selected_skills or '' }}"
+                            placeholder="e.g., Python, Design"
+                            class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                            autocomplete="off">
+                        <div id="skills-suggestions"
+                            class="absolute z-10 w-full bg-white border border-gray-300 rounded-md shadow-lg hidden max-h-32 overflow-y-auto">
+                        </div>
+                    </div>
                 </div>
                 <div class="sm:w-48">
                     <label for="school" class="block text-sm font-medium text-gray-700 mb-2">School</label>
-                    <input type="text" id="school" name="school" value="{{ selected_school or '' }}"
-                        placeholder="School name"
-                        class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                    <div class="relative">
+                        <input type="text" id="school" name="school" value="{{ selected_school or '' }}"
+                            placeholder="School name"
+                            class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                            autocomplete="off">
+                        <div id="school-suggestions"
+                            class="absolute z-10 w-full bg-white border border-gray-300 rounded-md shadow-lg hidden max-h-32 overflow-y-auto">
+                        </div>
+                    </div>
                 </div>
                 <div class="sm:w-40">
                     <label for="grade" class="block text-sm font-medium text-gray-700 mb-2">Grade</label>
@@ -47,7 +71,8 @@
                 </div>
                 <div class="flex items-end">
                     <button type="submit"
-                        class="w-full sm:w-auto bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        class="w-full sm:w-auto bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
+                        <i class="fas fa-search mr-2"></i>
                         Search
                     </button>
                 </div>
@@ -204,6 +229,126 @@
 </style>
 
 <script>
+    // Search suggestions functionality
+    let suggestionTimeouts = {};
+
+    function setupSearchSuggestions(fieldId, suggestionsId) {
+        const field = document.getElementById(fieldId);
+        const suggestionsDiv = document.getElementById(suggestionsId);
+
+        if (!field || !suggestionsDiv) return;
+
+        field.addEventListener('input', function () {
+            const term = this.value.trim();
+
+            // Clear previous timeout
+            if (suggestionTimeouts[fieldId]) {
+                clearTimeout(suggestionTimeouts[fieldId]);
+            }
+
+            if (term.length < 2) {
+                suggestionsDiv.classList.add('hidden');
+                return;
+            }
+
+            // Debounce the API call
+            suggestionTimeouts[fieldId] = setTimeout(() => {
+                fetchSuggestions(fieldId.replace('-', '_'), term, suggestionsDiv);
+            }, 300);
+        });
+
+        // Hide suggestions when clicking outside
+        document.addEventListener('click', function (e) {
+            if (!field.contains(e.target) && !suggestionsDiv.contains(e.target)) {
+                suggestionsDiv.classList.add('hidden');
+            }
+        });
+
+        // Handle keyboard navigation
+        field.addEventListener('keydown', function (e) {
+            const items = suggestionsDiv.querySelectorAll('.suggestion-item');
+            const activeItem = suggestionsDiv.querySelector('.suggestion-item.active');
+
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                if (!activeItem && items.length > 0) {
+                    items[0].classList.add('active');
+                } else if (activeItem) {
+                    const nextItem = activeItem.nextElementSibling;
+                    activeItem.classList.remove('active');
+                    if (nextItem) {
+                        nextItem.classList.add('active');
+                    } else {
+                        items[0].classList.add('active');
+                    }
+                }
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                if (activeItem) {
+                    const prevItem = activeItem.previousElementSibling;
+                    activeItem.classList.remove('active');
+                    if (prevItem) {
+                        prevItem.classList.add('active');
+                    } else {
+                        items[items.length - 1].classList.add('active');
+                    }
+                }
+            } else if (e.key === 'Enter') {
+                if (activeItem) {
+                    e.preventDefault();
+                    field.value = activeItem.textContent;
+                    suggestionsDiv.classList.add('hidden');
+                }
+            } else if (e.key === 'Escape') {
+                suggestionsDiv.classList.add('hidden');
+            }
+        });
+    }
+
+    async function fetchSuggestions(field, term, suggestionsDiv) {
+        try {
+            const response = await fetch(`/api/search/suggestions?field=${field}&term=${encodeURIComponent(term)}`);
+            const data = await response.json();
+
+            if (data.suggestions && data.suggestions.length > 0) {
+                displaySuggestions(data.suggestions, suggestionsDiv);
+            } else {
+                suggestionsDiv.classList.add('hidden');
+            }
+        } catch (error) {
+            console.error('Error fetching suggestions:', error);
+            suggestionsDiv.classList.add('hidden');
+        }
+    }
+
+    function displaySuggestions(suggestions, suggestionsDiv) {
+        suggestionsDiv.innerHTML = '';
+
+        suggestions.forEach(suggestion => {
+            const item = document.createElement('div');
+            item.className = 'suggestion-item px-3 py-2 hover:bg-blue-50 cursor-pointer text-sm border-b border-gray-100 last:border-b-0';
+            item.textContent = suggestion;
+
+            item.addEventListener('click', function () {
+                const field = suggestionsDiv.previousElementSibling;
+                field.value = suggestion;
+                suggestionsDiv.classList.add('hidden');
+            });
+
+            item.addEventListener('mouseenter', function () {
+                // Remove active class from all items
+                suggestionsDiv.querySelectorAll('.suggestion-item').forEach(i => i.classList.remove('active'));
+                // Add active class to hovered item
+                this.classList.add('active');
+            });
+
+            suggestionsDiv.appendChild(item);
+        });
+
+        suggestionsDiv.classList.remove('hidden');
+    }
+
+    // Save/unsave profile functionality
     async function toggleSaveProfile(profileId, button) {
         // Disable button during request
         button.disabled = true;
@@ -268,5 +413,23 @@
             }
         }, 3000);
     }
+
+    // Initialize search suggestions when DOM is ready
+    document.addEventListener('DOMContentLoaded', function () {
+        setupSearchSuggestions('skills', 'skills-suggestions');
+        setupSearchSuggestions('school', 'school-suggestions');
+
+        // Add search tips
+        const searchField = document.getElementById('search');
+        if (searchField) {
+            let tipShown = false;
+            searchField.addEventListener('focus', function () {
+                if (!tipShown && !this.value) {
+                    showAlert('💡 Try advanced search: "web development" OR python AND react', 'info');
+                    tipShown = true;
+                }
+            });
+        }
+    });
 </script>
 {% endblock %}

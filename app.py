@@ -3,6 +3,7 @@ from dotenv import load_dotenv
 import os
 from datetime import datetime
 from supabase_config import supabase_service
+from search_service import search_service
 
 # Load environment variables
 load_dotenv()
@@ -133,9 +134,14 @@ def login():
                     return redirect(url_for("profile"))
                 else:
                     if not profile:
-                        flash("User profile not found. Please contact support.", "error")
+                        flash(
+                            "User profile not found. Please contact support.", "error"
+                        )
                     else:
-                        flash("Profile incomplete. Please complete your profile.", "warning")
+                        flash(
+                            "Profile incomplete. Please complete your profile.",
+                            "warning",
+                        )
                         session["user_id"] = user["id"]
                         session["user_type"] = profile.get("user_type", "student")
                         session["user_name"] = profile.get("name", "User")
@@ -289,9 +295,22 @@ def dashboard():
     elif user_type == "organization":
         # Get organization's posted opportunities, applications, and saved profiles/opportunities
         try:
-            company_opportunities = supabase_service.get_organization_opportunities(user_id)
+            company_opportunities = supabase_service.get_organization_opportunities(
+                user_id
+            )
             # Ensure all opportunities are dicts with all expected fields
-            expected_fields = ["title", "description", "type", "category", "location", "requirements", "compensation", "duration", "application_deadline", "status"]
+            expected_fields = [
+                "title",
+                "description",
+                "type",
+                "category",
+                "location",
+                "requirements",
+                "compensation",
+                "duration",
+                "application_deadline",
+                "status",
+            ]
             for opp in company_opportunities:
                 for field in expected_fields:
                     if field not in opp:
@@ -302,8 +321,25 @@ def dashboard():
                     if not isinstance(opp, dict):
                         company_opportunities[i] = dict(opp)
                     for field in expected_fields:
-                        if field not in company_opportunities[i] or company_opportunities[i][field] is None:
-                            company_opportunities[i][field] = '' if field in ['title', 'description', 'type', 'category', 'location', 'requirements', 'compensation', 'duration'] else None
+                        if (
+                            field not in company_opportunities[i]
+                            or company_opportunities[i][field] is None
+                        ):
+                            company_opportunities[i][field] = (
+                                ""
+                                if field
+                                in [
+                                    "title",
+                                    "description",
+                                    "type",
+                                    "category",
+                                    "location",
+                                    "requirements",
+                                    "compensation",
+                                    "duration",
+                                ]
+                                else None
+                            )
             if not company_opportunities:
                 company_opportunities = []
             saved_profiles = supabase_service.get_saved_profiles(user_id)
@@ -386,6 +422,17 @@ def profile():
                 # Update session data
                 if "name" in profile_data:
                     session["user_name"] = profile_data["name"]
+
+                # Update search index for student profiles
+                if user_type == "student":
+                    try:
+                        updated_profile = supabase_service.get_profile(user_id)
+                        if updated_profile:
+                            search_service.index_student_profile(updated_profile)
+                    except Exception as search_error:
+                        # Don't fail the profile update if search indexing fails
+                        print(f"Warning: Failed to update search index: {search_error}")
+
                 return redirect(url_for("profile"))
             else:
                 flash(
@@ -544,14 +591,16 @@ def talent_search():
         school = request.args.get("school", "")
         grade = request.args.get("grade", "")
 
-        # Search for students
-        students = supabase_service.search_students(
+        # Use Whoosh search service instead of direct Supabase query
+        students = search_service.search_students(
             search_query=search_query, skills=skills, school=school, grade=grade
         )
 
         # Check which profiles are saved by the current user
         for student in students:
-            student['is_saved'] = supabase_service.is_profile_saved(user_id, student['id'])
+            student["is_saved"] = supabase_service.is_profile_saved(
+                user_id, student["id"]
+            )
 
         return render_template(
             "talent_search.html",
@@ -609,7 +658,17 @@ def create_opportunity(opportunity_id=None):
 
         # For drafts, ensure all keys exist, but allow None values
         if status == "draft":
-            for key in ["title", "description", "type", "category", "location", "requirements", "compensation", "duration", "application_deadline"]:
+            for key in [
+                "title",
+                "description",
+                "type",
+                "category",
+                "location",
+                "requirements",
+                "compensation",
+                "duration",
+                "application_deadline",
+            ]:
                 if opportunity_data.get(key) is None:
                     opportunity_data[key] = None
 
@@ -623,29 +682,59 @@ def create_opportunity(opportunity_id=None):
 
             # If editing and publishing, require all fields
             is_publish = request.form.get("publish") == "1"
-            required_fields = ["title", "description", "type", "category", "location", "requirements", "compensation", "duration", "application_deadline"]
+            required_fields = [
+                "title",
+                "description",
+                "type",
+                "category",
+                "location",
+                "requirements",
+                "compensation",
+                "duration",
+                "application_deadline",
+            ]
             if is_editing and is_publish:
                 # Publishing: require all fields
                 missing = [f for f in required_fields if not opportunity_data.get(f)]
                 if missing:
-                    flash(f"Missing required fields for publishing: {', '.join(missing)}. Complete all fields to publish.", "error")
-                    return render_template("create_opportunity.html", opportunity=opportunity_data, is_editing=is_editing, missing_fields=missing)
+                    flash(
+                        f"Missing required fields for publishing: {', '.join(missing)}. Complete all fields to publish.",
+                        "error",
+                    )
+                    return render_template(
+                        "create_opportunity.html",
+                        opportunity=opportunity_data,
+                        is_editing=is_editing,
+                        missing_fields=missing,
+                    )
                 opportunity_data["status"] = "active"
-                result = supabase_service.update_opportunity(opportunity_id, opportunity_data)
+                result = supabase_service.update_opportunity(
+                    opportunity_id, opportunity_data
+                )
                 success_message = "Opportunity published successfully!"
                 redirect_route = url_for("opportunity_details", id=opportunity_id)
             elif is_editing:
                 # Regular update, redirect back to referrer
                 opportunity_data["status"] = "draft"
-                result = supabase_service.update_opportunity(opportunity_id, opportunity_data)
+                result = supabase_service.update_opportunity(
+                    opportunity_id, opportunity_data
+                )
                 success_message = "Draft updated successfully!"
                 redirect_route = referrer_url
             elif not is_editing and status == "active":
                 # Creating and publishing
                 missing = [f for f in required_fields if not opportunity_data.get(f)]
                 if missing:
-                    flash(f"Missing required fields for publishing: {', '.join(missing)}. Complete all fields to publish.", "error")
-                    return render_template("create_opportunity.html", opportunity=opportunity_data, is_editing=is_editing, missing_fields=missing)
+                    flash(
+                        f"Missing required fields for publishing: {', '.join(missing)}. Complete all fields to publish.",
+                        "error",
+                    )
+                    return render_template(
+                        "create_opportunity.html",
+                        opportunity=opportunity_data,
+                        is_editing=is_editing,
+                        missing_fields=missing,
+                    )
                 opportunity_data["status"] = "active"
                 result = supabase_service.create_opportunity(opportunity_data)
                 success_message = "Opportunity created successfully!"
@@ -660,13 +749,23 @@ def create_opportunity(opportunity_id=None):
                 flash(success_message, "success")
                 return redirect(redirect_route)
             else:
-                error_message = "Failed to update opportunity" if is_editing else "Failed to create opportunity"
+                error_message = (
+                    "Failed to update opportunity"
+                    if is_editing
+                    else "Failed to create opportunity"
+                )
                 flash(result.get("error", error_message), "error")
         except Exception as e:
-            error_message = f"Error updating opportunity: {str(e)}" if is_editing else f"Error creating opportunity: {str(e)}"
+            error_message = (
+                f"Error updating opportunity: {str(e)}"
+                if is_editing
+                else f"Error creating opportunity: {str(e)}"
+            )
             flash(error_message, "error")
 
-    return render_template("create_opportunity.html", opportunity=opportunity, is_editing=is_editing)
+    return render_template(
+        "create_opportunity.html", opportunity=opportunity, is_editing=is_editing
+    )
 
 
 @app.route("/delete_opportunity/<int:opportunity_id>", methods=["POST"])
@@ -686,14 +785,18 @@ def delete_opportunity(opportunity_id):
     try:
         # Get the opportunity to check ownership
         opportunity = supabase_service.get_opportunity_by_id(opportunity_id)
-        print(f"Delete request for opportunity_id={opportunity_id}, found: {opportunity}")
+        print(
+            f"Delete request for opportunity_id={opportunity_id}, found: {opportunity}"
+        )
         if not opportunity:
             print("Opportunity not found for deletion.")
             return {"success": False, "error": "Opportunity not found"}, 404
 
         # Check if user owns this opportunity
         if opportunity.get("company_id") != user_id:
-            print(f"User {user_id} does not own opportunity {opportunity_id} (company_id={opportunity.get('company_id')})")
+            print(
+                f"User {user_id} does not own opportunity {opportunity_id} (company_id={opportunity.get('company_id')})"
+            )
             return {
                 "success": False,
                 "error": "You can only delete your own opportunities",
@@ -780,6 +883,62 @@ def unsave_profile(profile_id):
         return {"success": True, "message": "Profile removed from saved"}
     except Exception as e:
         return {"success": False, "error": str(e)}, 500
+
+
+@app.route("/api/search/suggestions")
+def search_suggestions():
+    """API endpoint for search suggestions."""
+    if "user_id" not in session:
+        return {"suggestions": []}, 401
+
+    field = request.args.get("field", "skills")
+    term = request.args.get("term", "")
+
+    if not term or len(term) < 2:
+        return {"suggestions": []}
+
+    try:
+        suggestions = search_service.get_search_suggestions(field, term, limit=10)
+        return {"suggestions": suggestions}
+    except Exception as e:
+        print(f"Error getting search suggestions: {e}")
+        return {"suggestions": []}
+
+
+@app.route("/admin/search/rebuild", methods=["POST"])
+def rebuild_search_index():
+    """Admin endpoint to rebuild the search index."""
+    # This should be protected with admin authentication in a real app
+    if "user_id" not in session:
+        return {"success": False, "error": "Not authenticated"}, 401
+
+    try:
+        # Get all student profiles
+        profiles = supabase_service.search_students()  # Gets all students
+        success = search_service.rebuild_index(profiles)
+
+        if success:
+            return {
+                "success": True,
+                "message": f"Index rebuilt with {len(profiles)} profiles",
+            }
+        else:
+            return {"success": False, "error": "Failed to rebuild index"}, 500
+    except Exception as e:
+        return {"success": False, "error": str(e)}, 500
+
+
+@app.route("/admin/search/stats")
+def search_index_stats():
+    """Admin endpoint to get search index statistics."""
+    if "user_id" not in session:
+        return {"error": "Not authenticated"}, 401
+
+    try:
+        stats = search_service.get_index_stats()
+        return {"stats": stats}
+    except Exception as e:
+        return {"error": str(e)}, 500
 
 
 if __name__ == "__main__":
