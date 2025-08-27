@@ -1,0 +1,59 @@
+{
+  "last_updated": "2025-08-27T19:01:27.025948",
+  "profiles": [
+    {
+      "id": "83a4aacc-0936-45c2-b5b0-ee2e30325605",
+      "name": "Achyut Subramanian",
+      "bio": "I really like to do things. Things are really fun to do. This is my bio. I really don't know what else to write. I like to do things. Yep. Doing things is really fun.",
+      "skills": null,
+      "school": "WW-P High School South",
+      "grade": "11th Grade",
+      "email": "achyutsubramanian@gmail.com",
+      "location": null,
+      "github_url": null,
+      "linkedin_url": null,
+      "portfolio_url": null,
+      "interests": "",
+      "phone": null,
+      "user_type": "student",
+      "created_at": "2025-08-27T02:50:01.76199+00:00",
+      "updated_at": "2025-08-27T02:50:02.369011+00:00"
+    },
+    {
+      "id": "c72454a2-4927-4f0e-a1d6-842086ca9f90",
+      "name": "Hridhay Jayakumar",
+      "bio": "Hi",
+      "skills": null,
+      "school": "WWP HSN",
+      "grade": "11th Grade",
+      "email": "hridhayj20@gmail.com",
+      "location": "Plainsboro, NJ",
+      "github_url": null,
+      "linkedin_url": null,
+      "portfolio_url": null,
+      "interests": "",
+      "phone": null,
+      "user_type": "student",
+      "created_at": "2025-08-22T02:16:11.565987+00:00",
+      "updated_at": "2025-08-23T18:13:19.570551+00:00"
+    },
+    {
+      "id": "5451653e-4bb9-4fa3-9120-eff29f4fc5f2",
+      "name": "Prathyush Yeturi",
+      "bio": "I really like to code. I'm also on a robotics team.",
+      "skills": "Python, Java, AI, ML",
+      "school": "WW-P High School North",
+      "grade": "11th Grade",
+      "email": "prathyushyeturi@gmail.com",
+      "location": "Princeton, New Jersey",
+      "github_url": null,
+      "linkedin_url": null,
+      "portfolio_url": null,
+      "interests": "",
+      "phone": "6099551442",
+      "user_type": "student",
+      "created_at": "2025-08-21T19:39:11.394853+00:00",
+      "updated_at": "2025-08-27T22:39:02.984251+00:00"
+    }
+  ]
+}

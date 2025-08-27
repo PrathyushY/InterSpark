@@ -107,6 +107,15 @@ def test_search():
             )
 
 
+def remove_test_profile():
+    """Remove the test profile from the search index."""
+    success = search_service.remove_from_index("test-student-001")
+    if success:
+        print("✅ Removed test profile from search index")
+    else:
+        print("❌ Failed to remove test profile")
+
+
 def show_index_stats():
     """Show search index statistics."""
     print("\n📊 Search Index Statistics:")
@@ -129,6 +138,7 @@ def main():
         print("  stats      - Show index statistics")
         print("  test       - Test search functionality")
         print("  sample     - Add sample profile for testing")
+        print("  remove     - Remove test profile from index")
         return
 
     command = sys.argv[1].lower()
@@ -143,6 +153,8 @@ def main():
         test_search()
     elif command == "sample":
         add_sample_profile()
+    elif command == "remove":
+        remove_test_profile()
     else:
         print(f"Unknown command: {command}")
         print(

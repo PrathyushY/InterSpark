@@ -3,7 +3,16 @@ from dotenv import load_dotenv
 import os
 from datetime import datetime
 from supabase_config import supabase_service
-from search_service import search_service
+
+# Use serverless search service for deployment compatibility
+try:
+    from search_service_serverless import serverless_search_service as search_service
+
+    SEARCH_MODE = "serverless"
+except ImportError:
+    from search_service import search_service
+
+    SEARCH_MODE = "whoosh"
 
 # Load environment variables
 load_dotenv()
@@ -428,7 +437,10 @@ def profile():
                     try:
                         updated_profile = supabase_service.get_profile(user_id)
                         if updated_profile:
-                            search_service.index_student_profile(updated_profile)
+                            if SEARCH_MODE == "serverless":
+                                search_service.update_profile(updated_profile)
+                            else:
+                                search_service.index_student_profile(updated_profile)
                     except Exception as search_error:
                         # Don't fail the profile update if search indexing fails
                         print(f"Warning: Failed to update search index: {search_error}")
