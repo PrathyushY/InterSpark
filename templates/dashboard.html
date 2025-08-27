@@ -67,33 +67,28 @@
                     {% set profile = saved_profile.profiles if saved_profile.profiles else saved_profile %}
                     {% set pid = profile.id or saved_profile.profile_id %}
                     <div id="saved-profile-{{ pid }}" class="group border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition duration-200 flex items-stretch justify-between min-h-[120px]">
-                        <a href="{{ url_for('view_profile', user_id=pid) }}" class="flex items-start space-x-3 flex-1 min-w-0">
-                            <div class="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
-                                <i class="fas fa-user text-green-600"></i>
-                            </div>
-                            <div class="flex-1 min-w-0 flex flex-col">
-                                <h4 class="text-sm font-medium text-gray-900 truncate">{{ profile.name or profile.organization_name or 'Anonymous' }}</h4>
-                                <p class="text-xs text-gray-500 truncate">{{ profile.email or 'No email' }}</p>
-                                <div class="mt-1 flex flex-wrap gap-1 min-h-[20px]">
-                                    {% if profile.school %}
-                                    <span class="px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-[10px] font-medium truncate max-w-[140px]" title="School">School: {{ profile.school }}</span>
-                                    {% endif %}
-                                    {% if profile.grade %}
-                                    <span class="px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-[10px] font-medium" title="Grade">Grade: {{ profile.grade }}</span>
-                                    {% endif %}
-                                    {% if not profile.school and not profile.grade %}
-                                    <span class="px-2 py-0.5 text-transparent select-none">placeholder</span>
-                                    {% endif %}
-                                </div>
-                                {% if profile.skills %}
-                                <p class="text-[11px] text-gray-400 mt-1 line-clamp-1">{{ profile.skills }}</p>
-                                {% elif profile.bio %}
-                                <p class="text-[11px] text-gray-400 mt-1 line-clamp-1">{{ profile.bio }}</p>
-                                {% else %}
-                                <span class="mt-1 text-[11px] text-transparent select-none">placeholder</span>
+                        <a href="{{ url_for('view_profile', user_id=pid) }}" class="flex-1 min-w-0 flex flex-col">
+                            <h4 class="text-sm font-medium text-gray-900 truncate">{{ profile.name or profile.organization_name or 'Anonymous' }}</h4>
+                            <p class="text-xs text-gray-500 truncate">{{ profile.email or 'No email' }}</p>
+                            <div class="flex items-center mt-2 space-x-2">
+                                {% if profile.school %}
+                                <span class="inline-flex items-center px-2 py-1 rounded-full text-[10px] font-medium bg-gray-100 text-gray-600">{{ profile.school }}</span>
                                 {% endif %}
-                                <div class="mt-auto"></div>
+                                {% if profile.grade %}
+                                <span class="inline-flex items-center px-2 py-1 rounded-full text-[10px] font-medium bg-gray-100 text-gray-600">{{ profile.grade }}</span>
+                                {% endif %}
+                                {% if not profile.school and not profile.grade %}
+                                <span class="inline-flex items-center px-2 py-1 rounded-full text-[10px] font-medium bg-transparent text-transparent select-none">info</span>
+                                {% endif %}
                             </div>
+                            {% if profile.skills %}
+                            <p class="text-[11px] text-gray-400 mt-2 line-clamp-2">{{ profile.skills }}</p>
+                            {% elif profile.bio %}
+                            <p class="text-[11px] text-gray-400 mt-2 line-clamp-2">{{ profile.bio }}</p>
+                            {% else %}
+                            <span class="mt-2 text-[11px] text-transparent select-none">placeholder</span>
+                            {% endif %}
+                            <div class="mt-auto"></div>
                         </a>
                         <div class="flex flex-col items-end justify-between opacity-0 group-hover:opacity-100 transition ml-3">
                             <a href="{{ url_for('view_profile', user_id=pid) }}" class="text-blue-600 hover:text-blue-800 text-xs">View</a>
@@ -109,6 +104,7 @@
                 <p class="text-gray-500 text-center py-8">No saved profiles yet</p>
             {% endif %}
         </div>
+
         <!-- Saved Opportunities -->
         <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             <div class="flex items-center justify-between mb-4">
@@ -125,7 +121,7 @@
                     {% for saved_opportunity in saved_opportunities[:2] %}
                     {% set opportunity = saved_opportunity.opportunities if saved_opportunity.opportunities else saved_opportunity %}
                     {% set oid = opportunity.id or saved_opportunity.opportunity_id %}
-                    <div id="saved-opp-{{ oid }}" class="group border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition duration-200 flex items-stretch justify-between cursor-pointer min-h-[120px]">
+                    <div id="saved-opp-{{ oid }}" class="group border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition duration-200 flex items-stretch justify-between min-h-[120px]">
                         <a href="{{ url_for('opportunity_details', id=oid) }}" class="flex-1 min-w-0 flex flex-col">
                             <h4 class="text-sm font-medium text-gray-900 truncate">{{ opportunity.title or 'Untitled Opportunity' }}</h4>
                             <p class="text-xs text-gray-500 truncate">
