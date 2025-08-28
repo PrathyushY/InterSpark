@@ -953,6 +953,12 @@ def search_index_stats():
         return {"error": str(e)}, 500
 
 
+@app.route("/profile_details/<profile>")
+def profile_details(profile):
+    """Alias route to maintain backward compatibility with older templates linking to profile_details."""
+    return redirect(url_for("view_profile", user_id=profile))
+
+
 if __name__ == "__main__":
     import os
 

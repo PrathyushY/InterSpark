@@ -10,7 +10,7 @@
         </h2>
         <p class="mt-2 text-center text-sm text-gray-600">
             Or
-            <a href="{{ url_for('login') }}" class="font-medium text-blue-600 hover:text-blue-500">
+            <a href="{{ url_for('login') }}" class="font-medium text-orange-600 hover:text-orange-500">
                 sign in to your existing account
             </a>
         </p>
@@ -25,12 +25,12 @@
                     <div class="flex space-x-4">
                         <label class="inline-flex items-center">
                             <input type="radio" name="user_type" value="student" checked
-                                class="form-radio text-blue-600" onchange="toggleFormFields()">
+                                class="form-radio text-orange-600" onchange="Signup.toggleFormFields()">
                             <span class="ml-2 text-sm font-medium text-gray-700">Student</span>
                         </label>
                         <label class="inline-flex items-center">
-                            <input type="radio" name="user_type" value="organization" class="form-radio text-blue-600"
-                                onchange="toggleFormFields()">
+                            <input type="radio" name="user_type" value="organization" class="form-radio text-orange-600"
+                                onchange="Signup.toggleFormFields()">
                             <span class="ml-2 text-sm font-medium text-gray-700">Organization</span>
                         </label>
                     </div>
@@ -42,7 +42,7 @@
                     </label>
                     <div class="mt-1">
                         <input id="name" name="name" type="text" required
-                            class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                            class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-orange-500 focus:border-orange-500 sm:text-sm">
                     </div>
                 </div>
 
@@ -52,7 +52,7 @@
                     </label>
                     <div class="mt-1">
                         <input id="email" name="email" type="email" autocomplete="email" required
-                            class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                            class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-orange-500 focus:border-orange-500 sm:text-sm">
                     </div>
                 </div>
 
@@ -64,7 +64,7 @@
                         </label>
                         <div class="mt-1">
                             <input id="school" name="school" type="text" placeholder="e.g., Lincoln High School"
-                                class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                                class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-orange-500 focus:border-orange-500 sm:text-sm">
                         </div>
                     </div>
 
@@ -74,7 +74,7 @@
                         </label>
                         <div class="mt-1">
                             <select id="grade" name="grade"
-                                class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                                class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-orange-500 focus:border-orange-500 sm:text-sm">
                                 <option value="">Select Grade</option>
                                 <option value="9th Grade">9th Grade</option>
                                 <option value="10th Grade">10th Grade</option>
@@ -91,7 +91,7 @@
                         <div class="mt-1">
                             <textarea id="bio" name="bio" rows="3"
                                 placeholder="Tell us about yourself, your interests, and what kind of opportunities you're looking for..."
-                                class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"></textarea>
+                                class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-orange-500 focus:border-orange-500 sm:text-sm"></textarea>
                         </div>
                     </div>
                 </div>
@@ -105,7 +105,7 @@
                         <div class="mt-1">
                             <textarea id="description" name="description" rows="3"
                                 placeholder="Describe your organization's mission, values, and what you do..."
-                                class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"></textarea>
+                                class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-orange-500 focus:border-orange-500 sm:text-sm"></textarea>
                         </div>
                     </div>
                 </div>
@@ -116,7 +116,7 @@
                     </label>
                     <div class="mt-1">
                         <input id="password" name="password" type="password" autocomplete="new-password" required
-                            class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                            class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-orange-500 focus:border-orange-500 sm:text-sm">
                     </div>
                 </div>
 
@@ -127,13 +127,13 @@
                     <div class="mt-1">
                         <input id="confirm-password" name="confirm_password" type="password" autocomplete="new-password"
                             required
-                            class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                            class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-orange-500 focus:border-orange-500 sm:text-sm">
                     </div>
                 </div>
 
                 <div class="flex items-center">
                     <input id="terms" name="terms" type="checkbox" required
-                        class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                        class="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded">
                     <label for="terms" class="ml-2 block text-sm text-gray-900">
                         I agree to the <a href="#" class="text-blue-600 hover:text-blue-500">Terms and Conditions</a>
                     </label>
@@ -141,7 +141,7 @@
 
                 <div>
                     <button type="submit"
-                        class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-orange-600 hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500">
                         Create Account
                     </button>
                 </div>
@@ -150,83 +150,5 @@
     </div>
 </div>
 
-<script>
-    function toggleFormFields() {
-        const studentFields = document.getElementById('student-fields');
-        const organizationFields = document.getElementById('organization-fields');
-        const nameLabel = document.getElementById('name-label');
-        const selectedUserType = document.querySelector('input[name="user_type"]:checked').value;
-
-        if (selectedUserType === 'organization') {
-            nameLabel.textContent = 'Organization Name';
-            studentFields.style.display = 'none';
-            organizationFields.style.display = 'block';
-
-            // Remove required attribute from student fields
-            document.getElementById('school').removeAttribute('required');
-            document.getElementById('grade').removeAttribute('required');
-            document.getElementById('bio').removeAttribute('required');
-
-            // Add required attribute to organization fields
-            document.getElementById('description').setAttribute('required', 'required');
-        } else {
-            nameLabel.textContent = 'Full Name';
-            studentFields.style.display = 'block';
-            organizationFields.style.display = 'none';
-
-            // Add required attribute to student fields
-            document.getElementById('school').setAttribute('required', 'required');
-            document.getElementById('grade').setAttribute('required', 'required');
-            document.getElementById('bio').setAttribute('required', 'required');
-
-            // Remove required attribute from organization fields
-            document.getElementById('description').removeAttribute('required');
-        }
-    }
-
-    // Initialize form fields on page load
-    document.addEventListener('DOMContentLoaded', function () {
-        toggleFormFields();
-    });
-
-    // Add form validation
-    document.getElementById('signup-form').addEventListener('submit', function (e) {
-        const password = document.getElementById('password').value;
-        const confirmPassword = document.getElementById('confirm-password').value;
-        const selectedUserType = document.querySelector('input[name="user_type"]:checked').value;
-
-        if (password !== confirmPassword) {
-            e.preventDefault();
-            alert('Passwords do not match. Please check and try again.');
-            return false;
-        }
-
-        if (password.length < 6) {
-            e.preventDefault();
-            alert('Password must be at least 6 characters long.');
-            return false;
-        }
-
-        // Additional validation for required fields based on user type
-        if (selectedUserType === 'student') {
-            const school = document.getElementById('school').value.trim();
-            const grade = document.getElementById('grade').value;
-            const bio = document.getElementById('bio').value.trim();
-
-            if (!school || !grade || !bio) {
-                e.preventDefault();
-                alert('Please fill in all required fields: School, Grade, and Bio.');
-                return false;
-            }
-        } else if (selectedUserType === 'organization') {
-            const description = document.getElementById('description').value.trim();
-
-            if (!description) {
-                e.preventDefault();
-                alert('Please fill in the organization description.');
-                return false;
-            }
-        }
-    });
-</script>
+<script src="{{ url_for('static', filename='js/signup.js') }}"></script>
 {% endblock %}

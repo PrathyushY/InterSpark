@@ -13,7 +13,7 @@
 
     <!-- Search and Filters -->
     <div class="bg-white p-6 rounded-lg shadow-sm mb-8">
-        <form class="space-y-4">
+        <form class="space-y-4" id="talent-search-form">
             <div class="max-w-4xl mx-auto">
                 <div class="text-center mb-4">
                     <label for="search" class="block text-lg font-medium text-gray-900 mb-2">
@@ -27,30 +27,30 @@
                 <div class="relative">
                     <input type="text" id="search" name="search" value="{{ search_query or '' }}"
                         placeholder="Try: python, Stanford, 12th grade, &quot;machine learning&quot;, javascript AND react..."
-                        class="block w-full px-4 py-3 pr-12 text-lg border-2 border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors">
+                        class="block w-full px-4 py-3 pr-12 text-lg border-2 border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors">
                     <div class="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
                         <i class="fas fa-search text-gray-400 text-xl"></i>
                     </div>
                 </div>
                 <div class="flex items-center justify-center space-x-4 mt-4">
                     <button type="submit"
-                        class="bg-blue-600 text-white px-8 py-3 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors font-medium">
+                        class="flex-1 max-w-xs bg-orange-600 text-white px-8 py-3 rounded-lg hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 transition-colors font-medium inline-flex justify-center items-center">
                         <i class="fas fa-search mr-2"></i>
                         Search Students
                     </button>
                     <button type="button" onclick="clearSearch()"
-                        class="bg-gray-500 text-white px-6 py-3 rounded-lg hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors font-medium">
+                        class="flex-1 max-w-xs bg-gray-500 text-white px-6 py-3 rounded-lg hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors font-medium inline-flex justify-center items-center">
                         <i class="fas fa-times mr-2"></i>
                         Clear
                     </button>
                 </div>
                 <div class="mt-3 text-center">
                     <details class="inline-block">
-                        <summary class="text-sm text-blue-600 hover:text-blue-800 cursor-pointer font-medium">
+                        <summary class="text-sm text-orange-600 hover:text-orange-700 cursor-pointer font-medium">
                             <i class="fas fa-info-circle mr-1"></i>
                             Advanced Search Tips
                         </summary>
-                        <div class="mt-2 p-3 bg-blue-50 rounded-lg text-sm text-gray-700 text-left max-w-2xl mx-auto">
+                        <div class="mt-2 p-3 bg-orange-50 rounded-lg text-sm text-gray-700 text-left max-w-2xl mx-auto">
                             <div class="space-y-1">
                                 <div><code class="bg-white px-2 py-1 rounded">"web development"</code> - Search for
                                     exact phrase</div>
@@ -80,8 +80,8 @@
                     <img src="{{ student.profile_image }}" alt="{{ student.name }}"
                         class="h-16 w-16 rounded-full object-cover mr-4">
                     {% else %}
-                    <div class="h-16 w-16 rounded-full bg-blue-100 flex items-center justify-center mr-4">
-                        <i class="fas fa-user text-blue-600 text-xl"></i>
+                    <div class="h-16 w-16 rounded-full bg-orange-100 flex items-center justify-center mr-4">
+                        <i class="fas fa-user text-orange-600 text-xl"></i>
                     </div>
                     {% endif %}
                     <div>
@@ -98,7 +98,7 @@
                 <!-- Location -->
                 {% if student.location %}
                 <div class="flex items-center mb-3 text-sm text-gray-500">
-                    <i class="fas fa-map-marker-alt mr-2"></i>
+                    <i class="fas fa-map-marker-alt mr-2 text-orange-500"></i>
                     <span>{{ student.location }}</span>
                 </div>
                 {% endif %}
@@ -117,7 +117,7 @@
                     <div class="flex flex-wrap gap-1">
                         {% for interest in student.interests.split(',')[:4] %}
                         <span
-                            class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-700">
                             {{ interest.strip() }}
                         </span>
                         {% endfor %}
@@ -133,24 +133,24 @@
                     {% if session.user_id %}
                     <!-- Contact button for both organizations and students -->
                     <a href="mailto:{{ student.email }}?subject={{ 'Hello ' + (student.name|urlencode) + ', from InterSpark' }}"
-                        class="flex-1 inline-flex items-center justify-center px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-md shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
+                        class="flex-1 inline-flex items-center justify-center px-4 py-2.5 bg-orange-600 text-white text-sm font-medium rounded-md shadow-sm hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 transition-colors">
                         <i class="fas fa-envelope mr-2"></i>
                         Contact
                     </a>
                     <a href="{{ url_for('view_profile', user_id=student.id, search=search_query, skills=selected_skills, school=selected_school, grade=selected_grade) }}"
-                        class="flex-1 inline-flex items-center justify-center px-4 py-2.5 border border-gray-300 rounded-md text-gray-700 text-sm font-medium bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors shadow-sm">
+                        class="flex-1 inline-flex items-center justify-center px-4 py-2.5 border border-orange-300 rounded-md text-orange-700 text-sm font-medium bg-white hover:bg-orange-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 transition-colors shadow-sm">
                         <i class="fas fa-eye mr-2"></i>
                         View
                     </a>
                     <button onclick="toggleSaveProfile('{{ student.id }}', this)"
-                        class="inline-flex items-center justify-center px-3 py-2.5 border rounded-md text-sm font-medium hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors shadow-sm {% if student.is_saved %}bg-blue-50 border-blue-300 text-blue-700{% else %}bg-white border-gray-300 text-gray-700{% endif %}"
+                        class="inline-flex items-center justify-center px-3 py-2.5 border rounded-md text-sm font-medium hover:bg-orange-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 transition-colors shadow-sm {% if student.is_saved %}bg-orange-50 border-orange-300 text-orange-700{% else %}bg-white border-gray-300 text-gray-700{% endif %}"
                         title="Save Profile">
                         <i class="{% if student.is_saved %}fas fa-bookmark{% else %}far fa-bookmark{% endif %}"></i>
                     </button>
                     {% else %}
                     <div class="flex-1 text-center py-2 text-sm text-gray-500">
                         <i class="fas fa-lock mr-1"></i>
-                        <a href="{{ url_for('login') }}" class="text-blue-600 hover:text-blue-800">Login</a> to view
+                        <a href="{{ url_for('login') }}" class="text-orange-600 hover:text-orange-700">Login</a> to view
                         profiles
                     </div>
                     {% endif %}
@@ -170,7 +170,7 @@
             <a href="#"
                 class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">1</a>
             <a href="#"
-                class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-blue-50 text-sm font-medium text-blue-600">2</a>
+                class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-orange-50 text-sm font-medium text-orange-600">2</a>
             <a href="#"
                 class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">3</a>
             <a href="#"
@@ -193,12 +193,12 @@
 
     <!-- Call to Action for Non-Organizations -->
     {% if not session.user_id or session.user_type != 'organization' %}
-    <div class="mt-12 bg-gray-50 rounded-lg p-8 text-center">
+    <div class="mt-12 bg-orange-50 rounded-lg p-8 text-center">
         <h3 class="text-lg font-medium text-gray-900 mb-2">Are you an organization?</h3>
         <p class="text-gray-600 mb-4">Create an organization account to contact students and post opportunities.</p>
         {% if not session.user_id %}
         <a href="{{ url_for('signup') }}"
-            class="inline-flex items-center px-4 py-2 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
+            class="inline-flex items-center px-4 py-2 border border-transparent text-base font-medium rounded-md text-white bg-orange-600 hover:bg-orange-700">
             Create Organization Account
         </a>
         {% endif %}
@@ -206,218 +206,5 @@
     {% endif %}
 </div>
 
-<style>
-    .line-clamp-3 {
-        display: -webkit-box;
-        -webkit-line-clamp: 3;
-        line-clamp: 3;
-        -webkit-box-orient: vertical;
-        overflow: hidden;
-    }
-</style>
-
-<script>
-    // Search suggestions functionality
-    let suggestionTimeouts = {};
-
-    function setupSearchSuggestions(fieldId, suggestionsId) {
-        const field = document.getElementById(fieldId);
-        const suggestionsDiv = document.getElementById(suggestionsId);
-
-        if (!field || !suggestionsDiv) return;
-
-        field.addEventListener('input', function () {
-            const term = this.value.trim();
-
-            // Clear previous timeout
-            if (suggestionTimeouts[fieldId]) {
-                clearTimeout(suggestionTimeouts[fieldId]);
-            }
-
-            if (term.length < 2) {
-                suggestionsDiv.classList.add('hidden');
-                return;
-            }
-
-            // Debounce the API call
-            suggestionTimeouts[fieldId] = setTimeout(() => {
-                fetchSuggestions(fieldId.replace('-', '_'), term, suggestionsDiv);
-            }, 300);
-        });
-
-        // Hide suggestions when clicking outside
-        document.addEventListener('click', function (e) {
-            if (!field.contains(e.target) && !suggestionsDiv.contains(e.target)) {
-                suggestionsDiv.classList.add('hidden');
-            }
-        });
-
-        // Handle keyboard navigation
-        field.addEventListener('keydown', function (e) {
-            const items = suggestionsDiv.querySelectorAll('.suggestion-item');
-            const activeItem = suggestionsDiv.querySelector('.suggestion-item.active');
-
-            if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                if (!activeItem && items.length > 0) {
-                    items[0].classList.add('active');
-                } else if (activeItem) {
-                    const nextItem = activeItem.nextElementSibling;
-                    activeItem.classList.remove('active');
-                    if (nextItem) {
-                        nextItem.classList.add('active');
-                    } else {
-                        items[0].classList.add('active');
-                    }
-                }
-            } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                if (activeItem) {
-                    const prevItem = activeItem.previousElementSibling;
-                    activeItem.classList.remove('active');
-                    if (prevItem) {
-                        prevItem.classList.add('active');
-                    } else {
-                        items[items.length - 1].classList.add('active');
-                    }
-                }
-            } else if (e.key === 'Enter') {
-                if (activeItem) {
-                    e.preventDefault();
-                    field.value = activeItem.textContent;
-                    suggestionsDiv.classList.add('hidden');
-                }
-            } else if (e.key === 'Escape') {
-                suggestionsDiv.classList.add('hidden');
-            }
-        });
-    }
-
-    async function fetchSuggestions(field, term, suggestionsDiv) {
-        try {
-            const response = await fetch(`/api/search/suggestions?field=${field}&term=${encodeURIComponent(term)}`);
-            const data = await response.json();
-
-            if (data.suggestions && data.suggestions.length > 0) {
-                displaySuggestions(data.suggestions, suggestionsDiv);
-            } else {
-                suggestionsDiv.classList.add('hidden');
-            }
-        } catch (error) {
-            console.error('Error fetching suggestions:', error);
-            suggestionsDiv.classList.add('hidden');
-        }
-    }
-
-    function displaySuggestions(suggestions, suggestionsDiv) {
-        suggestionsDiv.innerHTML = '';
-
-        suggestions.forEach(suggestion => {
-            const item = document.createElement('div');
-            item.className = 'suggestion-item px-3 py-2 hover:bg-blue-50 cursor-pointer text-sm border-b border-gray-100 last:border-b-0';
-            item.textContent = suggestion;
-
-            item.addEventListener('click', function () {
-                const field = suggestionsDiv.previousElementSibling;
-                field.value = suggestion;
-                suggestionsDiv.classList.add('hidden');
-            });
-
-            item.addEventListener('mouseenter', function () {
-                // Remove active class from all items
-                suggestionsDiv.querySelectorAll('.suggestion-item').forEach(i => i.classList.remove('active'));
-                // Add active class to hovered item
-                this.classList.add('active');
-            });
-
-            suggestionsDiv.appendChild(item);
-        });
-
-        suggestionsDiv.classList.remove('hidden');
-    }
-
-    // Save/unsave profile functionality
-    async function toggleSaveProfile(profileId, button) {
-        // Disable button during request
-        button.disabled = true;
-        const icon = button.querySelector('i');
-
-        // Check current state based on icon class
-        const isSaved = icon.classList.contains('fas');
-
-        try {
-            // Toggle between save and unsave based on current state
-            const url = isSaved ? `/unsave_profile/${profileId}` : `/save_profile/${profileId}`;
-            const response = await fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' }
-            });
-            const data = await response.json();
-
-            if (data.success) {
-                // Update UI based on new state
-                if (isSaved) {
-                    // Was saved, now unsaved
-                    icon.className = 'far fa-bookmark text-sm';
-                    button.className = button.className.replace('bg-blue-50 border-blue-300 text-blue-700', 'border-gray-300 text-gray-700');
-                } else {
-                    // Was unsaved, now saved
-                    icon.className = 'fas fa-bookmark text-sm';
-                    button.className = button.className.replace('border-gray-300 text-gray-700', 'bg-blue-50 border-blue-300 text-blue-700');
-                }
-                showAlert(data.message || (isSaved ? 'Profile removed from saved' : 'Profile saved successfully'), 'success');
-            } else {
-                showAlert(data.error || 'Failed to update profile', 'error');
-            }
-        } catch (error) {
-            showAlert('An error occurred. Please try again.', 'error');
-            console.error('Toggle profile error:', error);
-        } finally {
-            button.disabled = false;
-        }
-    }
-
-    function showAlert(message, type) {
-        const alert = document.createElement('div');
-        alert.className = `alert p-4 rounded-lg shadow-lg fixed top-4 left-1/2 transform -translate-x-1/2 z-50 max-w-md
-                      ${type === 'error' ? 'bg-red-50/95 border border-red-200 text-red-700' : 'bg-green-50/95 border border-green-200 text-green-700'}`;
-        alert.innerHTML = `
-        <div class="flex justify-between items-center">
-            <span class="text-sm font-medium">${message}</span>
-            <button onclick="this.parentElement.parentElement.remove()" class="ml-4 text-${type === 'error' ? 'red' : 'green'}-500">
-                <i class="fas fa-times"></i>
-            </button>
-        </div>
-    `;
-
-        document.body.appendChild(alert);
-
-        // Auto-remove after 3 seconds
-        setTimeout(() => {
-            if (alert.parentNode) {
-                alert.style.transition = 'opacity 0.3s ease';
-                alert.style.opacity = '0';
-                setTimeout(() => alert.remove(), 300);
-            }
-        }, 3000);
-    }
-
-    // Initialize search suggestions when DOM is ready
-    document.addEventListener('DOMContentLoaded', function () {
-        setupSearchSuggestions('skills', 'skills-suggestions');
-        setupSearchSuggestions('school', 'school-suggestions');
-
-        // Add search tips
-        const searchField = document.getElementById('search');
-        if (searchField) {
-            let tipShown = false;
-            searchField.addEventListener('focus', function () {
-                if (!tipShown && !this.value) {
-                    showAlert('💡 Try advanced search: "web development" OR python AND react', 'info');
-                    tipShown = true;
-                }
-            });
-        }
-    });
-</script>
+<script src="{{ url_for('static', filename='js/talent_search.js') }}"></script>
 {% endblock %}

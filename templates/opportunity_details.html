@@ -6,7 +6,7 @@
 <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
     <!-- Back Button -->
     <div class="mb-6">
-        <a href="{{ url_for('opportunities') }}" class="inline-flex items-center text-blue-600 hover:text-blue-800">
+        <a href="{{ url_for('opportunities') }}" class="inline-flex items-center text-orange-600 hover:text-orange-700">
             <i class="fas fa-arrow-left mr-2"></i>
             Back to Opportunities
         </a>
@@ -17,7 +17,7 @@
         {% if opportunity.image %}
         <div class="h-64 bg-gray-200 bg-cover bg-center" style="background-image: url('{{ opportunity.image }}')"></div>
         {% else %}
-        <div class="h-64 bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+        <div class="h-64 bg-gradient-to-br from-orange-500 to-blue-600 flex items-center justify-center">
             <i class="fas fa-briefcase text-white text-6xl"></i>
         </div>
         {% endif %}
@@ -26,8 +26,8 @@
             <div class="flex items-center justify-between mb-4">
                 <div class="flex items-center space-x-3">
                     <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium 
-                        {% if opportunity.type == 'Internship' %}bg-blue-100 text-blue-800
-                        {% else %}bg-green-100 text-green-800{% endif %}">
+                        {% if opportunity.type == 'Internship' %}bg-orange-100 text-orange-800
+                        {% else %}bg-blue-100 text-blue-800{% endif %}">
                         {{ opportunity.type }}
                     </span>
                     <span class="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">{{ opportunity.type }}</span>
@@ -46,8 +46,8 @@
                     alt="{{ opportunity.profiles.name or opportunity.profiles.organization_name }}"
                     class="w-12 h-12 rounded-full mr-4">
                 {% else %}
-                <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mr-4">
-                    <i class="fas fa-building text-blue-600"></i>
+                <div class="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center mr-4">
+                    <i class="fas fa-building text-orange-600"></i>
                 </div>
                 {% endif %}
                 <div>
@@ -170,15 +170,12 @@
                 </h3>
                 {% if session.user_id %}
                 {% if session.user_type == 'student' %}
-                <button
-                    class="w-full bg-blue-600 text-white px-4 py-3 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 mb-3">
+                <button class="w-full bg-orange-600 text-white px-4 py-3 rounded-md hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 mb-3">
                     <i class="fas fa-paper-plane mr-2"></i>
                     Apply for This Position
                 </button>
                 {% endif %}
-                <button id="save-opportunity-btn" onclick="toggleSaveOpportunity({{ opportunity.id }})"
-                    class="w-full border border-gray-300 px-4 py-2 rounded-md hover:bg-gray-50 transition-colors
-                               {% if is_saved %}bg-blue-50 border-blue-300 text-blue-700{% else %}text-gray-700{% endif %}">
+                <button id="save-opportunity-btn" onclick="OpportunityDetails.toggleSave()" class="w-full border px-4 py-2 rounded-md transition-colors {% if is_saved %}bg-orange-50 border-orange-300 text-orange-700{% else %}border-gray-300 text-gray-700 hover:bg-orange-50{% endif %}">
                     <i class="{% if is_saved %}fas fa-bookmark{% else %}far fa-bookmark{% endif %} mr-2"></i>
                     <span id="save-text">{% if is_saved %}Saved{% else %}Save for Later{% endif %}</span>
                 </button>
@@ -186,10 +183,7 @@
             {% else %}
             <div class="text-center">
                 <p class="text-gray-600 mb-4">Create an account to apply for this opportunity</p>
-                <a href="{{ url_for('signup') }}"
-                    class="w-full inline-flex justify-center items-center px-4 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 mb-3">
-                    Sign Up to Apply
-                </a>
+                <a href="{{ url_for('signup') }}" class="w-full inline-flex justify-center items-center px-4 py-3 border border-transparent text-base font-medium rounded-md text-white bg-orange-600 hover:bg-orange-700 mb-3">Sign Up to Apply</a>
                 <a href="{{ url_for('login') }}"
                     class="w-full inline-flex justify-center items-center px-4 py-2 border border-gray-300 text-base font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
                     Already have an account?
@@ -210,7 +204,7 @@
                 {% if opportunity.profiles and opportunity.profiles.email %}
                 <div class="flex items-center">
                     <i class="fas fa-envelope text-gray-400 w-4 mr-3"></i>
-                    <a href="mailto:{{ opportunity.profiles.email }}" class="text-blue-600 hover:text-blue-800">
+                    <a href="mailto:{{ opportunity.profiles.email }}" class="text-orange-600 hover:text-orange-700">
                         {{ opportunity.profiles.email }}
                     </a>
                 </div>
@@ -224,8 +218,7 @@
                 {% if opportunity.profiles and opportunity.profiles.website %}
                 <div class="flex items-center">
                     <i class="fas fa-globe text-gray-400 w-4 mr-3"></i>
-                    <a href="{{ opportunity.profiles.website }}" target="_blank"
-                        class="text-blue-600 hover:text-blue-800">
+                    <a href="{{ opportunity.profiles.website }}" target="_blank" class="text-orange-600 hover:text-orange-700">
                         Visit Website
                     </a>
                 </div>
@@ -237,76 +230,7 @@
 </div>
 
 <script>
-    let isSaved = {{ 'true' if is_saved else 'false' }};
-
-    async function toggleSaveOpportunity(opportunityId) {
-        const btn = document.getElementById('save-opportunity-btn');
-        const saveText = document.getElementById('save-text');
-        const icon = btn.querySelector('i');
-
-        // Disable button during request
-        btn.disabled = true;
-
-        try {
-            const url = isSaved ? `/unsave_opportunity/${opportunityId}` : `/save_opportunity/${opportunityId}`;
-            const response = await fetch(url, { method: 'POST' });
-            const data = await response.json();
-
-            if (data.success) {
-                // Toggle state
-                isSaved = !isSaved;
-
-                // Update UI
-                if (isSaved) {
-                    icon.className = 'fas fa-bookmark mr-2';
-                    saveText.textContent = 'Saved';
-                    btn.className = btn.className.replace('text-gray-700', 'bg-blue-50 border-blue-300 text-blue-700');
-                } else {
-                    icon.className = 'far fa-bookmark mr-2';
-                    saveText.textContent = 'Save for Later';
-                    btn.className = btn.className.replace('bg-blue-50 border-blue-300 text-blue-700', 'text-gray-700');
-                }
-
-                // Show success message
-                showAlert(data.message, 'success');
-            } else {
-                showAlert(data.error || 'Failed to update saved status', 'error');
-            }
-        } catch (error) {
-            showAlert('An error occurred. Please try again.', 'error');
-            console.error('Save opportunity error:', error);
-        } finally {
-            btn.disabled = false;
-        }
-    }
-
-    function showAlert(message, type) {
-        // Create alert element
-        const alert = document.createElement('div');
-        alert.className = `alert alert-${type} p-4 rounded-lg shadow-lg relative backdrop-blur-sm fixed top-4 left-1/2 transform -translate-x-1/2 z-50 max-w-md
-                          ${type === 'error' ? 'bg-red-50/95 border border-red-200 text-red-700' : 'bg-green-50/95 border border-green-200 text-green-700'}`;
-        alert.style.animation = 'slideDown 0.3s ease-out';
-        alert.innerHTML = `
-            <div class="flex justify-between items-center">
-                <div class="flex items-center">
-                    <i class="fas fa-${type === 'error' ? 'exclamation-circle text-red-400' : 'check-circle text-green-400'} mr-3"></i>
-                    <span class="text-sm font-medium">${message}</span>
-                </div>
-                <button onclick="this.parentElement.parentElement.remove()" class="ml-4 text-${type === 'error' ? 'red' : 'green'}-500 hover:text-${type === 'error' ? 'red' : 'green'}-700">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-        `;
-
-        document.body.appendChild(alert);
-
-        // Auto-remove after 3 seconds
-        setTimeout(() => {
-            if (alert.parentNode) {
-                alert.style.animation = 'slideUp 0.3s ease-out forwards';
-                setTimeout(() => alert.remove(), 300);
-            }
-        }, 3000);
-    }
+  window.OPPORTUNITY_STATE = { id: {{ opportunity.id }}, isSaved: {{ 'true' if is_saved else 'false' }} };
 </script>
+<script src="{{ url_for('static', filename='js/opportunity_details.js') }}"></script>
 {% endblock %}
