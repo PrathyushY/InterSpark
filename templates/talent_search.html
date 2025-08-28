@@ -24,6 +24,23 @@
                         <i class="fas fa-search text-blue-400"></i>
                     </div>
                 </div>
+                <div class="relative">
+                    <select id="grade-filter" name="grade"
+                            class="block px-4 py-2 border border-blue-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-white text-gray-900">
+                        <option value="">All Grades</option>
+                        <option value="9th Grade" {% if selected_grade == '9th Grade' %}selected{% endif %}>9th Grade
+                        </option>
+                        <option value="10th Grade" {% if selected_grade == '10th Grade' %}selected{% endif %}>10th
+                            Grade
+                        </option>
+                        <option value="11th Grade" {% if selected_grade == '11th Grade' %}selected{% endif %}>11th
+                            Grade
+                        </option>
+                        <option value="12th Grade" {% if selected_grade == '12th Grade' %}selected{% endif %}>12th
+                            Grade
+                        </option>
+                    </select>
+                </div>
                 <button type="submit"
                         class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors font-medium inline-flex items-center">
                     <i class="fas fa-search mr-2"></i>
@@ -85,10 +102,9 @@
                                     <h4 class="text-sm font-medium text-gray-900 mb-2">Interests</h4>
                                     <div class="flex flex-wrap gap-1">
                                         {% for interest in student.interests.split(',')[:4] %}
-                                            <span
-                                                    class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                            {{ interest.strip() }}
-                        </span>
+                                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                                {{ interest.strip() }}
+                                            </span>
                                         {% endfor %}
                                         {% if student.interests.split(',')|length > 4 %}
                                             <span class="text-xs text-gray-500">+{{ student.interests.split(',')|length - 4 }} more</span>
