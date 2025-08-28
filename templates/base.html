@@ -18,28 +18,27 @@
                 <div class="flex items-center">
                     <a href="{% if session.user_id %}{{ url_for('dashboard') }}{% else %}{{ url_for('home') }}{% endif %}"
                         class="flex-shrink-0 flex items-center">
-                        <span class="text-orange-600 text-xl font-bold">Inter<span class="text-blue-600">Spark</span></span>
+                        <span class="text-blue-600 text-xl font-bold">InterSpark</span>
                     </a>
                     <div class="hidden sm:ml-6 sm:flex sm:space-x-8">
                         {% if not session.user_id %}
                         <a href="{{ url_for('home') }}"
-                            class="{% if request.endpoint == 'home' %}border-orange-500 text-orange-700 font-semibold{% else %}border-transparent text-gray-500 hover:border-orange-500 hover:text-gray-700{% endif %} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">Home</a>
+                            class="{% if request.endpoint == 'home' %}border-blue-500 text-blue-700 font-bold{% else %}border-transparent text-gray-500 hover:border-blue-500 hover:text-gray-700{% endif %} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">Home</a>
                         {% endif %}
                         <a href="{{ url_for('opportunities') }}"
-                            class="{% if request.endpoint == 'opportunities' %}border-orange-500 text-orange-700 font-semibold{% else %}border-transparent text-gray-500 hover:border-orange-500 hover:text-gray-700{% endif %} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">Opportunities</a>
+                            class="{% if request.endpoint == 'opportunities' %}border-blue-500 text-blue-700 font-bold{% else %}border-transparent text-gray-500 hover:border-blue-500 hover:text-gray-700{% endif %} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">Opportunities</a>
                         <a href="{{ url_for('talent_search') }}"
-                            class="{% if request.endpoint == 'talent_search' %}border-orange-500 text-orange-700 font-semibold{% else %}border-transparent text-gray-500 hover:border-orange-500 hover:text-gray-700{% endif %} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">Find
-                            Talent</a>
+                            class="{% if request.endpoint == 'talent_search' %}border-blue-500 text-blue-700 font-bold{% else %}border-transparent text-gray-500 hover:border-blue-500 hover:text-gray-700{% endif %} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">Find Talent</a>
                     </div>
                 </div>
                 <div class="hidden sm:ml-6 sm:flex sm:items-center">
                     {% if session.user_id %}
                     <div class="flex items-center space-x-4">
                         <a href="{{ url_for('dashboard') }}"
-                            class="{% if request.endpoint == 'dashboard' %}text-orange-700 font-semibold{% else %}text-gray-500 hover:text-gray-700{% endif %} px-3 py-2 rounded-md text-sm font-medium">Dashboard</a>
+                            class="{% if request.endpoint == 'dashboard' %}text-blue-700 font-bold{% else %}text-gray-500 hover:text-gray-700{% endif %} px-3 py-2 rounded-md text-sm font-medium">Dashboard</a>
                         <a href="{{ url_for('profile') }}" class="flex items-center">
-                            <div class="h-8 w-8 rounded-full bg-orange-100 flex items-center justify-center">
-                                <i class="fas fa-user text-orange-600"></i>
+                            <div class="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center">
+                                <i class="fas fa-user text-blue-600"></i>
                             </div>
                         </a>
                         <a href="{{ url_for('logout') }}"
@@ -52,7 +51,7 @@
                             class="text-gray-500 hover:text-gray-700 px-3 py-2 rounded-md text-sm font-medium">Log
                             in</a>
                         <a href="{{ url_for('signup') }}"
-                            class="bg-orange-600 text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-orange-700">Sign
+                            class="bg-blue-600 text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-blue-700">Sign
                             up</a>
                     </div>
                     {% endif %}
@@ -71,19 +70,18 @@
             <div class="pt-2 pb-3 space-y-1">
                 {% if not session.user_id %}
                 <a href="{{ url_for('home') }}"
-                    class="block px-3 py-2 text-base font-medium {% if request.endpoint == 'home' %}bg-orange-100 text-orange-700 font-semibold{% else %}text-gray-500 hover:bg-gray-50 hover:text-gray-700{% endif %}">Home</a>
+                    class="block px-3 py-2 text-base font-medium {% if request.endpoint == 'home' %}bg-blue-100 text-blue-700 font-bold{% else %}text-gray-500 hover:bg-gray-50 hover:text-gray-700{% endif %}">Home</a>
                 {% endif %}
                 <a href="{{ url_for('opportunities') }}"
-                    class="block px-3 py-2 text-base font-medium {% if request.endpoint == 'opportunities' %}bg-orange-100 text-orange-700 font-semibold{% else %}text-gray-500 hover:bg-gray-50 hover:text-gray-700{% endif %}">Opportunities</a>
+                    class="block px-3 py-2 text-base font-medium {% if request.endpoint == 'opportunities' %}bg-blue-100 text-blue-700 font-bold{% else %}text-gray-500 hover:bg-gray-50 hover:text-gray-700{% endif %}">Opportunities</a>
                 <a href="{{ url_for('talent_search') }}"
-                    class="block px-3 py-2 text-base font-medium {% if request.endpoint == 'talent_search' %}bg-orange-100 text-orange-700 font-semibold{% else %}text-gray-500 hover:bg-gray-50 hover:text-gray-700{% endif %}">Find
-                    Talent</a>
+                    class="block px-3 py-2 text-base font-medium {% if request.endpoint == 'talent_search' %}bg-blue-100 text-blue-700 font-bold{% else %}text-gray-500 hover:bg-gray-50 hover:text-gray-700{% endif %}">Find Talent</a>
             </div>
             {% if session.user_id %}
             <div class="pt-4 pb-3 border-t border-gray-200">
                 <div class="flex items-center px-4">
-                    <div class="h-10 w-10 rounded-full bg-orange-100 flex items-center justify-center">
-                        <i class="fas fa-user text-orange-600"></i>
+                    <div class="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
+                        <i class="fas fa-user text-blue-600"></i>
                     </div>
                     <div class="ml-3">
                         <div class="text-base font-medium text-gray-800">{{ session.user_name }}</div>
@@ -91,7 +89,7 @@
                 </div>
                 <div class="mt-3 space-y-1">
                     <a href="{{ url_for('dashboard') }}"
-                        class="block px-4 py-2 text-base font-medium {% if request.endpoint == 'dashboard' %}bg-orange-100 text-orange-700 font-semibold{% else %}text-gray-500 hover:bg-gray-50 hover:text-gray-700{% endif %}">Dashboard</a>
+                        class="block px-4 py-2 text-base font-medium {% if request.endpoint == 'dashboard' %}bg-blue-100 text-blue-700 font-bold{% else %}text-gray-500 hover:bg-gray-50 hover:text-gray-700{% endif %}">Dashboard</a>
                     <a href="{{ url_for('profile') }}"
                         class="block px-4 py-2 text-base font-medium text-gray-500 hover:bg-gray-50 hover:text-gray-700">Your
                         Profile</a>
