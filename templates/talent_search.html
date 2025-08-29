@@ -12,21 +12,21 @@
             </p>
         </div>
 
-        <!-- Compact Search Bar -->
+        <!-- Simplified Search Bar -->
         <div class="bg-white p-4 rounded-lg shadow-sm mb-8 border border-blue-200">
-            <form class="flex items-center space-x-3" id="talent-search-form" onsubmit="return false;">
+            <form method="GET" action="{{ url_for('talent_search') }}" class="flex items-center space-x-3">
                 <div class="flex-1 relative">
                     <input type="text" id="search" name="search" value="{{ search_query or '' }}"
-                           placeholder="Search by name, skills, school, grade, or interests..."
-                           class="block w-full px-4 py-2 pr-10 border border-blue-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                           onkeypress="if(event.key==='Enter') document.getElementById('talent-search-form').dispatchEvent(new Event('submit'));">
+                           placeholder="Search by name, skills, school, or bio..."
+                           class="block w-full px-4 py-2 pr-10 border border-blue-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors">
                     <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
                         <i class="fas fa-search text-blue-400"></i>
                     </div>
                 </div>
                 <div class="relative">
-                    <select id="grade-filter" name="grade"
-                            class="block px-4 py-2 border border-blue-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-white text-gray-900">
+                    <select id="grade" name="grade"
+                            class="block px-4 py-2 border border-blue-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-white text-gray-900"
+                            onchange="this.form.submit();">
                         <option value="">All Grades</option>
                         <option value="9th Grade" {% if selected_grade == '9th Grade' %}selected{% endif %}>9th Grade
                         </option>
@@ -46,11 +46,11 @@
                     <i class="fas fa-search mr-2"></i>
                     Search
                 </button>
-                <button type="button" onclick="clearSearch()"
-                        class="bg-blue-100 text-blue-700 px-4 py-2 rounded-lg hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors font-medium inline-flex items-center border border-blue-300">
+                <a href="{{ url_for('talent_search') }}"
+                   class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors font-medium inline-flex items-center border border-gray-300">
                     <i class="fas fa-times mr-2"></i>
                     Clear
-                </button>
+                </a>
             </form>
         </div>
 
@@ -122,7 +122,7 @@
                                         <i class="fas fa-envelope mr-2"></i>
                                         Contact
                                     </a>
-                                    <a href="{{ url_for('view_profile', user_id=student.id, search=search_query, skills=selected_skills, school=selected_school, grade=selected_grade) }}"
+                                    <a href="{{ url_for('view_profile', user_id=student.id, search=search_query, grade=selected_grade) }}"
                                        class="flex-1 inline-flex items-center justify-center px-4 py-2.5 border border-blue-300 rounded-md text-blue-700 text-sm font-medium bg-white hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors shadow-sm">
                                         <i class="fas fa-eye mr-2"></i>
                                         View

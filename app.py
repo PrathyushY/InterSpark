@@ -1,18 +1,10 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, session
-from dotenv import load_dotenv
 import os
 from datetime import datetime
+
+from dotenv import load_dotenv
+from flask import Flask, render_template, request, redirect, url_for, flash, session
+
 from supabase_config import supabase_service
-
-# Use serverless search service for deployment compatibility
-try:
-    from search_service_serverless import serverless_search_service as search_service
-
-    SEARCH_MODE = "serverless"
-except ImportError:
-    from search_service import search_service
-
-    SEARCH_MODE = "whoosh"
 
 # Load environment variables
 load_dotenv()
@@ -331,22 +323,22 @@ def dashboard():
                         company_opportunities[i] = dict(opp)
                     for field in expected_fields:
                         if (
-                            field not in company_opportunities[i]
-                            or company_opportunities[i][field] is None
+                                field not in company_opportunities[i]
+                                or company_opportunities[i][field] is None
                         ):
                             company_opportunities[i][field] = (
                                 ""
                                 if field
-                                in [
-                                    "title",
-                                    "description",
-                                    "type",
-                                    "category",
-                                    "location",
-                                    "requirements",
-                                    "compensation",
-                                    "duration",
-                                ]
+                                   in [
+                                       "title",
+                                       "description",
+                                       "type",
+                                       "category",
+                                       "location",
+                                       "requirements",
+                                       "compensation",
+                                       "duration",
+                                   ]
                                 else None
                             )
             if not company_opportunities:
@@ -431,19 +423,6 @@ def profile():
                 # Update session data
                 if "name" in profile_data:
                     session["user_name"] = profile_data["name"]
-
-                # Update search index for student profiles
-                if user_type == "student":
-                    try:
-                        updated_profile = supabase_service.get_profile(user_id)
-                        if updated_profile:
-                            if SEARCH_MODE == "serverless":
-                                search_service.update_profile(updated_profile)
-                            else:
-                                search_service.index_student_profile(updated_profile)
-                    except Exception as search_error:
-                        # Don't fail the profile update if search indexing fails
-                        print(f"Warning: Failed to update search index: {search_error}")
 
                 return redirect(url_for("profile"))
             else:
@@ -597,22 +576,19 @@ def talent_search():
     try:
         user_id = session.get("user_id")
 
-        # Get filters from query parameters
+        # Get search parameters from request
         search_query = request.args.get("search", "")
         skills = request.args.get("skills", "")
         school = request.args.get("school", "")
         grade = request.args.get("grade", "")
 
-        # Use Whoosh search service instead of direct Supabase query
-        students = search_service.search_students(
-            search_query=search_query, skills=skills, school=school, grade=grade
+        # Search students with filters
+        students = supabase_service.search_students(
+            search_query=search_query,
+            skills=skills,
+            school=school,
+            grade=grade
         )
-
-        # Check which profiles are saved by the current user
-        for student in students:
-            student["is_saved"] = supabase_service.is_profile_saved(
-                user_id, student["id"]
-            )
 
         return render_template(
             "talent_search.html",
@@ -895,62 +871,6 @@ def unsave_profile(profile_id):
         return {"success": True, "message": "Profile removed from saved"}
     except Exception as e:
         return {"success": False, "error": str(e)}, 500
-
-
-@app.route("/api/search/suggestions")
-def search_suggestions():
-    """API endpoint for search suggestions."""
-    if "user_id" not in session:
-        return {"suggestions": []}, 401
-
-    field = request.args.get("field", "skills")
-    term = request.args.get("term", "")
-
-    if not term or len(term) < 2:
-        return {"suggestions": []}
-
-    try:
-        suggestions = search_service.get_search_suggestions(field, term, limit=10)
-        return {"suggestions": suggestions}
-    except Exception as e:
-        print(f"Error getting search suggestions: {e}")
-        return {"suggestions": []}
-
-
-@app.route("/admin/search/rebuild", methods=["POST"])
-def rebuild_search_index():
-    """Admin endpoint to rebuild the search index."""
-    # This should be protected with admin authentication in a real app
-    if "user_id" not in session:
-        return {"success": False, "error": "Not authenticated"}, 401
-
-    try:
-        # Get all student profiles
-        profiles = supabase_service.search_students()  # Gets all students
-        success = search_service.rebuild_index(profiles)
-
-        if success:
-            return {
-                "success": True,
-                "message": f"Index rebuilt with {len(profiles)} profiles",
-            }
-        else:
-            return {"success": False, "error": "Failed to rebuild index"}, 500
-    except Exception as e:
-        return {"success": False, "error": str(e)}, 500
-
-
-@app.route("/admin/search/stats")
-def search_index_stats():
-    """Admin endpoint to get search index statistics."""
-    if "user_id" not in session:
-        return {"error": "Not authenticated"}, 401
-
-    try:
-        stats = search_service.get_index_stats()
-        return {"stats": stats}
-    except Exception as e:
-        return {"error": str(e)}, 500
 
 
 @app.route("/profile_details/<profile>")
