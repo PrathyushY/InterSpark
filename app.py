@@ -37,12 +37,14 @@ def check_profile_completion():
             completion_check = supabase_service.is_profile_complete(profile, user_type)
 
             if not completion_check["complete"]:
-                missing_fields_str = ", ".join(completion_check["missing_fields"])
-                flash(
-                    f"Please complete your profile. Missing: {missing_fields_str}",
-                    "warning",
-                )
-                return redirect(url_for("profile"))
+                # Only redirect if not already on profile page to prevent infinite loop
+                if request.endpoint != "profile":
+                    missing_fields_str = ", ".join(completion_check["missing_fields"])
+                    flash(
+                        f"Please complete your profile. Missing: {missing_fields_str}",
+                        "warning",
+                    )
+                    return redirect(url_for("profile"))
 
     except Exception as e:
         # Log error but don't block navigation
@@ -299,56 +301,18 @@ def dashboard():
             company_opportunities = supabase_service.get_organization_opportunities(
                 user_id
             )
-            # Ensure all opportunities are dicts with all expected fields
-            expected_fields = [
-                "title",
-                "description",
-                "type",
-                "category",
-                "location",
-                "requirements",
-                "compensation",
-                "duration",
-                "application_deadline",
-                "status",
-            ]
-            for opp in company_opportunities:
-                for field in expected_fields:
-                    if field not in opp:
-                        opp[field] = None
-                print("company_opportunities for dashboard:", company_opportunities)
-                # Extra: ensure every opportunity is a dict and has all expected fields
-                for i, opp in enumerate(company_opportunities):
-                    if not isinstance(opp, dict):
-                        company_opportunities[i] = dict(opp)
-                    for field in expected_fields:
-                        if (
-                                field not in company_opportunities[i]
-                                or company_opportunities[i][field] is None
-                        ):
-                            company_opportunities[i][field] = (
-                                ""
-                                if field
-                                   in [
-                                       "title",
-                                       "description",
-                                       "type",
-                                       "category",
-                                       "location",
-                                       "requirements",
-                                       "compensation",
-                                       "duration",
-                                   ]
-                                else None
-                            )
+            # Ensure all opportunities are properly formatted
             if not company_opportunities:
                 company_opportunities = []
+
             saved_profiles = supabase_service.get_saved_profiles(user_id)
             if not saved_profiles:
                 saved_profiles = []
+
             saved_opportunities = supabase_service.get_saved_opportunities(user_id)
             if not saved_opportunities:
                 saved_opportunities = []
+
             return render_template(
                 "dashboard.html",
                 user_type="organization",
@@ -584,10 +548,7 @@ def talent_search():
 
         # Search students with filters
         students = supabase_service.search_students(
-            search_query=search_query,
-            skills=skills,
-            school=school,
-            grade=grade
+            search_query=search_query, skills=skills, school=school, grade=grade
         )
 
         return render_template(
@@ -880,6 +841,4 @@ def profile_details(profile):
 
 
 if __name__ == "__main__":
-    import os
-
     app.run(debug=True, port=5000)
