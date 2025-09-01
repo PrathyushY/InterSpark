@@ -111,7 +111,7 @@ def inject_user_profile():
         except Exception as e:
             # Log error but don't break the template rendering
             print(f"Error loading user profile for navbar: {str(e)}")
-    
+
     return {"current_user_profile": None}
 
 

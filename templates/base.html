@@ -28,7 +28,8 @@
                         <a href="{{ url_for('opportunities') }}"
                             class="{% if request.endpoint == 'opportunities' %}border-blue-500 text-blue-700 font-bold{% else %}border-transparent text-gray-500 hover:border-blue-500 hover:text-gray-700{% endif %} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">Opportunities</a>
                         <a href="{{ url_for('talent_search') }}"
-                            class="{% if request.endpoint == 'talent_search' %}border-blue-500 text-blue-700 font-bold{% else %}border-transparent text-gray-500 hover:border-blue-500 hover:text-gray-700{% endif %} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">Find Talent</a>
+                            class="{% if request.endpoint == 'talent_search' %}border-blue-500 text-blue-700 font-bold{% else %}border-transparent text-gray-500 hover:border-blue-500 hover:text-gray-700{% endif %} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">Find
+                            Talent</a>
                     </div>
                 </div>
                 <div class="hidden sm:ml-6 sm:flex sm:items-center">
@@ -37,11 +38,13 @@
                         <a href="{{ url_for('dashboard') }}"
                             class="{% if request.endpoint == 'dashboard' %}text-blue-700 font-bold{% else %}text-gray-500 hover:text-gray-700{% endif %} px-3 py-2 rounded-md text-sm font-medium">Dashboard</a>
                         <a href="{{ url_for('profile') }}" class="flex items-center">
-                            <div class="h-8 w-8 rounded-full overflow-hidden bg-blue-100 flex items-center justify-center">
+                            <div
+                                class="h-8 w-8 rounded-full overflow-hidden bg-blue-100 flex items-center justify-center">
                                 {% if current_user_profile and current_user_profile.profile_image %}
-                                    <img src="{{ current_user_profile.profile_image }}" alt="Profile Picture" class="w-full h-full object-cover">
+                                <img src="{{ current_user_profile.profile_image }}" alt="Profile Picture"
+                                    class="w-full h-full object-cover">
                                 {% else %}
-                                    <i class="fas fa-user text-blue-600"></i>
+                                <i class="fas fa-user text-blue-600"></i>
                                 {% endif %}
                             </div>
                         </a>
@@ -79,16 +82,18 @@
                 <a href="{{ url_for('opportunities') }}"
                     class="block px-3 py-2 text-base font-medium {% if request.endpoint == 'opportunities' %}bg-blue-100 text-blue-700 font-bold{% else %}text-gray-500 hover:bg-gray-50 hover:text-gray-700{% endif %}">Opportunities</a>
                 <a href="{{ url_for('talent_search') }}"
-                    class="block px-3 py-2 text-base font-medium {% if request.endpoint == 'talent_search' %}bg-blue-100 text-blue-700 font-bold{% else %}text-gray-500 hover:bg-gray-50 hover:text-gray-700{% endif %}">Find Talent</a>
+                    class="block px-3 py-2 text-base font-medium {% if request.endpoint == 'talent_search' %}bg-blue-100 text-blue-700 font-bold{% else %}text-gray-500 hover:bg-gray-50 hover:text-gray-700{% endif %}">Find
+                    Talent</a>
             </div>
             {% if session.user_id %}
             <div class="pt-4 pb-3 border-t border-gray-200">
                 <div class="flex items-center px-4">
                     <div class="h-10 w-10 rounded-full overflow-hidden bg-blue-100 flex items-center justify-center">
                         {% if current_user_profile and current_user_profile.profile_image %}
-                            <img src="{{ current_user_profile.profile_image }}" alt="Profile Picture" class="w-full h-full object-cover">
+                        <img src="{{ current_user_profile.profile_image }}" alt="Profile Picture"
+                            class="w-full h-full object-cover">
                         {% else %}
-                            <i class="fas fa-user text-blue-600"></i>
+                        <i class="fas fa-user text-blue-600"></i>
                         {% endif %}
                     </div>
                     <div class="ml-3">
@@ -205,12 +210,32 @@
     </footer>
 
     <style>
-        @keyframes slideDown { from { transform: translateY(-100%); opacity: 0;} to { transform: translateY(0); opacity: 1;} }
-        @keyframes slideUp { from { transform: translateY(0); opacity: 1;} to { transform: translateY(-100%); opacity: 0;} }
+        @keyframes slideDown {
+            from {
+                transform: translateY(-100%);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(0);
+                opacity: 1;
+            }
+
+            to {
+                transform: translateY(-100%);
+                opacity: 0;
+            }
+        }
     </style>
 
     <script src="{{ url_for('static', filename='js/base.js') }}"></script>
 </body>
 
 </html>
-
