@@ -19,239 +19,9 @@
 
         <div class="bg-white shadow rounded-lg">
             <form method="POST" class="divide-y divide-gray-200" id="opportunity-form">
-                <script>
-                    // Utility to get required fields
-                    function getRequiredFields() {
-                        return ["title", "type", "category", "location", "requirements", "compensation", "duration", "application_deadline", "description"];
-                    }
-
-                    // Save form data to localStorage
-                    function saveFormLocally() {
-                        const data = {};
-                        getRequiredFields().forEach(function (field) {
-                            var el = document.getElementById(field);
-                            if (el) {
-                                data[field] = el.value;
-                            }
-                        });
-                        localStorage.setItem("opportunityDraft", JSON.stringify(data));
-                    }
-
-                    // Restore form data from localStorage
-                    function restoreFormLocally() {
-                        const data = localStorage.getItem("opportunityDraft");
-                        if (data) {
-                            const obj = JSON.parse(data);
-                            getRequiredFields().forEach(function (field) {
-                                var el = document.getElementById(field);
-                                if (el && obj[field] !== undefined) {
-                                    el.value = obj[field];
-                                }
-                            });
-                        }
-                    }
-
-                    // Clear localStorage draft
-                    function clearFormLocally() {
-                        localStorage.removeItem("opportunityDraft");
-                    }
-
-                    // On page load, restore form
-                    document.addEventListener('DOMContentLoaded', restoreFormLocally);
-
-                    // Intercept Publish button
-                    function publishOpportunity() {
-                        // Check for missing required fields
-                        var missing = [];
-                        getRequiredFields().forEach(function (field) {
-                            var el = document.getElementById(field);
-                            if (el && !el.value) {
-                                missing.push(field);
-                            }
-                        });
-                        if (missing.length > 0) {
-                            saveFormLocally();
-                            highlightRequiredFields(missing);
-                            alert("Missing required fields: " + missing.join(", ") + "\nDraft saved locally. Complete all fields to publish.");
-                            return false;
-                        }
-                        clearFormLocally();
-                        // Set status to active and add a hidden field to indicate publish
-                        document.getElementById('status-field').value = 'active';
-                        let publishField = document.getElementById('publish-field');
-                        if (!publishField) {
-                            publishField = document.createElement('input');
-                            publishField.type = 'hidden';
-                            publishField.name = 'publish';
-                            publishField.id = 'publish-field';
-                            publishField.value = '1';
-                            document.getElementById('opportunity-form').appendChild(publishField);
-                        } else {
-                            publishField.value = '1';
-                        }
-                        document.getElementById('opportunity-form').submit();
-                    }
-
-                    // Intercept Save as Draft button
-                    function saveAsDraft() {
-                        clearFormLocally();
-                        document.getElementById('status-field').value = 'draft';
-                        document.getElementById('opportunity-form').submit();
-                    }
-
-                    // Clear local draft if user leaves page
-                    window.addEventListener('beforeunload', clearFormLocally);
-
-                    function confirmCancel() {
-                        if (confirm("Are you sure you want to cancel? Any unsaved changes will be lost.")) {
-                            // Clear any locally saved draft
-                            clearFormLocally();
-                            // Navigate to previous page or dashboard as fallback
-                            if (document.referrer && document.referrer !== window.location.href) {
-                                window.location.href = document.referrer;
-                            } else {
-                                window.location.href = "{{ url_for('dashboard') }}";
-                            }
-                        }
-                    }
-
-                    function previewOpportunity() {
-                        // Collect current form data
-                        const formData = {};
-                        const fields = ["title", "type", "category", "location", "requirements", "compensation", "duration", "application_deadline", "description"];
-
-                        fields.forEach(field => {
-                            const element = document.getElementById(field);
-                            if (element) {
-                                formData[field] = element.value || '';
-                            }
-                        });
-
-                        // Show preview modal
-                        showPreviewModal(formData);
-                    }
-
-                    function showPreviewModal(data) {
-                        // Create modal HTML
-                        const modalHTML = `
-                            <div id="preview-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-                                <div class="relative top-20 mx-auto p-5 border w-11/12 max-w-4xl shadow-lg rounded-md bg-white">
-                                    <div class="mt-3">
-                                        <div class="flex justify-between items-center mb-4">
-                                            <h3 class="text-lg font-medium text-gray-900">Opportunity Preview</h3>
-                                            <button onclick="closePreviewModal()" class="text-gray-400 hover:text-gray-600">
-                                                <i class="fas fa-times text-xl"></i>
-                                            </button>
-                                        </div>
-
-                                        <!-- Preview Content -->
-                                        <div class="bg-white rounded-lg shadow-md overflow-hidden">
-                                            <div class="h-32 bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-                                                <i class="fas fa-briefcase text-white text-4xl"></i>
-                                            </div>
-
-                                            <div class="p-6">
-                                                <div class="flex items-center justify-between mb-4">
-                                                    <div class="flex items-center space-x-3">
-                                                        <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${data.type === 'Internship' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'}">
-                                                            ${data.type || 'Type not specified'}
-                                                        </span>
-                                                        <span class="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">${data.category || 'Category not specified'}</span>
-                                                    </div>
-                                                </div>
-
-                                                <h1 class="text-2xl font-bold text-gray-900 mb-4">${data.title || 'Opportunity Title'}</h1>
-
-                                                <!-- Key Details -->
-                                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                                                    <div class="space-y-3">
-                                                        <div class="flex items-center">
-                                                            <i class="fas fa-map-marker-alt text-gray-400 w-5 mr-3"></i>
-                                                            <span class="text-gray-700">${data.location || 'Location not specified'}</span>
-                                                        </div>
-                                                        <div class="flex items-center">
-                                                            <i class="fas fa-clock text-gray-400 w-5 mr-3"></i>
-                                                            <span class="text-gray-700">${data.duration || 'Duration not specified'}</span>
-                                                        </div>
-                                                        <div class="flex items-center">
-                                                            <i class="fas fa-dollar-sign text-gray-400 w-5 mr-3"></i>
-                                                            <span class="text-gray-700">${data.compensation || 'Compensation not specified'}</span>
-                                                        </div>
-                                                    </div>
-                                                    <div class="space-y-3">
-                                                        <div class="flex items-center">
-                                                            <i class="fas fa-calendar text-gray-400 w-5 mr-3"></i>
-                                                            <span class="text-gray-700">Deadline: ${data.application_deadline ? new Date(data.application_deadline).toLocaleDateString() : 'No deadline specified'}</span>
-                                                        </div>
-                                                    </div>
-                                                </div>
-
-                                                <!-- Description -->
-                                                ${data.description ? `
-                                                    <div class="mb-6">
-                                                        <h3 class="text-lg font-semibold text-gray-900 mb-3">About This Opportunity</h3>
-                                                        <p class="text-gray-700 leading-relaxed">${data.description.replace(/\n/g, '<br>')}</p>
-                                                    </div>
-                                                ` : ''}
-
-                                                <!-- Requirements -->
-                                                ${data.requirements ? `
-                                                    <div class="mb-6">
-                                                        <h3 class="text-lg font-semibold text-gray-900 mb-3">Requirements</h3>
-                                                        <ul class="space-y-2 text-gray-700">
-                                                            ${data.requirements.split('\n').filter(req => req.trim()).map(req =>
-                            `<li class="flex items-start">
-                                                                    <i class="fas fa-circle text-gray-400 mr-3 mt-2 flex-shrink-0" style="font-size: 6px;"></i>
-                                                                    <span>${req.trim()}</span>
-                                                                </li>`
-                        ).join('')}
-                                                        </ul>
-                                                    </div>
-                                                ` : ''}
-                                            </div>
-                                        </div>
-
-                                        <div class="flex justify-end mt-6 space-x-3">
-                                            <button onclick="closePreviewModal()" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-medium py-2 px-4 rounded">
-                                                Close Preview
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        `;
-
-                        // Add modal to page
-                        document.body.insertAdjacentHTML('beforeend', modalHTML);
-                    }
-
-                    function closePreviewModal() {
-                        const modal = document.getElementById('preview-modal');
-                        if (modal) {
-                            modal.remove();
-                        }
-                    }
-                </script>
                 <input type="hidden" name="status" id="status-field" value="active">
                 <input type="hidden" name="referrer" value="{{ request.referrer or url_for('dashboard') }}">
                 <!-- Basic Information -->
-                <script>
-                    function highlightRequiredFields(missingFields) {
-                        missingFields.forEach(function (field) {
-                            var el = document.getElementById(field);
-                            if (el) {
-                                el.classList.add('required-highlight');
-                            }
-                        });
-                    }
-
-                    function clearRequiredHighlights() {
-                        var highlighted = document.querySelectorAll('.required-highlight');
-                        highlighted.forEach(function (el) {
-                            el.classList.remove('required-highlight');
-                        });
-                    }
-                </script>
                 <div class="px-4 py-5 sm:p-6">
                     <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">Basic Information</h3>
                     <div class="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
@@ -402,109 +172,69 @@
                 <!-- Actions -->
                 <div class="px-4 py-4 sm:px-6 flex justify-between">
                     <div>
-                        <button type="button"
-                                onclick="confirmCancel()"
-                                class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-4 inline-flex justify-center text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                            Cancel
-                        </button>
+                        <button type="button" onclick="CO.confirmCancel()" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-4 inline-flex justify-center text-sm font-medium text-gray-700 hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">Cancel</button>
                     </div>
                     <div class="flex space-x-3">
-                        <button type="button"
-                                onclick="previewOpportunity()"
-                                class="bg-purple-600 border border-transparent rounded-md shadow-sm py-2 px-4 inline-flex justify-center text-sm font-medium text-white hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500">
-                            <i class="fas fa-eye mr-2"></i>Preview
-                        </button>
+                        <button type="button" onclick="CO.previewOpportunity()" class="bg-blue-500 border border-transparent rounded-md shadow-sm py-2 px-4 inline-flex justify-center text-sm font-medium text-white hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"><i class="fas fa-eye mr-2"></i>Preview</button>
                         {% if not is_editing %}
-                            <button type="button"
-                                    class="bg-gray-600 border border-transparent rounded-md shadow-sm py-2 px-4 inline-flex justify-center text-sm font-medium text-white hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
-                                    onclick="saveAsDraft()">
-                                Save as Draft
-                            </button>
-                            <script>
-                                function saveAsDraft() {
-                                    document.getElementById('status-field').value = 'draft';
-                                    document.getElementById('opportunity-form').submit();
-                                }
-                            </script>
+                        <button type="button" class="bg-gray-600 border border-transparent rounded-md shadow-sm py-2 px-4 inline-flex justify-center text-sm font-medium text-white hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500" onclick="CO.saveAsDraft()">Save as Draft</button>
                         {% endif %}
-                        <button type="submit"
-                                class="bg-blue-600 border border-transparent rounded-md shadow-sm py-2 px-4 inline-flex justify-center text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        <button type="submit" class="bg-blue-600 border border-transparent rounded-md shadow-sm py-2 px-4 inline-flex justify-center text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
                             <i class="fas {% if is_editing %}fa-save{% else %}fa-plus{% endif %} mr-2"></i>
                             {% if is_editing %}Update Draft{% else %}Create Opportunity{% endif %}
                         </button>
                         {% if is_editing %}
-                            <button type="button"
-                                    class="bg-green-600 border border-transparent rounded-md shadow-sm py-2 px-4 inline-flex justify-center text-sm font-medium text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-                                    onclick="publishOpportunity()">
-                                <i class="fas fa-upload mr-2"></i>Publish Opportunity
-                            </button>
-                            <script>
-
-                                function publishOpportunity() {
-                                    // Set status to active and add a hidden field to indicate publish
-                                    document.getElementById('status-field').value = 'active';
-                                    let publishField = document.getElementById('publish-field');
-                                    if (!publishField) {
-                                        publishField = document.createElement('input');
-                                        publishField.type = 'hidden';
-                                        publishField.name = 'publish';
-                                        publishField.id = 'publish-field';
-                                        publishField.value = '1';
-                                        document.getElementById('opportunity-form').appendChild(publishField);
-                                    } else {
-                                        publishField.value = '1';
-                                    }
-                                    document.getElementById('opportunity-form').submit();
-                                }
-                            </script>
+                        <button type="button" class="bg-blue-700 border border-transparent rounded-md shadow-sm py-2 px-4 inline-flex justify-center text-sm font-medium text-white hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-700" onclick="CO.publishOpportunity()"><i class="fas fa-upload mr-2"></i>Publish Opportunity</button>
                         {% endif %}
                     </div>
                 </div>
             </form>
         </div>
-
-        <!-- Tips Section -->
         {% if not is_editing %}
-            <div class="mt-8 bg-blue-50 rounded-lg p-6">
-                <h3 class="text-lg font-medium text-gray-900 mb-4">
-                    <i class="fas fa-lightbulb text-blue-600 mr-2"></i>
-                    Tips for Creating Great Opportunities
-                </h3>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-700">
-                    <div>
-                        <h4 class="font-semibold mb-2">Be Specific and Clear</h4>
-                        <ul class="space-y-1 list-disc list-inside">
-                            <li>Use descriptive titles that clearly indicate the role</li>
-                            <li>Specify the time commitment and duration</li>
-                            <li>Be clear about remote vs. in-person work</li>
-                        </ul>
-                    </div>
-                    <div>
-                        <h4 class="font-semibold mb-2">Highlight Learning</h4>
-                        <ul class="space-y-1 list-disc list-inside">
-                            <li>Emphasize skills students will develop</li>
-                            <li>Mention mentorship and guidance available</li>
-                            <li>Include any certificates or recognition offered</li>
-                        </ul>
-                    </div>
-                    <div>
-                        <h4 class="font-semibold mb-2">Set Realistic Expectations</h4>
-                        <ul class="space-y-1 list-disc list-inside">
-                            <li>Match requirements to the experience level</li>
-                            <li>Be realistic about time commitments</li>
-                            <li>Clearly state if it's paid or unpaid</li>
-                        </ul>
-                    </div>
-                    <div>
-                        <h4 class="font-semibold mb-2">Make It Appealing</h4>
-                        <ul class="space-y-1 list-disc list-inside">
-                            <li>Use engaging language and positive tone</li>
-                            <li>Include your organization's mission</li>
-                            <li>Add an attractive image if possible</li>
-                        </ul>
-                    </div>
+        <div class="mt-8 bg-blue-50 rounded-lg p-6">
+            <h3 class="text-lg font-medium text-gray-900 mb-4">
+                <i class="fas fa-lightbulb text-blue-600 mr-2"></i>
+                Tips for Creating Great Opportunities
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-700">
+                <div>
+                    <h4 class="font-semibold mb-2">Be Specific and Clear</h4>
+                    <ul class="space-y-1 list-disc list-inside">
+                        <li>Use descriptive titles that clearly indicate the role</li>
+                        <li>Specify the time commitment and duration</li>
+                        <li>Be clear about remote vs. in-person work</li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-semibold mb-2">Highlight Learning</h4>
+                    <ul class="space-y-1 list-disc list-inside">
+                        <li>Emphasize skills students will develop</li>
+                        <li>Mention mentorship and guidance available</li>
+                        <li>Include any certificates or recognition offered</li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-semibold mb-2">Set Realistic Expectations</h4>
+                    <ul class="space-y-1 list-disc list-inside">
+                        <li>Match requirements to the experience level</li>
+                        <li>Be realistic about time commitments</li>
+                        <li>Clearly state if it's paid or unpaid</li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-semibold mb-2">Make It Appealing</h4>
+                    <ul class="space-y-1 list-disc list-inside">
+                        <li>Use engaging language and positive tone</li>
+                        <li>Include your organization's mission</li>
+                        <li>Add an attractive image if possible</li>
+                    </ul>
                 </div>
             </div>
+        </div>
         {% endif %}
     </div>
+<script>
+  window.OPP_EDITING = {{ 'true' if is_editing else 'false' }};
+</script>
+<script src="{{ url_for('static', filename='js/create_opportunity.js') }}"></script>
 {% endblock %}

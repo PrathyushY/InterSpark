@@ -4,229 +4,73 @@
 
 {% block content %}
 <div class="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-    <div class="sm:mx-auto sm:w-full sm:max-w-md">
-        <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Create your account
-        </h2>
-        <p class="mt-2 text-center text-sm text-gray-600">
-            Or
-            <a href="{{ url_for('login') }}" class="font-medium text-blue-600 hover:text-blue-500">
-                sign in to your existing account
-            </a>
-        </p>
-    </div>
-
-    <div class="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div class="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
-            <form class="space-y-6" method="POST" id="signup-form">
-                <!-- User Type Selection -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-3">I am a:</label>
-                    <div class="flex space-x-4">
-                        <label class="inline-flex items-center">
-                            <input type="radio" name="user_type" value="student" checked
-                                class="form-radio text-blue-600" onchange="toggleFormFields()">
-                            <span class="ml-2 text-sm font-medium text-gray-700">Student</span>
-                        </label>
-                        <label class="inline-flex items-center">
-                            <input type="radio" name="user_type" value="organization" class="form-radio text-blue-600"
-                                onchange="toggleFormFields()">
-                            <span class="ml-2 text-sm font-medium text-gray-700">Organization</span>
-                        </label>
-                    </div>
-                </div>
-
-                <div>
-                    <label for="name" class="block text-sm font-medium text-gray-700">
-                        <span id="name-label">Full Name</span> <span class="text-red-500">*</span>
-                    </label>
-                    <div class="mt-1">
-                        <input id="name" name="name" type="text" required
-                            class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                    </div>
-                </div>
-
-                <div>
-                    <label for="email" class="block text-sm font-medium text-gray-700">
-                        Email address <span class="text-red-500">*</span>
-                    </label>
-                    <div class="mt-1">
-                        <input id="email" name="email" type="email" autocomplete="email" required
-                            class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                    </div>
-                </div>
-
-                <!-- Student-specific fields -->
-                <div id="student-fields" class="space-y-6">
-                    <div>
-                        <label for="school" class="block text-sm font-medium text-gray-700">
-                            School <span class="text-red-500">*</span>
-                        </label>
-                        <div class="mt-1">
-                            <input id="school" name="school" type="text" placeholder="e.g., Lincoln High School"
-                                class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                        </div>
-                    </div>
-
-                    <div>
-                        <label for="grade" class="block text-sm font-medium text-gray-700">
-                            Grade <span class="text-red-500">*</span>
-                        </label>
-                        <div class="mt-1">
-                            <select id="grade" name="grade"
-                                class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                                <option value="">Select Grade</option>
-                                <option value="9th Grade">9th Grade</option>
-                                <option value="10th Grade">10th Grade</option>
-                                <option value="11th Grade">11th Grade</option>
-                                <option value="12th Grade">12th Grade</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div>
-                        <label for="bio" class="block text-sm font-medium text-gray-700">
-                            Bio <span class="text-red-500">*</span>
-                        </label>
-                        <div class="mt-1">
-                            <textarea id="bio" name="bio" rows="3"
-                                placeholder="Tell us about yourself, your interests, and what kind of opportunities you're looking for..."
-                                class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"></textarea>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Organization-specific fields -->
-                <div id="organization-fields" class="space-y-6" style="display: none;">
-                    <div>
-                        <label for="description" class="block text-sm font-medium text-gray-700">
-                            Organization Description <span class="text-red-500">*</span>
-                        </label>
-                        <div class="mt-1">
-                            <textarea id="description" name="description" rows="3"
-                                placeholder="Describe your organization's mission, values, and what you do..."
-                                class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"></textarea>
-                        </div>
-                    </div>
-                </div>
-
-                <div>
-                    <label for="password" class="block text-sm font-medium text-gray-700">
-                        Password <span class="text-red-500">*</span>
-                    </label>
-                    <div class="mt-1">
-                        <input id="password" name="password" type="password" autocomplete="new-password" required
-                            class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                    </div>
-                </div>
-
-                <div>
-                    <label for="confirm-password" class="block text-sm font-medium text-gray-700">
-                        Confirm Password <span class="text-red-500">*</span>
-                    </label>
-                    <div class="mt-1">
-                        <input id="confirm-password" name="confirm_password" type="password" autocomplete="new-password"
-                            required
-                            class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                    </div>
-                </div>
-
-                <div class="flex items-center">
-                    <input id="terms" name="terms" type="checkbox" required
-                        class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
-                    <label for="terms" class="ml-2 block text-sm text-gray-900">
-                        I agree to the <a href="#" class="text-blue-600 hover:text-blue-500">Terms and Conditions</a>
-                    </label>
-                </div>
-
-                <div>
-                    <button type="submit"
-                        class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                        Create Account
-                    </button>
-                </div>
-            </form>
+  <div class="sm:mx-auto sm:w-full sm:max-w-md">
+    <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">Create your account</h2>
+    <p class="mt-2 text-center text-sm text-gray-600">Or <a href="{{ url_for('login') }}" class="font-medium text-blue-600 hover:text-blue-500">sign in to your existing account</a></p>
+  </div>
+  <div class="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+    <div class="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
+      <form class="space-y-6" method="POST" id="signup-form">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-3">I am a:</label>
+          <div class="flex space-x-4">
+            <label class="inline-flex items-center">
+              <input type="radio" name="user_type" value="student" checked class="form-radio text-blue-600" onchange="Signup.toggleFormFields()">
+              <span class="ml-2 text-sm font-medium text-gray-700">Student</span>
+            </label>
+            <label class="inline-flex items-center">
+              <input type="radio" name="user_type" value="organization" class="form-radio text-blue-600" onchange="Signup.toggleFormFields()">
+              <span class="ml-2 text-sm font-medium text-gray-700">Organization</span>
+            </label>
+          </div>
         </div>
+        <div>
+          <label for="name" class="block text-sm font-medium text-gray-700"><span id="name-label">Full Name</span> <span class="text-red-500">*</span></label>
+          <div class="mt-1"><input id="name" name="name" type="text" required class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"></div>
+        </div>
+        <div>
+          <label for="email" class="block text-sm font-medium text-gray-700">Email address <span class="text-red-500">*</span></label>
+          <div class="mt-1"><input id="email" name="email" type="email" required class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"></div>
+        </div>
+        <div id="student-fields" class="space-y-6">
+          <div>
+            <label for="school" class="block text-sm font-medium text-gray-700">School <span class="text-red-500">*</span></label>
+            <div class="mt-1"><input id="school" name="school" type="text" class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"></div>
+          </div>
+          <div>
+            <label for="grade" class="block text-sm font-medium text-gray-700">Grade <span class="text-red-500">*</span></label>
+            <div class="mt-1"><select id="grade" name="grade" class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"><option value="">Select Grade</option><option value="9th Grade">9th Grade</option><option value="10th Grade">10th Grade</option><option value="11th Grade">11th Grade</option><option value="12th Grade">12th Grade</option></select></div>
+          </div>
+          <div>
+            <label for="bio" class="block text-sm font-medium text-gray-700">Bio <span class="text-red-500">*</span></label>
+            <div class="mt-1"><textarea id="bio" name="bio" rows="3" class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"></textarea></div>
+          </div>
+        </div>
+        <div id="organization-fields" class="space-y-6 hidden">
+          <div>
+            <label for="description" class="block text-sm font-medium text-gray-700">Organization Description <span class="text-red-500">*</span></label>
+            <div class="mt-1"><textarea id="description" name="description" rows="3" class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"></textarea></div>
+          </div>
+        </div>
+        <div>
+          <label for="password" class="block text-sm font-medium text-gray-700">Password <span class="text-red-500">*</span></label>
+          <div class="mt-1"><input id="password" name="password" type="password" required class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"></div>
+        </div>
+        <div>
+          <label for="confirm-password" class="block text-sm font-medium text-gray-700">Confirm Password <span class="text-red-500">*</span></label>
+          <div class="mt-1"><input id="confirm-password" name="confirm_password" type="password" required class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"></div>
+        </div>
+        <div class="flex items-center">
+          <input id="terms" name="terms" type="checkbox" required class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+          <label for="terms" class="ml-2 block text-sm text-gray-900">I agree to the <a href="#" class="text-blue-600 hover:text-blue-500">Terms and Conditions</a></label>
+        </div>
+        <div>
+          <button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">Create Account</button>
+        </div>
+      </form>
     </div>
+  </div>
 </div>
 
-<script>
-    function toggleFormFields() {
-        const studentFields = document.getElementById('student-fields');
-        const organizationFields = document.getElementById('organization-fields');
-        const nameLabel = document.getElementById('name-label');
-        const selectedUserType = document.querySelector('input[name="user_type"]:checked').value;
-
-        if (selectedUserType === 'organization') {
-            nameLabel.textContent = 'Organization Name';
-            studentFields.style.display = 'none';
-            organizationFields.style.display = 'block';
-
-            // Remove required attribute from student fields
-            document.getElementById('school').removeAttribute('required');
-            document.getElementById('grade').removeAttribute('required');
-            document.getElementById('bio').removeAttribute('required');
-
-            // Add required attribute to organization fields
-            document.getElementById('description').setAttribute('required', 'required');
-        } else {
-            nameLabel.textContent = 'Full Name';
-            studentFields.style.display = 'block';
-            organizationFields.style.display = 'none';
-
-            // Add required attribute to student fields
-            document.getElementById('school').setAttribute('required', 'required');
-            document.getElementById('grade').setAttribute('required', 'required');
-            document.getElementById('bio').setAttribute('required', 'required');
-
-            // Remove required attribute from organization fields
-            document.getElementById('description').removeAttribute('required');
-        }
-    }
-
-    // Initialize form fields on page load
-    document.addEventListener('DOMContentLoaded', function () {
-        toggleFormFields();
-    });
-
-    // Add form validation
-    document.getElementById('signup-form').addEventListener('submit', function (e) {
-        const password = document.getElementById('password').value;
-        const confirmPassword = document.getElementById('confirm-password').value;
-        const selectedUserType = document.querySelector('input[name="user_type"]:checked').value;
-
-        if (password !== confirmPassword) {
-            e.preventDefault();
-            alert('Passwords do not match. Please check and try again.');
-            return false;
-        }
-
-        if (password.length < 6) {
-            e.preventDefault();
-            alert('Password must be at least 6 characters long.');
-            return false;
-        }
-
-        // Additional validation for required fields based on user type
-        if (selectedUserType === 'student') {
-            const school = document.getElementById('school').value.trim();
-            const grade = document.getElementById('grade').value;
-            const bio = document.getElementById('bio').value.trim();
-
-            if (!school || !grade || !bio) {
-                e.preventDefault();
-                alert('Please fill in all required fields: School, Grade, and Bio.');
-                return false;
-            }
-        } else if (selectedUserType === 'organization') {
-            const description = document.getElementById('description').value.trim();
-
-            if (!description) {
-                e.preventDefault();
-                alert('Please fill in the organization description.');
-                return false;
-            }
-        }
-    });
-</script>
+<script src="{{ url_for('static', filename='js/signup.js') }}"></script>
 {% endblock %}

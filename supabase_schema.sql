@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     phone VARCHAR(20),
     location VARCHAR(255),
     user_type VARCHAR(20) NOT NULL CHECK (user_type IN ('student', 'organization')),
+    profile_image VARCHAR(500),  -- URL to profile image in storage
     
     -- Student-specific fields
     school VARCHAR(255),
@@ -184,3 +185,59 @@ CREATE INDEX IF NOT EXISTS opportunities_status_idx ON public.opportunities(stat
 CREATE INDEX IF NOT EXISTS applications_student_id_idx ON public.applications(student_id);
 CREATE INDEX IF NOT EXISTS applications_opportunity_id_idx ON public.applications(opportunity_id);
 CREATE INDEX IF NOT EXISTS applications_status_idx ON public.applications(status);
+
+-- Create saved profiles table
+CREATE TABLE IF NOT EXISTS public.saved_profiles (
+    id BIGSERIAL PRIMARY KEY,
+    user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
+    profile_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    
+    UNIQUE(user_id, profile_id)
+);
+
+-- Create saved opportunities table
+CREATE TABLE IF NOT EXISTS public.saved_opportunities (
+    id BIGSERIAL PRIMARY KEY,
+    user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
+    opportunity_id BIGINT REFERENCES public.opportunities(id) ON DELETE CASCADE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    
+    UNIQUE(user_id, opportunity_id)
+);
+
+-- Enable RLS on saved tables
+ALTER TABLE public.saved_profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.saved_opportunities ENABLE ROW LEVEL SECURITY;
+
+-- RLS Policies for saved profiles
+CREATE POLICY "Users can view their own saved profiles" 
+ON public.saved_profiles FOR SELECT 
+USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can save profiles" 
+ON public.saved_profiles FOR INSERT 
+WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can unsave their own saved profiles" 
+ON public.saved_profiles FOR DELETE 
+USING (auth.uid() = user_id);
+
+-- RLS Policies for saved opportunities
+CREATE POLICY "Users can view their own saved opportunities" 
+ON public.saved_opportunities FOR SELECT 
+USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can save opportunities" 
+ON public.saved_opportunities FOR INSERT 
+WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can unsave their own saved opportunities" 
+ON public.saved_opportunities FOR DELETE 
+USING (auth.uid() = user_id);
+
+-- Indexes for saved tables
+CREATE INDEX IF NOT EXISTS saved_profiles_user_id_idx ON public.saved_profiles(user_id);
+CREATE INDEX IF NOT EXISTS saved_profiles_profile_id_idx ON public.saved_profiles(profile_id);
+CREATE INDEX IF NOT EXISTS saved_opportunities_user_id_idx ON public.saved_opportunities(user_id);
+CREATE INDEX IF NOT EXISTS saved_opportunities_opportunity_id_idx ON public.saved_opportunities(opportunity_id);
