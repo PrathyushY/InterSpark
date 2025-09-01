@@ -17,14 +17,16 @@
           icon.className = 'fas fa-bookmark mr-2';
           text.textContent = 'Saved';
           btn.className = btn.className.replace('border-gray-300 text-gray-700', 'bg-blue-50 border-blue-300 text-blue-700');
+          showAlert(data.message || 'Opportunity saved successfully!', 'success');
         } else {
           icon.className = 'far fa-bookmark mr-2';
           text.textContent = 'Save for Later';
           btn.className = btn.className.replace('bg-blue-50 border-blue-300 text-blue-700', 'border-gray-300 text-gray-700');
+          showAlert(data.message || 'Opportunity removed from saved', 'info');
         }
-        showAlert(data.message || 'Opportunity Saved', 'info');
       } else {
-        showAlert(data.error || 'Failed to save', 'error');
+        console.error('Error toggling profile save:', data.error);
+        showAlert('Error: ' + (data.error || 'Failed to save profile'), 'error');
       }
     } catch (e) {
       showAlert('An error occurred. Try again.', 'error');
