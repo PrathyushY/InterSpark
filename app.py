@@ -2,8 +2,16 @@ import os
 from datetime import datetime
 
 from dotenv import load_dotenv
-from flask import Flask, render_template, request, redirect, url_for, flash, session
-from werkzeug.utils import secure_filename
+from flask import (
+    Flask,
+    render_template,
+    request,
+    redirect,
+    url_for,
+    flash,
+    session,
+    jsonify,
+)
 
 from supabase_config import supabase_service
 
@@ -12,72 +20,6 @@ load_dotenv()
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "2a15f8283ab2353f15089e80d8acf104")
-
-
-@app.route("/upload_avatar", methods=["POST"])
-def upload_avatar():
-    user_id = session.get("user_id")
-    file = request.files.get("avatar")
-    import sys
-    print(f"DEBUG: upload_avatar called. user_id={user_id}, file={file}")
-    sys.stdout.flush()
-    print(f"DEBUG: Flask file object: {file}, filename: {getattr(file, 'filename', None)}")
-    sys.stdout.flush()
-    if not user_id or not file or not getattr(file, 'filename', None):
-        flash("Missing user or file.", "error")
-        print("DEBUG: Missing user or file.")
-        sys.stdout.flush()
-        return redirect(url_for("profile"))
-    file.seek(0, 2)  # Seek to end
-    file_size = file.tell()
-    file.seek(0)  # Reset to start
-    print(f"DEBUG: Flask file size: {file_size}")
-    sys.stdout.flush()
-    if file_size == 0:
-        flash("Uploaded file is empty.", "error")
-        print("DEBUG: Uploaded file is empty.")
-        sys.stdout.flush()
-        return redirect(url_for("profile"))
-
-    filename = secure_filename(f"{user_id}_{file.filename}")
-    bucket = "avatars"
-    file_path = f"{user_id}/{filename}"
-    print(f"DEBUG: file_path={file_path}")
-    sys.stdout.flush()
-
-    # Remove old avatar if exists
-    profile = supabase_service.get_profile(user_id)
-    print(f"DEBUG: profile={profile}")
-    sys.stdout.flush()
-    old_avatar = profile.get("avatar_url") if profile else None
-    if old_avatar:
-        try:
-            print(f"DEBUG: Deleting old avatar {old_avatar}")
-            sys.stdout.flush()
-            supabase_service.delete_avatar(bucket, old_avatar)
-        except Exception as e:
-            print(f"DEBUG: Exception deleting old avatar: {e}")
-            sys.stdout.flush()
-
-    # Upload new avatar
-    upload_res = supabase_service.upload_avatar(bucket, file_path, file)
-    print(f"DEBUG: upload_res={upload_res}, file_path={file_path}")
-    sys.stdout.flush()
-    if upload_res and file_path and isinstance(file_path, str) and file_path.strip():
-        print(f"DEBUG: file_path is valid: {file_path}")
-        sys.stdout.flush()
-        result = supabase_service.update_profile(user_id, {"avatar_url": file_path})
-        print(f"DEBUG: update_profile result={result}")
-        sys.stdout.flush()
-        if result.get("success"):
-            flash("Profile picture updated!", "success")
-        else:
-            flash(f"Failed to update profile: {result.get('error')}", "error")
-    else:
-        print(f"DEBUG: file_path is invalid or upload failed. file_path={file_path}")
-        sys.stdout.flush()
-        flash("Failed to upload profile picture or file path invalid.", "error")
-    return redirect(url_for("profile"))
 
 
 def check_profile_completion():
@@ -104,12 +46,14 @@ def check_profile_completion():
             completion_check = supabase_service.is_profile_complete(profile, user_type)
 
             if not completion_check["complete"]:
-                missing_fields_str = ", ".join(completion_check["missing_fields"])
-                flash(
-                    f"Please complete your profile. Missing: {missing_fields_str}",
-                    "warning",
-                )
-                return redirect(url_for("profile"))
+                # Only redirect if not already on profile page to prevent infinite loop
+                if request.endpoint != "profile":
+                    missing_fields_str = ", ".join(completion_check["missing_fields"])
+                    flash(
+                        f"Please complete your profile. Missing: {missing_fields_str}",
+                        "warning",
+                    )
+                    return redirect(url_for("profile"))
 
     except Exception as e:
         # Log error but don't block navigation
@@ -366,56 +310,18 @@ def dashboard():
             company_opportunities = supabase_service.get_organization_opportunities(
                 user_id
             )
-            # Ensure all opportunities are dicts with all expected fields
-            expected_fields = [
-                "title",
-                "description",
-                "type",
-                "category",
-                "location",
-                "requirements",
-                "compensation",
-                "duration",
-                "application_deadline",
-                "status",
-            ]
-            for opp in company_opportunities:
-                for field in expected_fields:
-                    if field not in opp:
-                        opp[field] = None
-                print("company_opportunities for dashboard:", company_opportunities)
-                # Extra: ensure every opportunity is a dict and has all expected fields
-                for i, opp in enumerate(company_opportunities):
-                    if not isinstance(opp, dict):
-                        company_opportunities[i] = dict(opp)
-                    for field in expected_fields:
-                        if (
-                                field not in company_opportunities[i]
-                                or company_opportunities[i][field] is None
-                        ):
-                            company_opportunities[i][field] = (
-                                ""
-                                if field
-                                   in [
-                                       "title",
-                                       "description",
-                                       "type",
-                                       "category",
-                                       "location",
-                                       "requirements",
-                                       "compensation",
-                                       "duration",
-                                   ]
-                                else None
-                            )
+            # Ensure all opportunities are properly formatted
             if not company_opportunities:
                 company_opportunities = []
+
             saved_profiles = supabase_service.get_saved_profiles(user_id)
             if not saved_profiles:
                 saved_profiles = []
+
             saved_opportunities = supabase_service.get_saved_opportunities(user_id)
             if not saved_opportunities:
                 saved_opportunities = []
+
             return render_template(
                 "dashboard.html",
                 user_type="organization",
@@ -651,11 +557,22 @@ def talent_search():
 
         # Search students with filters
         students = supabase_service.search_students(
-            search_query=search_query,
-            skills=skills,
-            school=school,
-            grade=grade
+            search_query=search_query, skills=skills, school=school, grade=grade
         )
+
+        # Get saved profiles to determine which ones are bookmarked
+        saved_profiles = supabase_service.get_saved_profiles(user_id)
+        saved_profile_ids = set()
+        if saved_profiles:
+            for saved_profile in saved_profiles:
+                if "profiles" in saved_profile and saved_profile["profiles"]:
+                    saved_profile_ids.add(saved_profile["profiles"]["id"])
+                elif "profile_id" in saved_profile:
+                    saved_profile_ids.add(saved_profile["profile_id"])
+
+        # Add is_saved flag to each student
+        for student in students:
+            student["is_saved"] = student["id"] in saved_profile_ids
 
         return render_template(
             "talent_search.html",
@@ -664,6 +581,7 @@ def talent_search():
             selected_skills=skills,
             selected_school=school,
             selected_grade=grade,
+            saved_profile_ids=list(saved_profile_ids),
         )
     except Exception as e:
         flash(f"Error searching talent: {str(e)}", "error")
@@ -909,35 +827,49 @@ def unsave_opportunity(opportunity_id):
 @app.route("/save_profile/<profile_id>", methods=["POST"])
 def save_profile(profile_id):
     if "user_id" not in session:
-        return {"success": False, "error": "Not authenticated"}, 401
+        return jsonify({"success": False, "error": "Not authenticated"}), 401
 
     user_id = session.get("user_id")
+    user_type = session.get("user_type")
+
+    print(f"DEBUG - Save profile request:")
+    print(f"  User ID: {user_id}")
+    print(f"  User Type: {user_type}")
+    print(f"  Profile ID to save: {profile_id}")
 
     try:
         result = supabase_service.save_profile(user_id, profile_id)
+        print(f"DEBUG - Supabase save_profile result: {result}")
+
         if result["success"]:
-            return {"success": True, "message": "Profile saved successfully"}
+            return jsonify({"success": True, "message": "Profile saved successfully"})
         else:
-            return {
-                "success": False,
-                "error": result.get("error", "Failed to save profile"),
-            }, 400
+            return (
+                jsonify(
+                    {
+                        "success": False,
+                        "error": result.get("error", "Failed to save profile"),
+                    }
+                ),
+                400,
+            )
     except Exception as e:
-        return {"success": False, "error": str(e)}, 500
+        print(f"DEBUG - Exception in save_profile route: {str(e)}")
+        return jsonify({"success": False, "error": str(e)}), 500
 
 
 @app.route("/unsave_profile/<profile_id>", methods=["POST"])
 def unsave_profile(profile_id):
     if "user_id" not in session:
-        return {"success": False, "error": "Not authenticated"}, 401
+        return jsonify({"success": False, "error": "Not authenticated"}), 401
 
     user_id = session.get("user_id")
 
     try:
         result = supabase_service.unsave_profile(user_id, profile_id)
-        return {"success": True, "message": "Profile removed from saved"}
+        return jsonify({"success": True, "message": "Profile removed from saved"})
     except Exception as e:
-        return {"success": False, "error": str(e)}, 500
+        return jsonify({"success": False, "error": str(e)}), 500
 
 
 @app.route("/profile_details/<profile>")
@@ -947,6 +879,4 @@ def profile_details(profile):
 
 
 if __name__ == "__main__":
-    import os
-
     app.run(debug=True, port=5000)
