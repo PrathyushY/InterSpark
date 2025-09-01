@@ -51,13 +51,31 @@
             <div class="px-4 py-5 sm:p-6">
                 <div class="flex items-center space-x-5">
                     <div class="flex-shrink-0">
-                        {% if profile.profile_image %}
-                        <img src="{{ profile.profile_image }}" alt="{{ profile.name or 'User' }}"
-                            class="h-20 w-20 rounded-full">
+                        {% if is_own_profile %}
+                        <!-- Avatar Upload Form: moved outside main profile form to avoid nested forms -->
+                        <form id="avatar-upload-form" method="POST" enctype="multipart/form-data" action="{{ url_for('upload_avatar') }}" class="mb-6">
+                            <div>
+                                <img id="avatar-preview" src="{{ profile.avatar_url or url_for('static', filename='img/default_avatar.png') }}" alt="Profile Picture" class="h-20 w-20 rounded-full">
+                            </div>
+                            <input type="file" name="avatar" accept="image/*" onchange="previewAvatar(event)">
+                            <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded mt-2">Upload</button>
+                        </form>
+                        <script>
+                        function previewAvatar(event) {
+                            const [file] = event.target.files;
+                            if (file) {
+                                document.getElementById('avatar-preview').src = URL.createObjectURL(file);
+                            }
+                        }
+                        </script>
+                        {% else %}
+                        {% if profile.avatar_url %}
+                        <img src="{{ profile.avatar_url }}" alt="{{ profile.name or 'User' }}" class="h-20 w-20 rounded-full">
                         {% else %}
                         <div class="h-20 w-20 rounded-full bg-blue-100 flex items-center justify-center">
                             <i class="fas fa-user text-blue-600 text-2xl"></i>
                         </div>
+                        {% endif %}
                         {% endif %}
                     </div>
                     <div>
