@@ -50,22 +50,49 @@
             <!-- Profile Header -->
             <div class="px-4 py-5 sm:p-6">
                 <div class="flex items-center space-x-5">
-                    <div class="flex-shrink-0">
+                    <div class="flex-shrink-0 relative">
                         {% if profile.profile_image %}
-                        <img src="{{ profile.profile_image }}" alt="{{ profile.name or 'User' }}"
-                            class="h-20 w-20 rounded-full">
+                        <img id="profile-image" src="{{ profile.profile_image }}" alt="{{ profile.name or 'User' }}"
+                            class="h-20 w-20 rounded-full object-cover border-2 border-gray-200">
                         {% else %}
-                        <div class="h-20 w-20 rounded-full bg-blue-100 flex items-center justify-center">
+                        <div id="profile-image-placeholder"
+                            class="h-20 w-20 rounded-full bg-blue-100 flex items-center justify-center border-2 border-gray-200">
                             <i class="fas fa-user text-blue-600 text-2xl"></i>
                         </div>
                         {% endif %}
+
+                        {% if is_own_profile %}
+                        <!-- Image upload overlay -->
+                        <div class="absolute inset-0 rounded-full bg-black bg-opacity-50 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity cursor-pointer"
+                            onclick="document.getElementById('profile-picture-input').click()">
+                            <i class="fas fa-camera text-white text-lg"></i>
+                        </div>
+
+                        <!-- Hidden file input -->
+                        <input type="file" id="profile-picture-input" accept="image/*" style="display: none;"
+                            onchange="handleProfilePictureUpload(event)">
+
+                        <!-- Delete button for existing image -->
+                        {% if profile.profile_image %}
+                        <button type="button" id="delete-profile-picture-btn" onclick="deleteProfilePicture()"
+                            class="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-red-500 text-white flex items-center justify-center hover:bg-red-600 transition-colors text-xs"
+                            title="Delete profile picture">
+                            <i class="fas fa-times"></i>
+                        </button>
+                        {% endif %}
+                        {% endif %}
                     </div>
-                    <div>
+                    <div class="flex-grow">
                         <h3 class="text-lg leading-6 font-medium text-gray-900">{{ profile.name or session.user_name or
                             'User' }}</h3>
                         <p class="mt-1 max-w-2xl text-sm text-gray-500">
                             {% if user_type == 'student' %}Student Profile{% else %}Organization Profile{% endif %}
                         </p>
+                        {% if is_own_profile %}
+                        <p class="mt-1 text-xs text-gray-400">
+                            Click on your photo to change it
+                        </p>
+                        {% endif %}
                     </div>
                 </div>
             </div>
@@ -104,7 +131,8 @@
                             <input type="tel" name="phone" id="phone" value="{{ profile.phone or '' }}"
                                 class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">
                             {% else %}
-                            <span class="block w-full sm:text-sm text-gray-900">{{ profile.phone or 'Not specified' }}</span>
+                            <span class="block w-full sm:text-sm text-gray-900">{{ profile.phone or 'Not specified'
+                                }}</span>
                             {% endif %}
                         </div>
                     </div>
@@ -116,7 +144,8 @@
                                 placeholder="City, State"
                                 class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">
                             {% else %}
-                            <span class="block w-full sm:text-sm text-gray-900">{{ profile.location or 'Not specified' }}</span>
+                            <span class="block w-full sm:text-sm text-gray-900">{{ profile.location or 'Not specified'
+                                }}</span>
                             {% endif %}
                         </div>
                     </div>
@@ -188,7 +217,8 @@
                                 placeholder="List your skills separated by commas (e.g., Python, JavaScript, Data Analysis)"
                                 class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">{{ profile.skills or '' }}</textarea>
                             {% else %}
-                            <span class="block w-full sm:text-sm text-gray-900">{{ profile.skills or 'Not specified' }}</span>
+                            <span class="block w-full sm:text-sm text-gray-900">{{ profile.skills or 'Not specified'
+                                }}</span>
                             {% endif %}
                         </div>
                         {% if is_own_profile %}
@@ -197,7 +227,8 @@
                         {% endif %}
                     </div>
                     <div class="sm:col-span-2">
-                        <label for="github_url" class="block text-sm font-medium text-gray-700">GitHub URL{% if is_own_profile %}
+                        <label for="github_url" class="block text-sm font-medium text-gray-700">GitHub URL{% if
+                            is_own_profile %}
                             (Optional){% endif %}</label>
                         <div class="mt-1">
                             {% if is_own_profile %}
@@ -205,12 +236,14 @@
                                 placeholder="https://github.com/yourusername"
                                 class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">
                             {% else %}
-                            <span class="block w-full sm:text-sm text-gray-900">{{ profile.github_url or 'Not specified' }}</span>
+                            <span class="block w-full sm:text-sm text-gray-900">{{ profile.github_url or 'Not specified'
+                                }}</span>
                             {% endif %}
                         </div>
                     </div>
                     <div class="sm:col-span-2">
-                        <label for="linkedin_url" class="block text-sm font-medium text-gray-700">LinkedIn URL{% if is_own_profile %}
+                        <label for="linkedin_url" class="block text-sm font-medium text-gray-700">LinkedIn URL{% if
+                            is_own_profile %}
                             (Optional){% endif %}</label>
                         <div class="mt-1">
                             {% if is_own_profile %}
@@ -219,12 +252,14 @@
                                 placeholder="https://linkedin.com/in/yourusername"
                                 class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">
                             {% else %}
-                            <span class="block w-full sm:text-sm text-gray-900">{{ profile.linkedin_url or 'Not specified' }}</span>
+                            <span class="block w-full sm:text-sm text-gray-900">{{ profile.linkedin_url or 'Not
+                                specified' }}</span>
                             {% endif %}
                         </div>
                     </div>
                     <div class="sm:col-span-2">
-                        <label for="portfolio_url" class="block text-sm font-medium text-gray-700">Portfolio URL{% if is_own_profile %}
+                        <label for="portfolio_url" class="block text-sm font-medium text-gray-700">Portfolio URL{% if
+                            is_own_profile %}
                             (Optional){% endif %}</label>
                         <div class="mt-1">
                             {% if is_own_profile %}
@@ -232,7 +267,8 @@
                                 value="{{ profile.portfolio_url or '' }}" placeholder="https://yourportfolio.com"
                                 class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">
                             {% else %}
-                            <span class="block w-full sm:text-sm text-gray-900">{{ profile.portfolio_url or 'Not specified' }}</span>
+                            <span class="block w-full sm:text-sm text-gray-900">{{ profile.portfolio_url or 'Not
+                                specified' }}</span>
                             {% endif %}
                         </div>
                     </div>
@@ -269,7 +305,8 @@
                                 placeholder="https://example.com"
                                 class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">
                             {% else %}
-                            <span class="block w-full sm:text-sm text-gray-900">{{ profile.website or 'Not specified' }}</span>
+                            <span class="block w-full sm:text-sm text-gray-900">{{ profile.website or 'Not specified'
+                                }}</span>
                             {% endif %}
                         </div>
                     </div>
@@ -426,12 +463,12 @@
 
 {% if not is_own_profile %}
 <script>
-  window.PROFILE_STATE = { profileId: '{{ profile.id }}', isSaved: {{ 'true' if is_saved else 'false' }} };
+    window.PROFILE_STATE = { profileId: '{{ profile.id }}', isSaved: {{ 'true' if is_saved else 'false' }} };
 </script>
 {% endif %}
 {% if is_own_profile %}
 <script>
-  window.PROFILE_EDIT = { userType: '{{ user_type }}' };
+    window.PROFILE_EDIT = { userType: '{{ user_type }}' };
 </script>
 {% endif %}
 <script src="{{ url_for('static', filename='js/profile.js') }}"></script>

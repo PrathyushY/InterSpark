@@ -560,7 +560,11 @@ class SupabaseService:
             return []
 
     def search_opportunities(
-        self, search_query: str = "", opportunity_type: str = "", category: str = "", location: str = ""
+        self,
+        search_query: str = "",
+        opportunity_type: str = "",
+        category: str = "",
+        location: str = "",
     ) -> List[Dict[str, Any]]:
         """
         Search opportunities with text and filters.
@@ -742,7 +746,11 @@ class SupabaseService:
             )
 
             # Treat non-empty response.data as success
-            if response.data and isinstance(response.data, list) and len(response.data) > 0:
+            if (
+                response.data
+                and isinstance(response.data, list)
+                and len(response.data) > 0
+            ):
                 logger.info(f"Opportunity deleted successfully: {opportunity_id}")
                 return {"success": True}
             else:
@@ -1061,6 +1069,346 @@ class SupabaseService:
         except Exception as e:
             logger.error(f"Error checking saved profile: {str(e)}")
             return False
+
+    # Storage Management Methods
+    def create_profile_picture_bucket(self) -> Dict[str, Any]:
+        """
+        Create the profile pictures bucket with appropriate settings.
+
+        Returns:
+            Success/error response
+        """
+        try:
+            # Create bucket for profile pictures
+            response = self.service_client.storage.create_bucket(
+                "profile-pictures",
+                {
+                    "public": True,  # Public bucket for easy serving
+                    "allowedMimeTypes": [
+                        "image/jpeg",
+                        "image/png",
+                        "image/webp",
+                        "image/gif",
+                    ],
+                    "fileSizeLimit": 5242880,  # 5MB in bytes
+                },
+            )
+
+            logger.info(f"Bucket creation response: {response}")
+
+            if response:
+                logger.info("Profile pictures bucket created successfully")
+                return {"success": True, "data": response}
+            else:
+                return {"success": False, "error": "Failed to create bucket"}
+
+        except Exception as e:
+            # Bucket might already exist
+            error_str = str(e)
+            if (
+                "already exists" in error_str.lower()
+                or "duplicate" in error_str.lower()
+            ):
+                logger.info("Profile pictures bucket already exists")
+                return {"success": True, "message": "Bucket already exists"}
+
+            logger.error(f"Error creating profile pictures bucket: {str(e)}")
+            return {"success": False, "error": str(e)}
+
+    def _extract_file_path_from_url(self, image_url: str) -> Optional[str]:
+        """
+        Extract the file path from a Supabase storage URL.
+
+        Args:
+            image_url: The full public URL to the image
+
+        Returns:
+            The file path within the bucket or None if invalid
+        """
+        try:
+            if not image_url:
+                return None
+
+            # Handle different URL formats
+            if "/profile-pictures/" in image_url:
+                # Extract everything after /profile-pictures/
+                path = image_url.split("/profile-pictures/")[-1]
+                # Remove query parameters if present
+                if "?" in path:
+                    path = path.split("?")[0]
+                return path
+
+            return None
+        except Exception:
+            return None
+
+    def _delete_existing_profile_image(self, user_id: str) -> bool:
+        """
+        Delete the user's existing profile image from storage (internal helper).
+
+        Args:
+            user_id: The user's ID
+
+        Returns:
+            True if deleted or no image existed, False if error
+        """
+        try:
+            # Method 1: Try to get existing image from profile
+            profile = self.get_profile(user_id)
+            if profile and profile.get("profile_image"):
+                file_path = self._extract_file_path_from_url(profile["profile_image"])
+                if file_path:
+                    try:
+                        response = self.service_client.storage.from_(
+                            "profile-pictures"
+                        ).remove([file_path])
+                        logger.info(
+                            f"Deleted existing profile image from profile data: {file_path}"
+                        )
+                        return True
+                    except Exception as e:
+                        logger.warning(f"Failed to delete image from profile data: {e}")
+
+            # Method 2: List and clean up all images in user's folder (fallback)
+            # This handles cases where profile DB entry might be missing but files exist
+            safe_user_id = user_id.replace("/", "_").replace("\\", "_")
+            try:
+                # List files in the user's folder
+                files_response = self.service_client.storage.from_(
+                    "profile-pictures"
+                ).list(safe_user_id)
+
+                if files_response and len(files_response) > 0:
+                    # Delete all existing profile images for this user
+                    file_paths = [
+                        f"{safe_user_id}/{file['name']}"
+                        for file in files_response
+                        if file.get("name")
+                    ]
+                    if file_paths:
+                        response = self.service_client.storage.from_(
+                            "profile-pictures"
+                        ).remove(file_paths)
+                        logger.info(
+                            f"Cleaned up {len(file_paths)} existing files for user {user_id}: {file_paths}"
+                        )
+
+            except Exception as e:
+                logger.info(f"No existing files to clean up for user {user_id}: {e}")
+
+            return True  # Always return True to not block uploads
+
+        except Exception as e:
+            logger.warning(f"Error during cleanup for user {user_id}: {str(e)}")
+            return True  # Don't fail the upload because of cleanup error
+
+    def upload_profile_picture(
+        self, user_id: str, file_data: bytes, file_name: str, content_type: str = None
+    ) -> Dict[str, Any]:
+        """
+        Upload a profile picture for a user.
+
+        Args:
+            user_id: The user's ID
+            file_data: The image file data
+            file_name: Original file name
+            content_type: MIME type of the file
+
+        Returns:
+            Success/error response with file URL
+        """
+        try:
+            # Validate inputs
+            if not isinstance(user_id, str) or not user_id.strip():
+                return {"success": False, "error": "Invalid user_id"}
+
+            if not isinstance(file_name, str) or not file_name.strip():
+                return {"success": False, "error": "Invalid file_name"}
+
+            if not isinstance(file_data, bytes) or len(file_data) == 0:
+                return {"success": False, "error": "Invalid file_data"}
+
+            # STEP 1: Delete existing profile image before uploading new one
+            logger.info(f"Deleting existing profile image for user: {user_id}")
+            self._delete_existing_profile_image(user_id)
+
+            # Generate unique filename with user folder structure
+            import uuid
+            import os
+
+            # Extract file extension
+            file_ext = os.path.splitext(file_name)[1].lower()
+            if not file_ext:
+                file_ext = ".jpg"  # Default extension
+
+            # Create unique filename: user_id/profile_uuid.ext
+            # Ensure filename is safe for URLs
+            safe_user_id = user_id.replace("/", "_").replace("\\", "_")
+            unique_filename = f"{safe_user_id}/profile_{uuid.uuid4().hex}{file_ext}"
+
+            # Upload to storage
+            # Ensure content_type is a valid string
+            if not content_type or not isinstance(content_type, str):
+                # Default content type based on file extension
+                content_type_map = {
+                    ".jpg": "image/jpeg",
+                    ".jpeg": "image/jpeg",
+                    ".png": "image/png",
+                    ".webp": "image/webp",
+                    ".gif": "image/gif",
+                }
+                content_type = content_type_map.get(file_ext, "image/jpeg")
+
+            # Debug logging
+            logger.info(
+                f"Upload parameters - filename: {unique_filename}, content_type: {content_type}, file_size: {len(file_data)}"
+            )
+
+            # Try upload - use the correct parameter format for supabase-py
+            upload_options = {}
+            if content_type and isinstance(content_type, str) and content_type.strip():
+                upload_options["content_type"] = content_type.strip()
+
+            response = self.service_client.storage.from_("profile-pictures").upload(
+                path=unique_filename,
+                file=file_data,
+                file_options={
+                    "content-type": upload_options.get(
+                        "content_type", "application/octet-stream"
+                    ),
+                    "upsert": "true",
+                },
+            )
+
+            if response:
+                # Get public URL for the uploaded image
+                public_url = self.service_client.storage.from_(
+                    "profile-pictures"
+                ).get_public_url(unique_filename)
+
+                # Update user profile with new image URL
+                profile_update_result = self.update_profile(
+                    user_id, {"profile_image": public_url}
+                )
+
+                if profile_update_result["success"]:
+                    logger.info(
+                        f"Profile picture uploaded and profile updated for user: {user_id}"
+                    )
+                    return {
+                        "success": True,
+                        "url": public_url,
+                        "path": unique_filename,
+                        "message": "Profile picture uploaded successfully",
+                    }
+                else:
+                    # Upload succeeded but profile update failed
+                    logger.warning(
+                        f"Profile picture uploaded but profile update failed for user: {user_id}"
+                    )
+                    return {
+                        "success": True,
+                        "url": public_url,
+                        "path": unique_filename,
+                        "warning": "Image uploaded but profile update failed",
+                    }
+            else:
+                return {"success": False, "error": "Failed to upload image"}
+
+        except Exception as e:
+            logger.error(f"Error uploading profile picture: {str(e)}")
+            return {"success": False, "error": str(e)}
+
+    def delete_profile_picture(
+        self, user_id: str, file_path: str = None
+    ) -> Dict[str, Any]:
+        """
+        Delete a user's profile picture from storage.
+
+        Args:
+            user_id: The user's ID
+            file_path: Optional specific file path to delete
+
+        Returns:
+            Success/error response
+        """
+        try:
+            # If no specific path provided, get current profile image
+            if not file_path:
+                profile = self.get_profile(user_id)
+                if not profile or not profile.get("profile_image"):
+                    return {"success": True, "message": "No profile image to delete"}
+
+                # Extract path from URL using helper function
+                file_path = self._extract_file_path_from_url(profile["profile_image"])
+                if not file_path:
+                    logger.warning(
+                        f"Could not extract file path from URL: {profile['profile_image']}"
+                    )
+                    # Still update profile to remove the invalid URL
+                    profile_update_result = self.update_profile(
+                        user_id, {"profile_image": None}
+                    )
+                    return {
+                        "success": True,
+                        "message": "Profile image URL cleared (file may have been already deleted)",
+                    }
+
+            # Delete from storage
+            logger.info(f"Deleting profile image from storage: {file_path}")
+            response = self.service_client.storage.from_("profile-pictures").remove(
+                [file_path]
+            )
+            logger.info(f"Storage delete response: {response}")
+
+            # Update profile to remove image URL
+            profile_update_result = self.update_profile(
+                user_id, {"profile_image": None}
+            )
+
+            if profile_update_result["success"]:
+                logger.info(f"Profile picture deleted successfully for user: {user_id}")
+                return {
+                    "success": True,
+                    "message": "Profile picture deleted successfully",
+                }
+            else:
+                logger.warning(
+                    f"File deleted from storage but profile update failed: {profile_update_result}"
+                )
+                return {
+                    "success": True,
+                    "message": "Profile picture deleted from storage, but profile update failed",
+                }
+
+        except Exception as e:
+            logger.error(f"Error deleting profile picture: {str(e)}")
+            # Still try to update profile to clear the image URL
+            try:
+                self.update_profile(user_id, {"profile_image": None})
+            except:
+                pass
+            return {"success": False, "error": str(e)}
+
+    def get_profile_picture_url(self, user_id: str) -> Optional[str]:
+        """
+        Get the public URL for a user's profile picture.
+
+        Args:
+            user_id: The user's ID
+
+        Returns:
+            Public URL or None if no image
+        """
+        try:
+            profile = self.get_profile(user_id)
+            if profile and profile.get("profile_image"):
+                return profile["profile_image"]
+            return None
+
+        except Exception as e:
+            logger.error(f"Error getting profile picture URL: {str(e)}")
+            return None
 
 
 # Global instance
