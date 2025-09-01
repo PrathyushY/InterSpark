@@ -29,7 +29,6 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     description TEXT,
     website VARCHAR(500),
     
-    avatar_url TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

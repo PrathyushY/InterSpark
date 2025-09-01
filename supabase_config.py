@@ -18,48 +18,6 @@ logger = logging.getLogger(__name__)
 
 
 class SupabaseService:
-    def upload_avatar(self, bucket: str, file_path: str, file_obj) -> bool:
-        """
-        Upload avatar image to Supabase Storage bucket.
-        """
-        try:
-            print(
-                f"DEBUG: upload_avatar called. bucket={bucket}, file_path={file_path}, file_obj={file_obj}"
-            )
-            import sys
-
-            sys.stdout.flush()
-            # Ensure file_obj is bytes
-            if hasattr(file_obj, "read"):
-                file_bytes = file_obj.read()
-            else:
-                file_bytes = file_obj
-            print(
-                f"DEBUG: file_bytes length={len(file_bytes) if file_bytes else 'None'}"
-            )
-            sys.stdout.flush()
-            res = self.service_client.storage.from_(bucket).upload(file_path, file_bytes)
-            print(f"DEBUG: Supabase storage upload response: {res}")
-            sys.stdout.flush()
-            return res.status_code == 200
-        except Exception as e:
-            logger.error(f"Error uploading avatar: {str(e)}")
-            print(f"DEBUG: Exception in upload_avatar: {e}")
-            import sys
-
-            sys.stdout.flush()
-            return False
-
-    def delete_avatar(self, bucket: str, file_path: str) -> bool:
-        """
-        Delete avatar image from Supabase Storage bucket.
-        """
-        try:
-            res = self.service_client.storage.from_(bucket).remove([file_path])
-            return res.status_code == 200
-        except Exception as e:
-            logger.error(f"Error deleting avatar: {str(e)}")
-            return False
     """Service class for all Supabase operations including auth and database."""
 
     def __init__(self):

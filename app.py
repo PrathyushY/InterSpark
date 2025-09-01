@@ -2,8 +2,7 @@ import os
 from datetime import datetime
 
 from dotenv import load_dotenv
-from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
-from werkzeug.utils import secure_filename
+from flask import Flask, render_template, request, redirect, url_for, flash, session
 
 from supabase_config import supabase_service
 
@@ -12,72 +11,6 @@ load_dotenv()
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "2a15f8283ab2353f15089e80d8acf104")
-
-
-@app.route("/upload_avatar", methods=["POST"])
-def upload_avatar():
-    user_id = session.get("user_id")
-    file = request.files.get("avatar")
-    import sys
-    print(f"DEBUG: upload_avatar called. user_id={user_id}, file={file}")
-    sys.stdout.flush()
-    print(f"DEBUG: Flask file object: {file}, filename: {getattr(file, 'filename', None)}")
-    sys.stdout.flush()
-    if not user_id or not file or not getattr(file, 'filename', None):
-        flash("Missing user or file.", "error")
-        print("DEBUG: Missing user or file.")
-        sys.stdout.flush()
-        return redirect(url_for("profile"))
-    file.seek(0, 2)  # Seek to end
-    file_size = file.tell()
-    file.seek(0)  # Reset to start
-    print(f"DEBUG: Flask file size: {file_size}")
-    sys.stdout.flush()
-    if file_size == 0:
-        flash("Uploaded file is empty.", "error")
-        print("DEBUG: Uploaded file is empty.")
-        sys.stdout.flush()
-        return redirect(url_for("profile"))
-
-    filename = secure_filename(f"{user_id}_{file.filename}")
-    bucket = "avatars"
-    file_path = f"{user_id}/{filename}"
-    print(f"DEBUG: file_path={file_path}")
-    sys.stdout.flush()
-
-    # Remove old avatar if exists
-    profile = supabase_service.get_profile(user_id)
-    print(f"DEBUG: profile={profile}")
-    sys.stdout.flush()
-    old_avatar = profile.get("avatar_url") if profile else None
-    if old_avatar:
-        try:
-            print(f"DEBUG: Deleting old avatar {old_avatar}")
-            sys.stdout.flush()
-            supabase_service.delete_avatar(bucket, old_avatar)
-        except Exception as e:
-            print(f"DEBUG: Exception deleting old avatar: {e}")
-            sys.stdout.flush()
-
-    # Upload new avatar
-    upload_res = supabase_service.upload_avatar(bucket, file_path, file)
-    print(f"DEBUG: upload_res={upload_res}, file_path={file_path}")
-    sys.stdout.flush()
-    if upload_res and file_path and isinstance(file_path, str) and file_path.strip():
-        print(f"DEBUG: file_path is valid: {file_path}")
-        sys.stdout.flush()
-        result = supabase_service.update_profile(user_id, {"avatar_url": file_path})
-        print(f"DEBUG: update_profile result={result}")
-        sys.stdout.flush()
-        if result.get("success"):
-            flash("Profile picture updated!", "success")
-        else:
-            flash(f"Failed to update profile: {result.get('error')}", "error")
-    else:
-        print(f"DEBUG: file_path is invalid or upload failed. file_path={file_path}")
-        sys.stdout.flush()
-        flash("Failed to upload profile picture or file path invalid.", "error")
-    return redirect(url_for("profile"))
 
 
 def check_profile_completion():
