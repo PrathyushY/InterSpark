@@ -97,6 +97,24 @@ def format_date_filter(date_string, format="%B %d, %Y"):
             return "Recently"
 
 
+@app.context_processor
+def inject_user_profile():
+    """
+    Make current user's profile data available in all templates.
+    This includes profile image for navbar display.
+    """
+    if "user_id" in session:
+        try:
+            user_profile = supabase_service.get_profile(session["user_id"])
+            if user_profile:
+                return {"current_user_profile": user_profile}
+        except Exception as e:
+            # Log error but don't break the template rendering
+            print(f"Error loading user profile for navbar: {str(e)}")
+    
+    return {"current_user_profile": None}
+
+
 @app.route("/")
 def home():
     # Redirect logged-in users to dashboard
