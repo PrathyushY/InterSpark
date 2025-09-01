@@ -52,7 +52,7 @@
                 <div class="flex items-center space-x-5">
                     <div class="flex-shrink-0 relative">
                         {% if profile.profile_image %}
-                        <img id="profile-image" src="{{ profile.profile_image }}" alt="{{ profile.name or 'User' }}"
+                        <img id="avatar-preview" src="{{ profile.profile_image }}" alt="{{ profile.name or 'User' }}"
                             class="h-20 w-20 rounded-full object-cover border-2 border-gray-200">
                         {% else %}
                         <div id="profile-image-placeholder"
@@ -67,10 +67,6 @@
                             onclick="document.getElementById('profile-picture-input').click()">
                             <i class="fas fa-camera text-white text-lg"></i>
                         </div>
-
-                        <!-- Hidden file input -->
-                        <input type="file" id="profile-picture-input" accept="image/*" style="display: none;"
-                            onchange="handleProfilePictureUpload(event)">
 
                         <!-- Delete button for existing image -->
                         {% if profile.profile_image %}
@@ -353,6 +349,20 @@
         {% endif %}
     </div>
 
+    <!-- Profile Picture Upload Section (standalone, outside main profile form) -->
+    {% if is_own_profile %}
+    <div class="flex-shrink-0 relative mb-6">
+      <form id="profile-picture-form" method="POST" action="/upload_profile_picture" enctype="multipart/form-data" style="display:inline;">
+        <img id="avatar-preview" src="{{ profile.profile_image or url_for('static', filename='img/default_avatar.png') }}" alt="Profile Picture" class="h-20 w-20 rounded-full object-cover border-2 border-gray-200">
+        <input type="file" id="profile-picture-input" name="profile_picture" accept="image/*" style="display: none;" onchange="previewAvatar(event)">
+        <div class="absolute inset-0 rounded-full bg-black bg-opacity-50 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity cursor-pointer"
+          onclick="document.getElementById('profile-picture-input').click()">
+          <i class="fas fa-camera text-white text-lg"></i>
+        </div>
+      </form>
+    </div>
+    {% endif %}
+
     <!-- Profile Completion Status -->
     {% if user_type == 'student' and is_own_profile %}
     <div
@@ -472,4 +482,20 @@
 </script>
 {% endif %}
 <script src="{{ url_for('static', filename='js/profile.js') }}"></script>
+<script>
+function previewAvatar(event) {
+  const [file] = event.target.files;
+  if (file) {
+    if (file.size > 1024 * 1024) { // 1MB limit
+      alert("Profile picture must be less than 1MB.");
+      event.target.value = ""; // Clear the file input
+      document.getElementById('avatar-preview').src = "{{ profile.profile_image or url_for('static', filename='img/default_avatar.png') }}";
+      return;
+    }
+    document.getElementById('avatar-preview').src = URL.createObjectURL(file);
+    // Automatically submit the form after selecting a valid file
+    document.getElementById('profile-picture-form').submit();
+  }
+}
+</script>
 {% endblock %}
