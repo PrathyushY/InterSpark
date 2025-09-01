@@ -31,7 +31,8 @@
                                 Title *</label>
                             <div class="mt-1">
                                 <input type="text" name="title" id="title" required
-                                       value="{% if opportunity and opportunity.title %}{{ opportunity.title|trim }}{% endif %}"
+                                       value="
+                                               {% if opportunity and opportunity.title %}{{ opportunity.title|trim }}{% endif %}"
                                        placeholder="e.g., Web Development Intern, Marketing Assistant"
                                        class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md{% if missing_fields and 'title' in missing_fields %} required-highlight{% endif %}">
                             </div>
@@ -44,9 +45,18 @@
                                 <select name="type" id="type"
                                         class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md{% if missing_fields and 'type' in missing_fields %} required-highlight{% endif %}">
                                     <option value="">Select Type</option>
-                                    <option value="Internship" {% if opportunity and opportunity.type and opportunity.type|trim == 'Internship' %}selected{% endif %}>Internship</option>
-                                    <option value="Volunteer" {% if opportunity and opportunity.type and opportunity.type|trim == 'Volunteer' %}selected{% endif %}>Volunteer</option>
-                                    <option value="Full Time" {% if opportunity and opportunity.type and opportunity.type|trim == 'Full Time' %}selected{% endif %}>Full Time</option>
+                                    <option value="Internship"
+                                            {% if opportunity and opportunity.type and opportunity.type|trim == 'Internship' %}selected{% endif %}>
+                                        Internship
+                                    </option>
+                                    <option value="Volunteer"
+                                            {% if opportunity and opportunity.type and opportunity.type|trim == 'Volunteer' %}selected{% endif %}>
+                                        Volunteer
+                                    </option>
+                                    <option value="Full Time"
+                                            {% if opportunity and opportunity.type and opportunity.type|trim == 'Full Time' %}selected{% endif %}>
+                                        Full Time
+                                    </option>
                                 </select>
                             </div>
                         </div>
@@ -58,8 +68,14 @@
                                 <select name="category" id="category"
                                         class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md {% if missing_fields and 'category' in missing_fields %}required-highlight{% endif %}">
                                     <option value="">Select Category</option>
-                                    <option value="Technology" {% if opportunity and opportunity.category and opportunity.category|trim == 'Technology' %}selected{% endif %}>Technology</option>
-                                    <option value="Environment" {% if opportunity and opportunity.category and opportunity.category|trim == 'Environment' %}selected{% endif %}>Environment</option>
+                                    <option value="Technology"
+                                            {% if opportunity and opportunity.category and opportunity.category|trim == 'Technology' %}selected{% endif %}>
+                                        Technology
+                                    </option>
+                                    <option value="Environment"
+                                            {% if opportunity and opportunity.category and opportunity.category|trim == 'Environment' %}selected{% endif %}>
+                                        Environment
+                                    </option>
                                     </option>
                                     <option value="Healthcare"
                                             {% if opportunity and opportunity.category == 'Healthcare' %}selected{% endif %}>
@@ -85,7 +101,8 @@
                                    class="block text-sm font-medium text-gray-700 {% if missing_fields and 'location' in missing_fields %}required-label{% endif %}">Location</label>
                             <div class="mt-1">
                                 <input type="text" name="location" id="location"
-                                       value="{% if opportunity and opportunity.location %}{{ opportunity.location|trim }}{% endif %}"
+                                       value="
+                                               {% if opportunity and opportunity.location %}{{ opportunity.location|trim }}{% endif %}"
                                        {% if missing_fields and 'location' in missing_fields %}class="required-highlight"{% endif %}
                                        placeholder="City, State or Remote"
                                        class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">
@@ -103,7 +120,8 @@
                                    class="block text-sm font-medium text-gray-700 {% if missing_fields and 'duration' in missing_fields %}required-label{% endif %}">Duration</label>
                             <div class="mt-1">
                                 <input type="text" name="duration" id="duration"
-                                       value="{% if opportunity and opportunity.duration %}{{ opportunity.duration|trim }}{% endif %}"
+                                       value="
+                                               {% if opportunity and opportunity.duration %}{{ opportunity.duration|trim }}{% endif %}"
                                        {% if missing_fields and 'duration' in missing_fields %}class="required-highlight"{% endif %}
                                        placeholder="e.g., Summer 2024, 3 months, Ongoing"
                                        class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">
@@ -116,7 +134,8 @@
                                 Deadline</label>
                             <div class="mt-1">
                                 <input type="date" name="application_deadline" id="application_deadline"
-                                       value="{% if opportunity and opportunity.application_deadline %}{{ opportunity.application_deadline|trim }}{% endif %}"
+                                       value="
+                                               {% if opportunity and opportunity.application_deadline %}{{ opportunity.application_deadline|trim }}{% endif %}"
                                        {% if missing_fields and 'application_deadline' in missing_fields %}class="required-highlight"{% endif %}
                                        class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">
                             </div>
@@ -127,7 +146,8 @@
                                    class="block text-sm font-medium text-gray-700 {% if missing_fields and 'compensation' in missing_fields %}required-label{% endif %}">Compensation</label>
                             <div class="mt-1">
                                 <input type="text" name="compensation" id="compensation"
-                                       value="{% if opportunity and opportunity.compensation %}{{ opportunity.compensation|trim }}{% endif %}"
+                                       value="
+                                               {% if opportunity and opportunity.compensation %}{{ opportunity.compensation|trim }}{% endif %}"
                                        {% if missing_fields and 'compensation' in missing_fields %}class="required-highlight"{% endif %}
                                        placeholder="e.g., Unpaid, $15/hour, Stipend provided, Academic credit"
                                        class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">
@@ -149,7 +169,8 @@
                             <div class="mt-1">
                             <textarea name="description" id="description" rows="6"
                                       placeholder="Provide a detailed description of the opportunity, what the student will learn, responsibilities, and why they should be excited about this role..."
-                                      class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md {% if missing_fields and 'description' in missing_fields %}required-highlight{% endif %}">{% if opportunity and opportunity.description %}{{ opportunity.description|trim }}{% endif %}</textarea>
+                                      class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md {% if missing_fields and 'description' in missing_fields %}required-highlight{% endif %}">{% if opportunity and opportunity.description %}
+                                {{ opportunity.description|trim }}{% endif %}</textarea>
                             </div>
                             <p class="mt-2 text-sm text-gray-500">Describe the opportunity in detail, including
                                 responsibilities and what students will gain from this experience.</p>
@@ -161,7 +182,8 @@
                             <div class="mt-1">
                             <textarea name="requirements" id="requirements" rows="4"
                                       placeholder="List the skills, qualifications, or characteristics you're looking for. Put each requirement on a new line."
-                                      class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md {% if missing_fields and 'requirements' in missing_fields %}required-highlight{% endif %}">{% if opportunity and opportunity.requirements %}{{ opportunity.requirements|trim }}{% endif %}</textarea>
+                                      class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md {% if missing_fields and 'requirements' in missing_fields %}required-highlight{% endif %}">{% if opportunity and opportunity.requirements %}
+                                {{ opportunity.requirements|trim }}{% endif %}</textarea>
                             </div>
                             <p class="mt-2 text-sm text-gray-500">Specify skills, experience level, and other
                                 qualifications. Each line will be displayed as a bullet point.</p>
@@ -172,69 +194,83 @@
                 <!-- Actions -->
                 <div class="px-4 py-4 sm:px-6 flex justify-between">
                     <div>
-                        <button type="button" onclick="CO.confirmCancel()" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-4 inline-flex justify-center text-sm font-medium text-gray-700 hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">Cancel</button>
+                        <button type="button" onclick="CO.confirmCancel()"
+                                class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-4 inline-flex justify-center text-sm font-medium text-gray-700 hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                            Cancel
+                        </button>
                     </div>
                     <div class="flex space-x-3">
-                        <button type="button" onclick="CO.previewOpportunity()" class="bg-blue-500 border border-transparent rounded-md shadow-sm py-2 px-4 inline-flex justify-center text-sm font-medium text-white hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"><i class="fas fa-eye mr-2"></i>Preview</button>
+                        <button type="button" onclick="CO.previewOpportunity()"
+                                class="bg-blue-500 border border-transparent rounded-md shadow-sm py-2 px-4 inline-flex justify-center text-sm font-medium text-white hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                            <i class="fas fa-eye mr-2"></i>Preview
+                        </button>
                         {% if not is_editing %}
-                        <button type="button" class="bg-gray-600 border border-transparent rounded-md shadow-sm py-2 px-4 inline-flex justify-center text-sm font-medium text-white hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500" onclick="CO.saveAsDraft()">Save as Draft</button>
+                            <button type="button"
+                                    class="bg-gray-600 border border-transparent rounded-md shadow-sm py-2 px-4 inline-flex justify-center text-sm font-medium text-white hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+                                    onclick="CO.saveAsDraft()">Save as Draft
+                            </button>
                         {% endif %}
-                        <button type="submit" class="bg-blue-600 border border-transparent rounded-md shadow-sm py-2 px-4 inline-flex justify-center text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        <button type="submit"
+                                class="bg-blue-600 border border-transparent rounded-md shadow-sm py-2 px-4 inline-flex justify-center text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
                             <i class="fas {% if is_editing %}fa-save{% else %}fa-plus{% endif %} mr-2"></i>
                             {% if is_editing %}Update Draft{% else %}Create Opportunity{% endif %}
                         </button>
                         {% if is_editing %}
-                        <button type="button" class="bg-blue-700 border border-transparent rounded-md shadow-sm py-2 px-4 inline-flex justify-center text-sm font-medium text-white hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-700" onclick="CO.publishOpportunity()"><i class="fas fa-upload mr-2"></i>Publish Opportunity</button>
+                            <button type="button"
+                                    class="bg-blue-700 border border-transparent rounded-md shadow-sm py-2 px-4 inline-flex justify-center text-sm font-medium text-white hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-700"
+                                    onclick="CO.publishOpportunity()"><i class="fas fa-upload mr-2"></i>Publish
+                                Opportunity
+                            </button>
                         {% endif %}
                     </div>
                 </div>
             </form>
         </div>
         {% if not is_editing %}
-        <div class="mt-8 bg-blue-50 rounded-lg p-6">
-            <h3 class="text-lg font-medium text-gray-900 mb-4">
-                <i class="fas fa-lightbulb text-blue-600 mr-2"></i>
-                Tips for Creating Great Opportunities
-            </h3>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-700">
-                <div>
-                    <h4 class="font-semibold mb-2">Be Specific and Clear</h4>
-                    <ul class="space-y-1 list-disc list-inside">
-                        <li>Use descriptive titles that clearly indicate the role</li>
-                        <li>Specify the time commitment and duration</li>
-                        <li>Be clear about remote vs. in-person work</li>
-                    </ul>
-                </div>
-                <div>
-                    <h4 class="font-semibold mb-2">Highlight Learning</h4>
-                    <ul class="space-y-1 list-disc list-inside">
-                        <li>Emphasize skills students will develop</li>
-                        <li>Mention mentorship and guidance available</li>
-                        <li>Include any certificates or recognition offered</li>
-                    </ul>
-                </div>
-                <div>
-                    <h4 class="font-semibold mb-2">Set Realistic Expectations</h4>
-                    <ul class="space-y-1 list-disc list-inside">
-                        <li>Match requirements to the experience level</li>
-                        <li>Be realistic about time commitments</li>
-                        <li>Clearly state if it's paid or unpaid</li>
-                    </ul>
-                </div>
-                <div>
-                    <h4 class="font-semibold mb-2">Make It Appealing</h4>
-                    <ul class="space-y-1 list-disc list-inside">
-                        <li>Use engaging language and positive tone</li>
-                        <li>Include your organization's mission</li>
-                        <li>Add an attractive image if possible</li>
-                    </ul>
+            <div class="mt-8 bg-blue-50 rounded-lg p-6">
+                <h3 class="text-lg font-medium text-gray-900 mb-4">
+                    <i class="fas fa-lightbulb text-blue-600 mr-2"></i>
+                    Tips for Creating Great Opportunities
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-700">
+                    <div>
+                        <h4 class="font-semibold mb-2">Be Specific and Clear</h4>
+                        <ul class="space-y-1 list-disc list-inside">
+                            <li>Use descriptive titles that clearly indicate the role</li>
+                            <li>Specify the time commitment and duration</li>
+                            <li>Be clear about remote vs. in-person work</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h4 class="font-semibold mb-2">Highlight Learning</h4>
+                        <ul class="space-y-1 list-disc list-inside">
+                            <li>Emphasize skills students will develop</li>
+                            <li>Mention mentorship and guidance available</li>
+                            <li>Include any certificates or recognition offered</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h4 class="font-semibold mb-2">Set Realistic Expectations</h4>
+                        <ul class="space-y-1 list-disc list-inside">
+                            <li>Match requirements to the experience level</li>
+                            <li>Be realistic about time commitments</li>
+                            <li>Clearly state if it's paid or unpaid</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h4 class="font-semibold mb-2">Make It Appealing</h4>
+                        <ul class="space-y-1 list-disc list-inside">
+                            <li>Use engaging language and positive tone</li>
+                            <li>Include your organization's mission</li>
+                            <li>Add an attractive image if possible</li>
+                        </ul>
+                    </div>
                 </div>
             </div>
-        </div>
         {% endif %}
     </div>
-<script>
-  window.OPP_EDITING = {{ 'true' if is_editing else 'false' }};
-</script>
-<script src="{{ url_for('static', filename='js/create_opportunity.js') }}"></script>
+    <script>
+        window.OPP_EDITING = {{ 'true' if is_editing else 'false' }};
+    </script>
+    <script src="{{ url_for('static', filename='js/create_opportunity.js') }}"></script>
 {% endblock %}
