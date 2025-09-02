@@ -80,8 +80,7 @@
                         {% endif %}
                     </div>
                     <div class="flex-grow">
-                    <!-- Removed bg-white shadow rounded-lg wrapper -->
-                            'User' }}</h3>
+                        <h3 class="text-lg leading-6 font-medium text-gray-900">{{ profile.name or 'User' }}</h3>
                         <p class="mt-1 max-w-2xl text-sm text-gray-500">
                             {% if user_type == 'student' %}Student Profile{% else %}Organization Profile{% endif %}
                         </p>
@@ -187,9 +186,9 @@
                             <input type="hidden" name="skills" id="skills-hidden-input">
                             <div id="skills-autocomplete-list" class="absolute z-10 bg-white border border-gray-300 rounded-md mt-1 w-full" style="display:none;"></div>
                             {% else %}
-                            {% if profile.skills and profile.skills|length > 0 %}
+                            {% if skills_json and skills_json|length > 0 %}
                                 <div class="flex flex-wrap gap-2">
-                                    {% for skill in profile.skills %}
+                                    {% for skill in skills_json %}
                                         <span class="inline-flex items-center px-3 py-1 rounded-full bg-blue-100 text-blue-800 text-sm font-medium">{{ skill }}</span>
                                     {% endfor %}
                                 </div>
