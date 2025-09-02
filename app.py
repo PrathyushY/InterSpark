@@ -1,30 +1,61 @@
 import os
 import json
-with open(os.path.join(os.path.dirname(__file__), 'src', 'utils', 'skills_master.json'), encoding='utf-8') as f:
-    skills_master = json.load(f)["skills"]
+
+
+def get_all_available_skills():
+    """Get all available skills from database only."""
+    try:
+        db_skills = supabase_service.get_all_skills()
+        return sorted(db_skills)
+    except Exception as e:
+        logger.error(f"Error loading skills from database: {e}")
+        return []  # Return empty list if DB fails
+
 
 def normalize_and_validate_skills(value):
     """
-    Normalize input to a list of valid, non-empty, stripped skills from skills_master.
+    Normalize input to a list of valid, non-empty, stripped skills.
+    Now checks only against database skills.
     """
     if value is None:
         return []
+
+    # Get all valid skills from database only
+    try:
+        all_valid_skills = set(supabase_service.get_all_skills())
+    except Exception as e:
+        logger.error(f"Could not load skills from database: {e}")
+        all_valid_skills = set()
+
     if isinstance(value, list):
-        return [s.strip() for s in value if isinstance(s, str) and s.strip() in skills_master]
+        return [
+            s.strip()
+            for s in value
+            if isinstance(s, str) and s.strip() in all_valid_skills
+        ]
     if isinstance(value, str):
         try:
             loaded = json.loads(value)
             if isinstance(loaded, list):
-                return [s.strip() for s in loaded if isinstance(s, str) and s.strip() in skills_master]
+                return [
+                    s.strip()
+                    for s in loaded
+                    if isinstance(s, str) and s.strip() in all_valid_skills
+                ]
         except Exception:
             pass
         # Comma-separated string
         if "," in value:
-            return [s.strip() for s in value.split(",") if s.strip() in skills_master]
+            return [
+                s.strip() for s in value.split(",") if s.strip() in all_valid_skills
+            ]
         val = value.strip()
-        return [val] if val in skills_master else []
+        return [val] if val in all_valid_skills else []
     return []
+
+
 import json
+
 
 # --- Skills normalization helper ---
 def normalize_skills(value):
@@ -49,6 +80,8 @@ def normalize_skills(value):
         val = value.strip()
         return [val] if val else []
     return []
+
+
 import os
 import json
 import logging
@@ -465,6 +498,7 @@ def profile():
             if isinstance(v, list):
                 return len(v) > 0
             return True
+
         profile_data = {k: v for k, v in profile_data.items() if is_valid_value(v)}
 
         print(f"DEBUG - Profile update attempt:")
@@ -515,7 +549,7 @@ def profile():
             is_own_profile=True,
             read_only=False,
             skills_json=skills_json,
-            skills_master=skills_master,
+            skills_master=get_all_available_skills(),
         )
     except Exception as e:
         flash(f"Error loading profile: {str(e)}", "error")
@@ -558,7 +592,6 @@ def view_profile(user_id):
     # Always pass skills_json as a Python list of valid skills
     skills_json = normalize_and_validate_skills(profile.get("skills"))
 
-
     # Get Talent Search filter params from query string
     search_query = request.args.get("search")
     skills = request.args.get("skills")
@@ -568,6 +601,7 @@ def view_profile(user_id):
     # Robustly parse selected_skills for Jinja2
     def parse_skills(val):
         import json
+
         if not val:
             return []
         if isinstance(val, list):
@@ -585,14 +619,11 @@ def view_profile(user_id):
     selected_skills_list = parse_skills(skills)
     # Show button if any talent search param is present in the URL (even if empty)
     back_to_talent_search = (
-        ("search" in request.args or "skills" in request.args or "school" in request.args or "grade" in request.args)
-        or any([
-            bool(search_query),
-            bool(skills),
-            bool(school),
-            bool(grade)
-        ])
-    )
+        "search" in request.args
+        or "skills" in request.args
+        or "school" in request.args
+        or "grade" in request.args
+    ) or any([bool(search_query), bool(skills), bool(school), bool(grade)])
 
     return render_template(
         "profile.html",
@@ -608,7 +639,7 @@ def view_profile(user_id):
         selected_school=school,
         selected_grade=grade,
         skills_json=skills_json,
-        skills_master=skills_master,
+        skills_master=get_all_available_skills(),
     )
 
 
@@ -636,6 +667,7 @@ def opportunities():
 
         # Parse skills_needed (comma-separated or JSON)
         import json
+
         def parse_skills(val):
             if not val:
                 return []
@@ -661,7 +693,7 @@ def opportunities():
             selected_category=category,
             selected_location=location,
             selected_skills_needed=selected_skills_needed,
-            skills_master=skills_master,
+            skills_master=get_all_available_skills(),
         )
     except Exception as e:
         flash(f"Error loading opportunities: {str(e)}", "error")
@@ -705,10 +737,15 @@ def talent_search():
         skills = request.args.get("skills", "")
         school = request.args.get("school", "")
         grade = request.args.get("grade", "")
+        location = request.args.get("location", "")
 
         # Search students with filters
         students = supabase_service.search_students(
-            search_query=search_query, skills=skills, school=school, grade=grade
+            search_query=search_query,
+            skills=skills,
+            school=school,
+            grade=grade,
+            location=location,
         )
 
         # Get saved profiles to determine which ones are bookmarked
@@ -729,6 +766,7 @@ def talent_search():
         # Parse selected_skills robustly (list or string)
         def parse_skills(val):
             import json
+
             if not val:
                 return []
             if isinstance(val, list):
@@ -752,8 +790,9 @@ def talent_search():
             selected_skills=selected_skills_list,
             selected_school=school,
             selected_grade=grade,
+            selected_location=location,
             saved_profile_ids=list(saved_profile_ids),
-            skills_master=skills_master,
+            skills_master=get_all_available_skills(),
         )
     except Exception as e:
         flash(f"Error searching talent: {str(e)}", "error")
@@ -789,7 +828,9 @@ def create_opportunity(opportunity_id=None):
         # Get form data and map to database fields
         status = request.form.get("status", "active")
         # Normalize and validate skills_needed from form
-        skills_needed_json = normalize_and_validate_skills(request.form.get("skills_needed"))
+        skills_needed_json = normalize_and_validate_skills(
+            request.form.get("skills_needed")
+        )
         opportunity_data = {
             "title": request.form.get("title") or None,
             "description": request.form.get("description") or None,
@@ -912,7 +953,10 @@ def create_opportunity(opportunity_id=None):
             flash(error_message, "error")
 
     return render_template(
-        "create_opportunity.html", opportunity=opportunity, is_editing=is_editing, skills_master=skills_master
+        "create_opportunity.html",
+        opportunity=opportunity,
+        is_editing=is_editing,
+        skills_master=get_all_available_skills(),
     )
 
 
@@ -1152,6 +1196,44 @@ def delete_profile_picture():
         logger.error(f"Error in delete_profile_picture: {str(e)}")
         return {"success": False, "error": str(e)}, 500
 
+
+@app.route("/add_skill", methods=["POST"])
+def add_skill():
+    """Add a new skill to the skills database."""
+    if "user_id" not in session:
+        return {"success": False, "error": "Authentication required"}, 401
+
+    try:
+        data = request.get_json()
+        if not data or "skill" not in data:
+            return {"success": False, "error": "Skill name is required"}, 400
+
+        skill_name = data["skill"].strip()
+        if not skill_name:
+            return {"success": False, "error": "Skill name cannot be empty"}, 400
+
+        # Validate skill name (no special characters, reasonable length)
+        if len(skill_name) > 100:
+            return {"success": False, "error": "Skill name too long"}, 400
+
+        if not skill_name.replace(" ", "").replace("-", "").replace(".", "").isalnum():
+            return {
+                "success": False,
+                "error": "Skill name contains invalid characters",
+            }, 400
+
+        # Add the skill to the database
+        result = supabase_service.add_new_skill(skill_name, session.get("user_id"))
+
+        if result["success"]:
+            # No need to maintain in-memory list - always fetch from database
+            return {"success": True, "skill": result["skill"]}
+        else:
+            return {"success": False, "error": result["error"]}, 400
+
+    except Exception as e:
+        logger.error(f"Error adding skill: {str(e)}")
+        return {"success": False, "error": str(e)}, 500
 
 if __name__ == "__main__":
     app.run(debug=True, port=5000)

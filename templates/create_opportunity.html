@@ -9,247 +9,357 @@
 {% block title %}{% if is_editing %}Edit Opportunity{% else %}Create Opportunity{% endif %} - InterSpark{% endblock %}
 
 {% block content %}
-    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div class="mb-8">
-            <h1 class="text-2xl font-bold text-gray-900">{% if is_editing %}Edit Opportunity{% else %}Create New
-                Opportunity{% endif %}</h1>
-            <p class="mt-1 text-gray-500">{% if is_editing %}Update your opportunity details{% else %}Post an internship
-                or volunteer opportunity to connect with talented students{% endif %}</p>
-        </div>
+<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div class="mb-8">
+        <h1 class="text-2xl font-bold text-gray-900">{% if is_editing %}Edit Opportunity{% else %}Create New
+            Opportunity{% endif %}</h1>
+        <p class="mt-1 text-gray-500">{% if is_editing %}Update your opportunity details{% else %}Post an internship
+            or volunteer opportunity to connect with talented students{% endif %}</p>
+    </div>
 
-        <div class="bg-white shadow rounded-lg">
-            <form method="POST" class="divide-y divide-gray-200" id="opportunity-form">
-                <input type="hidden" name="status" id="status-field" value="active">
-                <input type="hidden" name="referrer" value="{{ request.referrer or url_for('dashboard') }}">
-                <!-- Basic Information -->
-                <div class="px-4 py-5 sm:p-6">
-                    <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">Basic Information</h3>
-                    <div class="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
-                        <div class="sm:col-span-4">
-                            <label for="title"
-                                   class="block text-sm font-medium text-gray-700 {% if missing_fields and 'title' in missing_fields %}required-label{% endif %}">Opportunity
-                                Title *</label>
-                            <div class="mt-1">
-                                <input type="text" name="title" id="title" required
-                                       value="{% if opportunity and opportunity.title %}{{ opportunity.title|trim }}{% endif %}"
-                                       placeholder="e.g., Web Development Intern, Marketing Assistant"
-                                       class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md{% if missing_fields and 'title' in missing_fields %} required-highlight{% endif %}">
-                            </div>
-                        </div>
-
-                        <div class="sm:col-span-2">
-                            <label for="type"
-                                   class="block text-sm font-medium text-gray-700 {% if missing_fields and 'type' in missing_fields %}required-label{% endif %}">Type</label>
-                            <div class="mt-1">
-                                <select name="type" id="type"
-                                        class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md{% if missing_fields and 'type' in missing_fields %} required-highlight{% endif %}">
-                                    <option value="">Select Type</option>
-                                    <option value="Internship" {% if opportunity and opportunity.type and opportunity.type|trim == 'Internship' %}selected{% endif %}>Internship</option>
-                                    <option value="Volunteer" {% if opportunity and opportunity.type and opportunity.type|trim == 'Volunteer' %}selected{% endif %}>Volunteer</option>
-                                    <option value="Full Time" {% if opportunity and opportunity.type and opportunity.type|trim == 'Full Time' %}selected{% endif %}>Full Time</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="sm:col-span-3">
-                            <label for="category"
-                                   class="block text-sm font-medium text-gray-700 {% if missing_fields and 'category' in missing_fields %}required-label{% endif %}">Category</label>
-                            <div class="mt-1">
-                                <select name="category" id="category"
-                                        class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md {% if missing_fields and 'category' in missing_fields %}required-highlight{% endif %}">
-                                    <option value="">Select Category</option>
-                                    <option value="Technology" {% if opportunity and opportunity.category and opportunity.category|trim == 'Technology' %}selected{% endif %}>Technology</option>
-                                    <option value="Environment" {% if opportunity and opportunity.category and opportunity.category|trim == 'Environment' %}selected{% endif %}>Environment</option>
-                                    </option>
-                                    <option value="Healthcare"
-                                            {% if opportunity and opportunity.category == 'Healthcare' %}selected{% endif %}>
-                                        Healthcare
-                                    </option>
-                                    <option value="Education"
-                                            {% if opportunity and opportunity.category == 'Education' %}selected{% endif %}>
-                                        Education
-                                    </option>
-                                    <option value="Marketing"
-                                            {% if opportunity and opportunity.category == 'Marketing' %}selected{% endif %}>
-                                        Marketing
-                                    </option>
-                                    <option value="Science"
-                                            {% if opportunity and opportunity.category == 'Science' %}selected{% endif %}>
-                                        Science
-                                    </option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="sm:col-span-3">
-                            <label for="location"
-                                   class="block text-sm font-medium text-gray-700 {% if missing_fields and 'location' in missing_fields %}required-label{% endif %}">Location</label>
-                            <div class="mt-1">
-                                <input type="text" name="location" id="location"
-                                       value="{% if opportunity and opportunity.location %}{{ opportunity.location|trim }}{% endif %}"
-                                       {% if missing_fields and 'location' in missing_fields %}class="required-highlight"{% endif %}
-                                       placeholder="City, State or Remote"
-                                       class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">
-                            </div>
+    <div class="bg-white shadow rounded-lg">
+        <form method="POST" class="divide-y divide-gray-200" id="opportunity-form">
+            <input type="hidden" name="status" id="status-field" value="active">
+            <input type="hidden" name="referrer" value="{{ request.referrer or url_for('dashboard') }}">
+            <!-- Basic Information -->
+            <div class="px-4 py-5 sm:p-6">
+                <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">Basic Information</h3>
+                <div class="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
+                    <div class="sm:col-span-4">
+                        <label for="title"
+                            class="block text-sm font-medium text-gray-700 {% if missing_fields and 'title' in missing_fields %}required-label{% endif %}">Opportunity
+                            Title *</label>
+                        <div class="mt-1">
+                            <input type="text" name="title" id="title" required
+                                value="{% if opportunity and opportunity.title %}{{ opportunity.title|trim }}{% endif %}"
+                                placeholder="e.g., Web Development Intern, Marketing Assistant"
+                                class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md{% if missing_fields and 'title' in missing_fields %} required-highlight{% endif %}">
                         </div>
                     </div>
-                </div>
 
-                <!-- Schedule & Timeline -->
-                <div class="px-4 py-5 sm:p-6">
-                    <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">Schedule & Timeline</h3>
-                    <div class="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
-                        <div class="sm:col-span-3">
-                            <label for="duration"
-                                   class="block text-sm font-medium text-gray-700 {% if missing_fields and 'duration' in missing_fields %}required-label{% endif %}">Duration</label>
-                            <div class="mt-1">
-                                <input type="text" name="duration" id="duration"
-                                       value="{% if opportunity and opportunity.duration %}{{ opportunity.duration|trim }}{% endif %}"
-                                       {% if missing_fields and 'duration' in missing_fields %}class="required-highlight"{% endif %}
-                                       placeholder="e.g., Summer 2024, 3 months, Ongoing"
-                                       class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">
-                            </div>
-                        </div>
-
-                        <div class="sm:col-span-3">
-                            <label for="application_deadline"
-                                   class="block text-sm font-medium text-gray-700 {% if missing_fields and 'application_deadline' in missing_fields %}required-label{% endif %}">Application
-                                Deadline</label>
-                            <div class="mt-1">
-                                <input type="date" name="application_deadline" id="application_deadline"
-                                       value="{% if opportunity and opportunity.application_deadline %}{{ opportunity.application_deadline|trim }}{% endif %}"
-                                       {% if missing_fields and 'application_deadline' in missing_fields %}class="required-highlight"{% endif %}
-                                       class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">
-                            </div>
-                        </div>
-
-                        <div class="sm:col-span-6">
-                            <label for="compensation"
-                                   class="block text-sm font-medium text-gray-700 {% if missing_fields and 'compensation' in missing_fields %}required-label{% endif %}">Compensation</label>
-                            <div class="mt-1">
-                                <input type="text" name="compensation" id="compensation"
-                                       value="{% if opportunity and opportunity.compensation %}{{ opportunity.compensation|trim }}{% endif %}"
-                                       {% if missing_fields and 'compensation' in missing_fields %}class="required-highlight"{% endif %}
-                                       placeholder="e.g., Unpaid, $15/hour, Stipend provided, Academic credit"
-                                       class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">
-                            </div>
-                            <p class="mt-2 text-sm text-gray-500">Specify if this is paid, unpaid, or offers other
-                                benefits.</p>
-                        </div>
-                        <div class="sm:col-span-6">
-                            <label for="skills-needed-bubble-input" class="block text-sm font-medium text-gray-700">Skills Needed</label>
-                            <div class="mt-1">
-                                <div id="skills-needed-bubble-container" class="flex flex-wrap gap-2 mb-2"></div>
-                                <input type="text" id="skills-needed-bubble-input" name="skills-needed-bubble-input" autocomplete="off"
-                                    placeholder="Type a skill and press Enter..." class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">
-                                <input type="hidden" name="skills_needed" id="skills-needed-hidden-input" value="{{ opportunity.skills_needed|tojson|safe if opportunity and opportunity.skills_needed else '[]' }}">
-                                <div id="skills-needed-autocomplete-list" class="absolute z-10 bg-white border border-gray-300 rounded-md mt-1 w-full" style="display:none;"></div>
-                            </div>
-                            <p class="mt-2 text-sm text-gray-500">Add required skills as bubbles. Only skills from the master list are allowed.</p>
+                    <div class="sm:col-span-2">
+                        <label for="type"
+                            class="block text-sm font-medium text-gray-700 {% if missing_fields and 'type' in missing_fields %}required-label{% endif %}">Type</label>
+                        <div class="mt-1">
+                            <select name="type" id="type"
+                                class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md{% if missing_fields and 'type' in missing_fields %} required-highlight{% endif %}">
+                                <option value="">Select Type</option>
+                                <option value="Internship" {% if opportunity and opportunity.type and
+                                    opportunity.type|trim=='Internship' %}selected{% endif %}>Internship</option>
+                                <option value="Volunteer" {% if opportunity and opportunity.type and
+                                    opportunity.type|trim=='Volunteer' %}selected{% endif %}>Volunteer</option>
+                                <option value="Full-time" {% if opportunity and opportunity.type and
+                                    opportunity.type|trim=='Full-time' %}selected{% endif %}>Full-time</option>
+                                <option value="Part-time" {% if opportunity and opportunity.type and
+                                    opportunity.type|trim=='Part-time' %}selected{% endif %}>Part-time</option>
+                            </select>
                         </div>
                     </div>
-                </div>
 
-                <!-- Description -->
-                <div class="px-4 py-5 sm:p-6">
-                    <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">Opportunity Details</h3>
-
-                    <div class="space-y-6">
-                        <div>
-                            <label for="description"
-                                   class="block text-sm font-medium text-gray-700 {% if missing_fields and 'description' in missing_fields %}required-label{% endif %}">Description</label>
-                            <div class="mt-1">
-                            <textarea name="description" id="description" rows="6"
-                                      placeholder="Provide a detailed description of the opportunity, what the student will learn, responsibilities, and why they should be excited about this role..."
-                                      class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md {% if missing_fields and 'description' in missing_fields %}required-highlight{% endif %}">{% if opportunity and opportunity.description %}{{ opportunity.description|trim }}{% endif %}</textarea>
-                            </div>
-                            <p class="mt-2 text-sm text-gray-500">Describe the opportunity in detail, including
-                                responsibilities and what students will gain from this experience.</p>
+                    <div class="sm:col-span-3">
+                        <label for="category"
+                            class="block text-sm font-medium text-gray-700 {% if missing_fields and 'category' in missing_fields %}required-label{% endif %}">Category</label>
+                        <div class="mt-1">
+                            <select name="category" id="category"
+                                class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md {% if missing_fields and 'category' in missing_fields %}required-highlight{% endif %}">
+                                <option value="">Select Category</option>
+                                <option value="Technology" {% if opportunity and opportunity.category and
+                                    opportunity.category|trim=='Technology' %}selected{% endif %}>Technology</option>
+                                <option value="Environment" {% if opportunity and opportunity.category and
+                                    opportunity.category|trim=='Environment' %}selected{% endif %}>Environment</option>
+                                </option>
+                                <option value="Healthcare" {% if opportunity and opportunity.category=='Healthcare'
+                                    %}selected{% endif %}>
+                                    Healthcare
+                                </option>
+                                <option value="Education" {% if opportunity and opportunity.category=='Education'
+                                    %}selected{% endif %}>
+                                    Education
+                                </option>
+                                <option value="Marketing" {% if opportunity and opportunity.category=='Marketing'
+                                    %}selected{% endif %}>
+                                    Marketing
+                                </option>
+                                <option value="Science" {% if opportunity and opportunity.category=='Science'
+                                    %}selected{% endif %}>
+                                    Science
+                                </option>
+                            </select>
                         </div>
-
-                        <div>
-                            <label for="requirements"
-                                   class="block text-sm font-medium text-gray-700 {% if missing_fields and 'requirements' in missing_fields %}required-label{% endif %}">Requirements</label>
-                            <div class="mt-1">
-                            <textarea name="requirements" id="requirements" rows="4"
-                                      placeholder="List the skills, qualifications, or characteristics you're looking for. Put each requirement on a new line."
-                                      class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md {% if missing_fields and 'requirements' in missing_fields %}required-highlight{% endif %}">{% if opportunity and opportunity.requirements %}{{ opportunity.requirements|trim }}{% endif %}</textarea>
-                            </div>
-                            <p class="mt-2 text-sm text-gray-500">Specify skills, experience level, and other
-                                qualifications. Each line will be displayed as a bullet point.</p>
+                    </div>
+                    <div class="sm:col-span-3">
+                        <label for="location"
+                            class="block text-sm font-medium text-gray-700 {% if missing_fields and 'location' in missing_fields %}required-label{% endif %}">Location</label>
+                        <div class="mt-1">
+                            <input type="text" name="location" id="location"
+                                value="{% if opportunity and opportunity.location %}{{ opportunity.location|trim }}{% endif %}"
+                                {% if missing_fields and 'location' in missing_fields %}class="required-highlight" {%
+                                endif %} placeholder="City, State or Remote"
+                                class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">
                         </div>
                     </div>
-                </div>
-
-                <!-- Actions -->
-                <div class="px-4 py-4 sm:px-6 flex justify-between">
-                    <div>
-                        <button type="button" onclick="CO.confirmCancel()" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-4 inline-flex justify-center text-sm font-medium text-gray-700 hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">Cancel</button>
-                    </div>
-                    <div class="flex space-x-3">
-                        <button type="button" onclick="CO.previewOpportunity()" class="bg-blue-500 border border-transparent rounded-md shadow-sm py-2 px-4 inline-flex justify-center text-sm font-medium text-white hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"><i class="fas fa-eye mr-2"></i>Preview</button>
-                        {% if not is_editing %}
-                        <button type="button" class="bg-gray-600 border border-transparent rounded-md shadow-sm py-2 px-4 inline-flex justify-center text-sm font-medium text-white hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500" onclick="CO.saveAsDraft()">Save as Draft</button>
-                        {% endif %}
-                        <button type="submit" class="bg-blue-600 border border-transparent rounded-md shadow-sm py-2 px-4 inline-flex justify-center text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                            <i class="fas {% if is_editing %}fa-save{% else %}fa-plus{% endif %} mr-2"></i>
-                            {% if is_editing %}Update Draft{% else %}Create Opportunity{% endif %}
-                        </button>
-                        {% if is_editing %}
-                        <button type="button" class="bg-blue-700 border border-transparent rounded-md shadow-sm py-2 px-4 inline-flex justify-center text-sm font-medium text-white hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-700" onclick="CO.publishOpportunity()"><i class="fas fa-upload mr-2"></i>Publish Opportunity</button>
-                        {% endif %}
-                    </div>
-                </div>
-            </form>
-        </div>
-        {% if not is_editing %}
-        <div class="mt-8 bg-blue-50 rounded-lg p-6">
-            <h3 class="text-lg font-medium text-gray-900 mb-4">
-                <i class="fas fa-lightbulb text-blue-600 mr-2"></i>
-                Tips for Creating Great Opportunities
-            </h3>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-700">
-                <div>
-                    <h4 class="font-semibold mb-2">Be Specific and Clear</h4>
-                    <ul class="space-y-1 list-disc list-inside">
-                        <li>Use descriptive titles that clearly indicate the role</li>
-                        <li>Specify the time commitment and duration</li>
-                        <li>Be clear about remote vs. in-person work</li>
-                    </ul>
-                </div>
-                <div>
-                    <h4 class="font-semibold mb-2">Highlight Learning</h4>
-                    <ul class="space-y-1 list-disc list-inside">
-                        <li>Emphasize skills students will develop</li>
-                        <li>Mention mentorship and guidance available</li>
-                        <li>Include any certificates or recognition offered</li>
-                    </ul>
-                </div>
-                <div>
-                    <h4 class="font-semibold mb-2">Set Realistic Expectations</h4>
-                    <ul class="space-y-1 list-disc list-inside">
-                        <li>Match requirements to the experience level</li>
-                        <li>Be realistic about time commitments</li>
-                        <li>Clearly state if it's paid or unpaid</li>
-                    </ul>
-                </div>
-                <div>
-                    <h4 class="font-semibold mb-2">Make It Appealing</h4>
-                    <ul class="space-y-1 list-disc list-inside">
-                        <li>Use engaging language and positive tone</li>
-                        <li>Include your organization's mission</li>
-                        <li>Add an attractive image if possible</li>
-                    </ul>
                 </div>
             </div>
-        </div>
-        {% endif %}
+
+            <!-- Schedule & Timeline -->
+            <div class="px-4 py-5 sm:p-6">
+                <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">Schedule & Timeline</h3>
+                <div class="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
+                    <div class="sm:col-span-3">
+                        <label for="duration"
+                            class="block text-sm font-medium text-gray-700 {% if missing_fields and 'duration' in missing_fields %}required-label{% endif %}">Duration</label>
+                        <div class="mt-1">
+                            <input type="text" name="duration" id="duration"
+                                value="{% if opportunity and opportunity.duration %}{{ opportunity.duration|trim }}{% endif %}"
+                                {% if missing_fields and 'duration' in missing_fields %}class="required-highlight" {%
+                                endif %} placeholder="e.g., Summer 2024, 3 months, Ongoing"
+                                class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">
+                        </div>
+                    </div>
+
+                    <div class="sm:col-span-3">
+                        <label for="application_deadline"
+                            class="block text-sm font-medium text-gray-700 {% if missing_fields and 'application_deadline' in missing_fields %}required-label{% endif %}">Application
+                            Deadline</label>
+                        <div class="mt-1">
+                            <input type="date" name="application_deadline" id="application_deadline"
+                                value="{% if opportunity and opportunity.application_deadline %}{{ opportunity.application_deadline|trim }}{% endif %}"
+                                {% if missing_fields and 'application_deadline' in missing_fields
+                                %}class="required-highlight" {% endif %}
+                                class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">
+                        </div>
+                    </div>
+
+                    <div class="sm:col-span-6">
+                        <label for="compensation"
+                            class="block text-sm font-medium text-gray-700 {% if missing_fields and 'compensation' in missing_fields %}required-label{% endif %}">Compensation</label>
+                        <div class="mt-1">
+                            <input type="text" name="compensation" id="compensation"
+                                value="{% if opportunity and opportunity.compensation %}{{ opportunity.compensation|trim }}{% endif %}"
+                                {% if missing_fields and 'compensation' in missing_fields %}class="required-highlight"
+                                {% endif %} placeholder="e.g., Unpaid, $15/hour, Stipend provided, Academic credit"
+                                class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">
+                        </div>
+                        <p class="mt-2 text-sm text-gray-500">Specify if this is paid, unpaid, or offers other
+                            benefits.</p>
+                    </div>
+                    <div class="sm:col-span-6">
+                        <label for="skills-needed-bubble-input" class="block text-sm font-medium text-gray-700">Skills
+                            Needed</label>
+                        <div class="mt-1">
+                            <div id="skills-needed-bubble-container" class="flex flex-wrap gap-2 mb-2"></div>
+                            <input type="text" id="skills-needed-bubble-input" name="skills-needed-bubble-input"
+                                autocomplete="off" placeholder="Type a skill and press Enter..."
+                                class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">
+                            <input type="hidden" name="skills_needed" id="skills-needed-hidden-input"
+                                value="{{ opportunity.skills_needed|tojson|safe if opportunity and opportunity.skills_needed else '[]' }}">
+                            <div id="skills-needed-autocomplete-list"
+                                class="absolute z-10 bg-white border border-gray-300 rounded-md mt-1 w-full"
+                                style="display:none;"></div>
+                        </div>
+                        <p class="mt-2 text-sm text-gray-500">Add required skills as bubbles. Start typing for
+                            suggestions, or add new skills by typing them and pressing Enter. This helps students find
+                            relevant opportunities.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Description -->
+            <div class="px-4 py-5 sm:p-6">
+                <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">Opportunity Details</h3>
+
+                <div class="space-y-6">
+                    <div>
+                        <label for="description"
+                            class="block text-sm font-medium text-gray-700 {% if missing_fields and 'description' in missing_fields %}required-label{% endif %}">Description</label>
+                        <div class="mt-1">
+                            <textarea name="description" id="description" rows="6"
+                                placeholder="Provide a detailed description of the opportunity, what the student will learn, responsibilities, and why they should be excited about this role..."
+                                class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md {% if missing_fields and 'description' in missing_fields %}required-highlight{% endif %}">{% if opportunity and opportunity.description %}{{ opportunity.description|trim }}{% endif %}</textarea>
+                        </div>
+                        <p class="mt-2 text-sm text-gray-500">Describe the opportunity in detail, including
+                            responsibilities and what students will gain from this experience.</p>
+                    </div>
+
+                    <div>
+                        <label for="requirements"
+                            class="block text-sm font-medium text-gray-700 {% if missing_fields and 'requirements' in missing_fields %}required-label{% endif %}">Requirements</label>
+                        <div class="mt-1">
+                            <textarea name="requirements" id="requirements" rows="4"
+                                placeholder="List the skills, qualifications, or characteristics you're looking for. Put each requirement on a new line."
+                                class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md {% if missing_fields and 'requirements' in missing_fields %}required-highlight{% endif %}">{% if opportunity and opportunity.requirements %}{{ opportunity.requirements|trim }}{% endif %}</textarea>
+                        </div>
+                        <p class="mt-2 text-sm text-gray-500">Specify skills, experience level, and other
+                            qualifications. Each line will be displayed as a bullet point.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="px-4 py-4 sm:px-6 flex justify-between">
+                <div>
+                    <button type="button" onclick="CO.confirmCancel()"
+                        class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-4 inline-flex justify-center text-sm font-medium text-gray-700 hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">Cancel</button>
+                </div>
+                <div class="flex space-x-3">
+                    <button type="button" onclick="CO.previewOpportunity()"
+                        class="bg-blue-500 border border-transparent rounded-md shadow-sm py-2 px-4 inline-flex justify-center text-sm font-medium text-white hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"><i
+                            class="fas fa-eye mr-2"></i>Preview</button>
+                    {% if not is_editing %}
+                    <button type="button"
+                        class="bg-gray-600 border border-transparent rounded-md shadow-sm py-2 px-4 inline-flex justify-center text-sm font-medium text-white hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+                        onclick="CO.saveAsDraft()">Save as Draft</button>
+                    {% endif %}
+                    <button type="submit"
+                        class="bg-blue-600 border border-transparent rounded-md shadow-sm py-2 px-4 inline-flex justify-center text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        <i class="fas {% if is_editing %}fa-save{% else %}fa-plus{% endif %} mr-2"></i>
+                        {% if is_editing %}Update Draft{% else %}Create Opportunity{% endif %}
+                    </button>
+                    {% if is_editing %}
+                    <button type="button"
+                        class="bg-blue-700 border border-transparent rounded-md shadow-sm py-2 px-4 inline-flex justify-center text-sm font-medium text-white hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-700"
+                        onclick="CO.publishOpportunity()"><i class="fas fa-upload mr-2"></i>Publish Opportunity</button>
+                    {% endif %}
+                </div>
+            </div>
+        </form>
     </div>
+    {% if not is_editing %}
+    <div class="mt-8 bg-blue-50 rounded-lg p-6">
+        <h3 class="text-lg font-medium text-gray-900 mb-4">
+            <i class="fas fa-lightbulb text-blue-600 mr-2"></i>
+            Tips for Creating Great Opportunities
+        </h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-700">
+            <div>
+                <h4 class="font-semibold mb-2">Be Specific and Clear</h4>
+                <ul class="space-y-1 list-disc list-inside">
+                    <li>Use descriptive titles that clearly indicate the role</li>
+                    <li>Specify the time commitment and duration</li>
+                    <li>Be clear about remote vs. in-person work</li>
+                </ul>
+            </div>
+            <div>
+                <h4 class="font-semibold mb-2">Highlight Learning</h4>
+                <ul class="space-y-1 list-disc list-inside">
+                    <li>Emphasize skills students will develop</li>
+                    <li>Mention mentorship and guidance available</li>
+                    <li>Include any certificates or recognition offered</li>
+                </ul>
+            </div>
+            <div>
+                <h4 class="font-semibold mb-2">Set Realistic Expectations</h4>
+                <ul class="space-y-1 list-disc list-inside">
+                    <li>Match requirements to the experience level</li>
+                    <li>Be realistic about time commitments</li>
+                    <li>Clearly state if it's paid or unpaid</li>
+                </ul>
+            </div>
+            <div>
+                <h4 class="font-semibold mb-2">Make It Appealing</h4>
+                <ul class="space-y-1 list-disc list-inside">
+                    <li>Use engaging language and positive tone</li>
+                    <li>Include your organization's mission</li>
+                    <li>Add an attractive image if possible</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
 <script>
-const allowedSkills = JSON.parse('{{ skills_master|tojson|safe }}');
-function renderSkillBubbles(skills, container) {
-    container.innerHTML = '';
-    skills.forEach(skill => {
-        if (!allowedSkills.includes(skill)) return;
+    const allowedSkills = JSON.parse('{{ skills_master|tojson|safe }}');
+    function renderSkillBubbles(skills, container) {
+        container.innerHTML = '';
+        skills.forEach(skill => {
+            if (!allowedSkills.includes(skill)) return;
+            const bubble = document.createElement('span');
+            bubble.className = 'skill-bubble inline-flex items-center px-3 py-1 rounded-full bg-blue-100 text-blue-800 text-sm font-medium mr-2 mb-2';
+            bubble.textContent = skill;
+            const removeBtn = document.createElement('button');
+            removeBtn.type = 'button';
+            removeBtn.className = 'ml-2 text-blue-500 hover:text-red-600 focus:outline-none';
+            removeBtn.innerHTML = '<i class="fas fa-times"></i>';
+            removeBtn.onclick = () => {
+                container.removeChild(bubble);
+                updateHiddenInput(container);
+            };
+            bubble.appendChild(removeBtn);
+            container.appendChild(bubble);
+        });
+    }
+    function setupAutocomplete(input, container) {
+        input.addEventListener('input', function () {
+            const val = input.value.trim().toLowerCase();
+            let matches = allowedSkills.filter(s => s.toLowerCase().includes(val) && !getCurrentSkills(container).includes(s));
+            matches = matches.slice(0, 5);
+            const autocompleteList = document.getElementById('skills-needed-autocomplete-list');
+            autocompleteList.innerHTML = '';
+
+            // Show existing skill matches
+            matches.forEach(skill => {
+                const item = document.createElement('div');
+                item.className = 'px-3 py-2 cursor-pointer hover:bg-blue-50';
+                item.textContent = skill;
+                item.onclick = () => {
+                    addSkillBubble(skill, container);
+                    input.value = '';
+                    autocompleteList.style.display = 'none';
+                };
+                autocompleteList.appendChild(item);
+            });
+
+            // If no matches and user has typed something, show "Add new skill" option
+            if (matches.length === 0 && val.length >= 2) {
+                // Check if the skill already exists (case-insensitive)
+                const existsAlready = allowedSkills.some(s => s.toLowerCase() === val.toLowerCase());
+                if (!existsAlready) {
+                    const newSkillItem = document.createElement('div');
+                    newSkillItem.className = 'px-3 py-2 cursor-pointer hover:bg-green-50 text-green-700 border-t border-gray-200';
+                    newSkillItem.innerHTML = `<i class="fas fa-plus mr-2"></i>Add "${val}" as a new skill`;
+                    newSkillItem.onclick = () => {
+                        addNewSkillToDatabase(val, container, input, autocompleteList);
+                    };
+                    autocompleteList.appendChild(newSkillItem);
+                }
+            }
+
+            autocompleteList.style.display = (matches.length > 0 || (matches.length === 0 && val.length >= 2)) ? 'block' : 'none';
+            const inputRect = input.getBoundingClientRect();
+            autocompleteList.style.position = 'absolute';
+            autocompleteList.style.maxHeight = '180px';
+            autocompleteList.style.overflowY = 'auto';
+            autocompleteList.style.zIndex = '50';
+            autocompleteList.style.top = (input.offsetTop + input.offsetHeight) + 'px';
+            autocompleteList.style.left = input.offsetLeft + 'px';
+            autocompleteList.style.width = '350px';
+            autocompleteList.style.maxWidth = '350px';
+            autocompleteList.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)';
+        });
+        input.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' || e.key === ',') {
+                const skill = input.value.trim();
+                if (skill) {
+                    // Check if skill exists in allowed list (case insensitive)
+                    const existingSkill = allowedSkills.find(s => s.toLowerCase() === skill.toLowerCase());
+                    if (existingSkill) {
+                        // Use the properly cased version from the list
+                        if (!getCurrentSkills(container).includes(existingSkill)) {
+                            addSkillBubble(existingSkill, container);
+                        }
+                        input.value = '';
+                        document.getElementById('skills-needed-autocomplete-list').style.display = 'none';
+                    } else {
+                        // Add as new skill via backend
+                        addNewSkillToDatabase(skill, container, input, document.getElementById('skills-needed-autocomplete-list'));
+                    }
+                }
+                e.preventDefault();
+            }
+        });
+    }
+    function addSkillBubble(skill, container) {
+        if (getCurrentSkills(container).includes(skill)) return;
         const bubble = document.createElement('span');
         bubble.className = 'skill-bubble inline-flex items-center px-3 py-1 rounded-full bg-blue-100 text-blue-800 text-sm font-medium mr-2 mb-2';
         bubble.textContent = skill;
@@ -263,88 +373,99 @@ function renderSkillBubbles(skills, container) {
         };
         bubble.appendChild(removeBtn);
         container.appendChild(bubble);
-    });
-}
-function setupAutocomplete(input, container) {
-    input.addEventListener('input', function() {
-        const val = input.value.trim().toLowerCase();
-        let matches = allowedSkills.filter(s => s.toLowerCase().includes(val) && !getCurrentSkills(container).includes(s));
-        matches = matches.slice(0, 5);
-        const autocompleteList = document.getElementById('skills-needed-autocomplete-list');
-        autocompleteList.innerHTML = '';
-        matches.forEach(skill => {
-            const item = document.createElement('div');
-            item.className = 'px-3 py-2 cursor-pointer hover:bg-blue-50';
-            item.textContent = skill;
-            item.onclick = () => {
-                addSkillBubble(skill, container);
+        updateHiddenInput(container);
+    }
+    function getCurrentSkills(container) {
+        return Array.from(container.children).map(b => b.textContent.replace(/\s*\u00d7\s*$/, ''));
+    }
+    function updateHiddenInput(container) {
+        const skills = getCurrentSkills(container);
+        document.getElementById('skills-needed-hidden-input').value = JSON.stringify(skills);
+    }
+
+    async function addNewSkillToDatabase(skillName, container, input, autocompleteList) {
+        try {
+            // Show loading state
+            input.disabled = true;
+            input.placeholder = "Adding skill...";
+
+            const response = await fetch('/add_skill', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ skill: skillName })
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                // Add to local allowed skills list
+                const formattedSkill = result.skill.name;
+                if (!allowedSkills.includes(formattedSkill)) {
+                    allowedSkills.push(formattedSkill);
+                    allowedSkills.sort(); // Keep it sorted
+                }
+
+                // Add the skill bubble
+                addSkillBubble(formattedSkill, container);
+
+                // Clear input and hide dropdown
                 input.value = '';
                 autocompleteList.style.display = 'none';
-            };
-            autocompleteList.appendChild(item);
-        });
-        autocompleteList.style.display = matches.length ? 'block' : 'none';
-        const inputRect = input.getBoundingClientRect();
-        autocompleteList.style.position = 'absolute';
-        autocompleteList.style.maxHeight = '180px';
-        autocompleteList.style.overflowY = 'auto';
-        autocompleteList.style.zIndex = '50';
-        autocompleteList.style.top = (input.offsetTop + input.offsetHeight) + 'px';
-        autocompleteList.style.left = input.offsetLeft + 'px';
-        autocompleteList.style.width = '350px';
-        autocompleteList.style.maxWidth = '350px';
-        autocompleteList.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)';
-    });
-    input.addEventListener('keydown', function(e) {
-        if (e.key === 'Enter' || e.key === ',') {
-            const skill = input.value.trim();
-            if (skill && allowedSkills.includes(skill) && !getCurrentSkills(container).includes(skill)) {
-                addSkillBubble(skill, container);
+
+                // Show success message briefly
+                input.placeholder = "Skill added successfully!";
+                setTimeout(() => {
+                    input.placeholder = "Type a skill and press Enter...";
+                }, 2000);
+
+            } else {
+                // Handle errors
+                if (result.error === "Skill already exists") {
+                    // If skill exists, use the existing one
+                    const existingSkill = result.existing_skill || skillName;
+                    if (!allowedSkills.includes(existingSkill)) {
+                        allowedSkills.push(existingSkill);
+                        allowedSkills.sort();
+                    }
+                    addSkillBubble(existingSkill, container);
+                    input.value = '';
+                    autocompleteList.style.display = 'none';
+                    input.placeholder = "Used existing skill";
+                    setTimeout(() => {
+                        input.placeholder = "Type a skill and press Enter...";
+                    }, 2000);
+                } else {
+                    alert('Error adding skill: ' + result.error);
+                }
             }
-            input.value = '';
-            e.preventDefault();
+        } catch (error) {
+            console.error('Error adding skill:', error);
+            alert('Error adding skill. Please try again.');
+        } finally {
+            // Re-enable input
+            input.disabled = false;
+            if (input.placeholder === "Adding skill...") {
+                input.placeholder = "Type a skill and press Enter...";
+            }
         }
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const skillsContainer = document.getElementById('skills-needed-bubble-container');
+        const skillsInput = document.getElementById('skills-needed-bubble-input');
+        let initialSkills = [];
+        try {
+            initialSkills = JSON.parse(document.getElementById('skills-needed-hidden-input').value);
+        } catch (e) { }
+        renderSkillBubbles(initialSkills, skillsContainer);
+        setupAutocomplete(skillsInput, skillsContainer);
+        updateHiddenInput(skillsContainer);
     });
-}
-function addSkillBubble(skill, container) {
-    if (!allowedSkills.includes(skill)) return;
-    if (getCurrentSkills(container).includes(skill)) return;
-    const bubble = document.createElement('span');
-    bubble.className = 'skill-bubble inline-flex items-center px-3 py-1 rounded-full bg-blue-100 text-blue-800 text-sm font-medium mr-2 mb-2';
-    bubble.textContent = skill;
-    const removeBtn = document.createElement('button');
-    removeBtn.type = 'button';
-    removeBtn.className = 'ml-2 text-blue-500 hover:text-red-600 focus:outline-none';
-    removeBtn.innerHTML = '<i class="fas fa-times"></i>';
-    removeBtn.onclick = () => {
-        container.removeChild(bubble);
-        updateHiddenInput(container);
-    };
-    bubble.appendChild(removeBtn);
-    container.appendChild(bubble);
-    updateHiddenInput(container);
-}
-function getCurrentSkills(container) {
-    return Array.from(container.children).map(b => b.textContent.replace(/\s*\u00d7\s*$/, ''));
-}
-function updateHiddenInput(container) {
-    const skills = getCurrentSkills(container);
-    document.getElementById('skills-needed-hidden-input').value = JSON.stringify(skills);
-}
-document.addEventListener('DOMContentLoaded', function() {
-    const skillsContainer = document.getElementById('skills-needed-bubble-container');
-    const skillsInput = document.getElementById('skills-needed-bubble-input');
-    let initialSkills = [];
-    try {
-        initialSkills = JSON.parse(document.getElementById('skills-needed-hidden-input').value);
-    } catch (e) {}
-    renderSkillBubbles(initialSkills, skillsContainer);
-    setupAutocomplete(skillsInput, skillsContainer);
-    updateHiddenInput(skillsContainer);
-});
 </script>
 <script>
-  window.OPP_EDITING = {{ 'true' if is_editing else 'false' }};
+    window.OPP_EDITING = {{ 'true' if is_editing else 'false' }};
 </script>
 <script src="{{ url_for('static', filename='js/create_opportunity.js') }}"></script>
 {% endblock %}
