@@ -1489,5 +1489,5 @@ class SupabaseService:
             return None
 
 
-# Global instance
-supabase_service = SupabaseService()
+# Global instance - will be created in app.py after environment variables are loaded
+# supabase_service = SupabaseService()

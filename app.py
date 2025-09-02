@@ -65,11 +65,13 @@ from flask import (
     flash,
     session,
 )
-
-from supabase_config import supabase_service
+import google.generativeai as genai
 
 # Load environment variables
 load_dotenv()
+
+# Import the class, not the instance
+from supabase_config import SupabaseService
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -77,6 +79,13 @@ logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "2a15f8283ab2353f15089e80d8acf104")
+
+# Initialize Google Gemini client
+genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+gemini_model = genai.GenerativeModel('gemini-1.5-flash')
+
+# Initialize Supabase service after environment variables are loaded
+supabase_service = SupabaseService()
 
 
 def check_profile_completion():
@@ -1152,6 +1161,251 @@ def delete_profile_picture():
         logger.error(f"Error in delete_profile_picture: {str(e)}")
         return {"success": False, "error": str(e)}, 500
 
+
+@app.route("/chat")
+def chat():
+    """AI chatbot interface for InterSpark."""
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+    
+    # Initialize chat history in session if it doesn't exist
+    if "chat_history" not in session:
+        session["chat_history"] = []
+    
+    return render_template("chat.html", chat_history=session["chat_history"])
+
+@app.route("/chat/send", methods=["POST"])
+def chat_send():
+    """Handle chat message and return AI response."""
+    if "user_id" not in session:
+        return jsonify({"success": False, "error": "Not authenticated"}), 401
+    
+    try:
+        user_message = request.json.get("message", "").strip()
+        if not user_message:
+            return jsonify({"success": False, "error": "Message cannot be empty"}), 400
+        
+        # Initialize chat history if not exists
+        if "chat_history" not in session:
+            session["chat_history"] = []
+        
+        # Add user message to history
+        session["chat_history"].append({
+            "role": "user",
+            "content": user_message,
+            "timestamp": datetime.now().isoformat()
+        })
+        
+        # Search database for relevant results
+        db_results = search_database_for_context(user_message)
+        
+        # Generate AI response with conversation context
+        ai_response = generate_ai_response_with_context(user_message, db_results, session["chat_history"])
+        
+        # Add AI response to history
+        session["chat_history"].append({
+            "role": "assistant",
+            "content": ai_response,
+            "timestamp": datetime.now().isoformat()
+        })
+        
+        # Keep only last 20 messages to prevent session bloat
+        if len(session["chat_history"]) > 20:
+            session["chat_history"] = session["chat_history"][-20:]
+        
+        return jsonify({
+            "success": True,
+            "response": ai_response,
+            "db_results": db_results
+        })
+        
+    except Exception as e:
+        logger.error(f"Error in chat_send: {str(e)}")
+        return jsonify({"success": False, "error": "An error occurred while processing your message"}), 500
+
+def search_database_for_context(query):
+    """
+    Search database for relevant profiles and opportunities based on user query.
+    Returns structured results that can be used in AI prompt.
+    """
+    try:
+        results = {
+            "profiles": [],
+            "opportunities": [],
+            "total_matches": 0
+        }
+        
+        # Search in profiles table
+        profile_results = supabase_service.search_students(
+            search_query=query,
+            skills="",  # Could be enhanced to extract skills from query
+            school="",
+            grade=""
+        )
+        
+        # Search in opportunities table
+        opportunity_results = supabase_service.search_opportunities(
+            search_query=query,
+            opportunity_type="",
+            category="",
+            location="",
+            skills_needed=""
+        )
+        
+        # Limit results to top matches
+        results["profiles"] = profile_results[:5]  # Top 5 profiles
+        results["opportunities"] = opportunity_results[:5]  # Top 5 opportunities
+        results["total_matches"] = len(profile_results) + len(opportunity_results)
+        
+        return results
+        
+    except Exception as e:
+        logger.error(f"Error searching database: {str(e)}")
+        return {"profiles": [], "opportunities": [], "total_matches": 0}
+
+def generate_ai_response(user_message, db_results):
+    """
+    Generate AI response using Google Gemini with database context.
+    """
+    try:
+        # Build context from database results
+        context_parts = []
+        
+        if db_results["profiles"]:
+            context_parts.append("RELEVANT STUDENT PROFILES:")
+            for profile in db_results["profiles"]:
+                context_parts.append(f"- {profile.get('name', 'Unknown')} from {profile.get('school', 'Unknown school')}")
+                if profile.get('skills'):
+                    skills = profile.get('skills', [])
+                    if isinstance(skills, str):
+                        try:
+                            skills = json.loads(skills)
+                        except:
+                            skills = [skills]
+                    context_parts.append(f"  Skills: {', '.join(skills[:5])}")
+                context_parts.append(f"  View profile: /profile/{profile['id']}")
+        
+        if db_results["opportunities"]:
+            context_parts.append("\nRELEVANT OPPORTUNITIES:")
+            for opp in db_results["opportunities"]:
+                context_parts.append(f"- {opp.get('title', 'Unknown title')} at {opp.get('profiles', {}).get('name', 'Unknown organization')}")
+                context_parts.append(f"  Type: {opp.get('type', 'Unknown')} | Location: {opp.get('location', 'Unknown')}")
+                context_parts.append(f"  View opportunity: /opportunity/{opp['id']}")
+        
+        # Build the system prompt
+        system_prompt = f"""You are Spark AI, a helpful AI assistant for InterSpark - a platform connecting students with internship and volunteer opportunities.
+
+Your role is to:
+1. Provide helpful, conversational responses to user queries
+2. When relevant, mention and link to matching profiles or opportunities from our database
+3. Be encouraging and supportive, especially for students looking for opportunities
+4. Keep responses concise but informative
+5. Always format links as clickable URLs (e.g., /profile/123 or /opportunity/456)
+
+Current database context:
+{chr(10).join(context_parts) if context_parts else "No specific matches found in database."}
+
+Remember: You're helping users navigate InterSpark and find meaningful connections. Be friendly, professional, and always try to be helpful!"""
+
+        # Build user message with context
+        user_prompt = f"""User message: {user_message}
+
+Please provide a helpful response. If there are relevant database matches above, incorporate them naturally into your response with clickable links."""
+
+        # Generate response using Google Gemini
+        response = gemini_model.generate_content([
+            system_prompt,
+            user_prompt
+        ])
+        
+        return response.text
+        
+    except Exception as e:
+        logger.error(f"Error generating AI response: {str(e)}")
+        return "I apologize, but I'm having trouble processing your request right now. Please try again later or contact support if the issue persists."
+
+
+def generate_ai_response_with_context(user_message, db_results, chat_history):
+    """
+    Generate AI response using Google Gemini with database context and conversation history.
+    """
+    try:
+        # Build context from database results
+        context_parts = []
+        
+        if db_results["profiles"]:
+            context_parts.append("RELEVANT STUDENT PROFILES:")
+            for profile in db_results["profiles"]:
+                context_parts.append(f"- {profile.get('name', 'Unknown')} from {profile.get('school', 'Unknown school')}")
+                if profile.get('skills'):
+                    skills = profile.get('skills', [])
+                    if isinstance(skills, str):
+                        try:
+                            skills = json.loads(skills)
+                        except:
+                            skills = [skills]
+                    context_parts.append(f"  Skills: {', '.join(skills[:5])}")
+                context_parts.append(f"  View profile: /profile/{profile['id']}")
+        
+        if db_results["opportunities"]:
+            context_parts.append("\nRELEVANT OPPORTUNITIES:")
+            for opp in db_results["opportunities"]:
+                context_parts.append(f"- {opp.get('title', 'Unknown title')} at {opp.get('profiles', {}).get('name', 'Unknown organization')}")
+                context_parts.append(f"  Type: {opp.get('type', 'Unknown')} | Location: {opp.get('location', 'Unknown')}")
+                context_parts.append(f"  View opportunity: /opportunity/{opp['id']}")
+        
+        # Build conversation context from recent messages
+        conversation_context = ""
+        if len(chat_history) > 2:  # More than just current user message
+            recent_messages = chat_history[-6:]  # Last 6 messages for context
+            conversation_context = "\n\nCONVERSATION CONTEXT:\n"
+            for msg in recent_messages:
+                role = "User" if msg["role"] == "user" else "Assistant"
+                conversation_context += f"{role}: {msg['content']}\n"
+        
+        # Build the system prompt
+        system_prompt = f"""You are Spark AI, a helpful AI assistant for InterSpark - a platform connecting students with internship and volunteer opportunities.
+
+Your role is to:
+1. Provide helpful, conversational responses to user queries
+2. When relevant, mention and link to matching profiles or opportunities from our database
+3. Be encouraging and supportive, especially for students looking for opportunities
+4. Keep responses concise but informative
+5. Always format links as clickable URLs (e.g., /profile/123 or /opportunity/456)
+6. Maintain conversation flow and context from previous messages
+
+Current database context:
+{chr(10).join(context_parts) if context_parts else "No specific matches found in database."}
+
+{conversation_context}
+
+Remember: You're helping users navigate InterSpark and find meaningful connections. Be friendly, professional, and always try to be helpful!"""
+
+        # Build user message with context
+        user_prompt = f"""User message: {user_message}
+
+Please provide a helpful response. If there are relevant database matches above, incorporate them naturally into your response with clickable links. If no matches are found, reply naturally: I didn't find any matching profiles or opportunities. Want to try rephrasing your request?"""
+
+        # Generate response using Google Gemini
+        response = gemini_model.generate_content([
+            system_prompt,
+            user_prompt
+        ])
+        
+        return response.text
+        
+    except Exception as e:
+        logger.error(f"Error generating AI response: {str(e)}")
+        return "I apologize, but I'm having trouble processing your request right now. Please try again later or contact support if the issue persists."
+
+@app.route("/chat/clear", methods=["POST"])
+def chat_clear():
+    """Clear chat history."""
+    if "user_id" not in session:
+        return jsonify({"success": False, "error": "Not authenticated"}), 401
+    
+    session["chat_history"] = []
+    return jsonify({"success": True, "message": "Chat history cleared"})
 
 if __name__ == "__main__":
     app.run(debug=True, port=5000)
