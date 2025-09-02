@@ -634,7 +634,7 @@ def opportunities():
             skills_needed=skills_needed,
         )
 
-        # Robustly parse selected_skills_needed for Jinja2
+        # Parse skills_needed (comma-separated or JSON)
         import json
         def parse_skills(val):
             if not val:
