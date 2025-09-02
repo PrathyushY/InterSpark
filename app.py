@@ -1,5 +1,28 @@
 import os
 import json
+import logging
+from datetime import datetime
+
+from dotenv import load_dotenv
+from flask import (
+    Flask,
+    jsonify,
+    render_template,
+    request,
+    redirect,
+    url_for,
+    flash,
+    session,
+)
+
+from supabase_config import supabase_service
+
+# Load environment variables
+load_dotenv()
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 def get_all_available_skills():
@@ -54,14 +77,10 @@ def normalize_and_validate_skills(value):
     return []
 
 
-import json
-
-
-# --- Skills normalization helper ---
-def normalize_skills(value):
+def normalize_skills_for_draft(value):
     """
-    Normalize skills input to a list of non-empty, stripped strings.
-    Accepts list, JSON string, comma-separated string, or single string.
+    Normalize skills input for drafts - accepts all skills without validation against database.
+    This allows saving new skills in drafts before they're added to the database.
     """
     if value is None:
         return []
@@ -81,32 +100,6 @@ def normalize_skills(value):
         return [val] if val else []
     return []
 
-
-import os
-import json
-import logging
-from datetime import datetime
-
-from dotenv import load_dotenv
-from flask import (
-    Flask,
-    jsonify,
-    render_template,
-    request,
-    redirect,
-    url_for,
-    flash,
-    session,
-)
-
-from supabase_config import supabase_service
-
-# Load environment variables
-load_dotenv()
-
-# Set up logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "2a15f8283ab2353f15089e80d8acf104")
@@ -824,13 +817,30 @@ def create_opportunity(opportunity_id=None):
             flash("You can only edit your own opportunities", "error")
             return redirect(url_for("dashboard"))
 
+        # Debug: Log the skills_needed data
+        print(f"DEBUG - Loading draft opportunity {opportunity_id}:")
+        print(f"  Skills needed from DB: {opportunity.get('skills_needed')}")
+        print(f"  Type of skills_needed: {type(opportunity.get('skills_needed'))}")
+
     if request.method == "POST":
         # Get form data and map to database fields
         status = request.form.get("status", "active")
-        # Normalize and validate skills_needed from form
-        skills_needed_json = normalize_and_validate_skills(
-            request.form.get("skills_needed")
-        )
+
+        # For drafts, allow any skills without validation. For active opportunities, validate against database
+        if status == "draft":
+            skills_needed_json = normalize_skills_for_draft(
+                request.form.get("skills_needed")
+            )
+        else:
+            skills_needed_json = normalize_and_validate_skills(
+                request.form.get("skills_needed")
+            )
+
+        # Debug: Log the skills processing
+        print(f"DEBUG - Saving opportunity with status: {status}")
+        print(f"  Raw skills_needed from form: {request.form.get('skills_needed')}")
+        print(f"  Processed skills_needed: {skills_needed_json}")
+        print(f"  Type: {type(skills_needed_json)}")
         opportunity_data = {
             "title": request.form.get("title") or None,
             "description": request.form.get("description") or None,
@@ -905,6 +915,10 @@ def create_opportunity(opportunity_id=None):
             elif is_editing:
                 # Regular update, redirect back to referrer
                 opportunity_data["status"] = "draft"
+                # Re-normalize skills for draft since status changed
+                opportunity_data["skills_needed"] = normalize_skills_for_draft(
+                    request.form.get("skills_needed")
+                )
                 result = supabase_service.update_opportunity(
                     opportunity_id, opportunity_data
                 )
@@ -929,7 +943,12 @@ def create_opportunity(opportunity_id=None):
                 success_message = "Opportunity created successfully!"
                 redirect_route = referrer_url
             else:
+                # Creating a new draft
                 opportunity_data["status"] = "draft"
+                # Re-normalize skills for draft since status is draft
+                opportunity_data["skills_needed"] = normalize_skills_for_draft(
+                    request.form.get("skills_needed")
+                )
                 result = supabase_service.create_opportunity(opportunity_data)
                 success_message = "Draft saved successfully!"
                 redirect_route = url_for("dashboard")
@@ -1234,6 +1253,7 @@ def add_skill():
     except Exception as e:
         logger.error(f"Error adding skill: {str(e)}")
         return {"success": False, "error": str(e)}, 500
+
 
 if __name__ == "__main__":
     app.run(debug=True, port=5000)
