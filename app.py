@@ -1,4 +1,56 @@
 import os
+import json
+with open(os.path.join(os.path.dirname(__file__), 'src', 'utils', 'skills_master.json'), encoding='utf-8') as f:
+    skills_master = json.load(f)["skills"]
+
+def normalize_and_validate_skills(value):
+    """
+    Normalize input to a list of valid, non-empty, stripped skills from skills_master.
+    """
+    if value is None:
+        return []
+    if isinstance(value, list):
+        return [s.strip() for s in value if isinstance(s, str) and s.strip() in skills_master]
+    if isinstance(value, str):
+        try:
+            loaded = json.loads(value)
+            if isinstance(loaded, list):
+                return [s.strip() for s in loaded if isinstance(s, str) and s.strip() in skills_master]
+        except Exception:
+            pass
+        # Comma-separated string
+        if "," in value:
+            return [s.strip() for s in value.split(",") if s.strip() in skills_master]
+        val = value.strip()
+        return [val] if val in skills_master else []
+    return []
+import json
+
+# --- Skills normalization helper ---
+def normalize_skills(value):
+    """
+    Normalize skills input to a list of non-empty, stripped strings.
+    Accepts list, JSON string, comma-separated string, or single string.
+    """
+    if value is None:
+        return []
+    if isinstance(value, list):
+        return [s.strip() for s in value if isinstance(s, str) and s.strip()]
+    if isinstance(value, str):
+        try:
+            loaded = json.loads(value)
+            if isinstance(loaded, list):
+                return [s.strip() for s in loaded if isinstance(s, str) and s.strip()]
+        except Exception:
+            pass
+        # Comma-separated string
+        if "," in value:
+            return [s.strip() for s in value.split(",") if s.strip()]
+        val = value.strip()
+        return [val] if val else []
+    return []
+import os
+import json
 import logging
 from datetime import datetime
 
@@ -380,11 +432,13 @@ def profile():
         profile_data = {}
 
         if user_type == "student":
+            # Normalize and validate skills from form
+            skills_json = normalize_and_validate_skills(request.form.get("skills"))
             profile_data = {
                 "name": request.form.get("full_name"),
                 "school": request.form.get("school"),
                 "grade": request.form.get("grade"),
-                "skills": request.form.get("skills"),
+                "skills": skills_json,
                 "bio": request.form.get("bio"),
                 "github_url": request.form.get("github_url"),
                 "linkedin_url": request.form.get("linkedin_url"),
@@ -403,9 +457,15 @@ def profile():
             }
 
         # Remove empty values to avoid overwriting existing data with blank fields
-        profile_data = {
-            k: v for k, v in profile_data.items() if v is not None and v.strip() != ""
-        }
+        def is_valid_value(v):
+            if v is None:
+                return False
+            if isinstance(v, str):
+                return v.strip() != ""
+            if isinstance(v, list):
+                return len(v) > 0
+            return True
+        profile_data = {k: v for k, v in profile_data.items() if is_valid_value(v)}
 
         print(f"DEBUG - Profile update attempt:")
         print(f"  User ID: {user_id}")
@@ -413,6 +473,9 @@ def profile():
         print(f"  Profile data: {profile_data}")
 
         try:
+            # Persist skills as JSON array (not double-encoded)
+            if "skills" in profile_data:
+                profile_data["skills"] = profile_data["skills"]
             result = supabase_service.update_profile(user_id, profile_data)
             if result["success"]:
                 flash("Profile updated successfully!", "success")
@@ -440,6 +503,10 @@ def profile():
             }
         # Ensure user_type is in the profile data
         profile["user_type"] = user_type
+
+        # Always pass skills_json as a Python list of valid skills
+        skills_json = normalize_and_validate_skills(profile.get("skills"))
+
         return render_template(
             "profile.html",
             user_type=user_type,
@@ -447,6 +514,8 @@ def profile():
             user=profile,
             is_own_profile=True,
             read_only=False,
+            skills_json=skills_json,
+            skills_master=skills_master,
         )
     except Exception as e:
         flash(f"Error loading profile: {str(e)}", "error")
@@ -462,6 +531,7 @@ def profile():
             user=default_profile,
             is_own_profile=True,
             read_only=False,
+            skills_json=[],
         )
 
 
@@ -485,11 +555,44 @@ def view_profile(user_id):
     if not is_own_profile:
         is_saved = supabase_service.is_profile_saved(current_user_id, user_id)
 
+    # Always pass skills_json as a Python list of valid skills
+    skills_json = normalize_and_validate_skills(profile.get("skills"))
+
+
     # Get Talent Search filter params from query string
-    search_query = request.args.get("search", "")
-    skills = request.args.get("skills", "")
-    school = request.args.get("school", "")
-    grade = request.args.get("grade", "")
+    search_query = request.args.get("search")
+    skills = request.args.get("skills")
+    school = request.args.get("school")
+    grade = request.args.get("grade")
+
+    # Robustly parse selected_skills for Jinja2
+    def parse_skills(val):
+        import json
+        if not val:
+            return []
+        if isinstance(val, list):
+            return val
+        try:
+            loaded = json.loads(val)
+            if isinstance(loaded, list):
+                return loaded
+        except Exception:
+            pass
+        if "," in val:
+            return [s.strip() for s in val.split(",") if s.strip()]
+        return [val.strip()] if val.strip() else []
+
+    selected_skills_list = parse_skills(skills)
+    # Show button if any talent search param is present in the URL (even if empty)
+    back_to_talent_search = (
+        ("search" in request.args or "skills" in request.args or "school" in request.args or "grade" in request.args)
+        or any([
+            bool(search_query),
+            bool(skills),
+            bool(school),
+            bool(grade)
+        ])
+    )
 
     return render_template(
         "profile.html",
@@ -499,11 +602,13 @@ def view_profile(user_id):
         is_own_profile=is_own_profile,
         is_saved=is_saved,
         read_only=not is_own_profile,
-        back_to_talent_search=True,
+        back_to_talent_search=back_to_talent_search,
         search_query=search_query,
-        selected_skills=skills,
+        selected_skills=selected_skills_list,
         selected_school=school,
         selected_grade=grade,
+        skills_json=skills_json,
+        skills_master=skills_master,
     )
 
 
@@ -518,14 +623,35 @@ def opportunities():
         opportunity_type = request.args.get("type", "")
         category = request.args.get("category", "")
         location = request.args.get("location", "")
+        skills_needed = request.args.get("skills_needed", "")
 
-        # Fetch opportunities with filters
+        # Fetch opportunities with filters (including skills_needed)
         opportunities = supabase_service.search_opportunities(
             search_query=search_query,
             opportunity_type=opportunity_type,
             category=category,
             location=location,
+            skills_needed=skills_needed,
         )
+
+        # Robustly parse selected_skills_needed for Jinja2
+        import json
+        def parse_skills(val):
+            if not val:
+                return []
+            if isinstance(val, list):
+                return val
+            try:
+                loaded = json.loads(val)
+                if isinstance(loaded, list):
+                    return loaded
+            except Exception:
+                pass
+            if "," in val:
+                return [s.strip() for s in val.split(",") if s.strip()]
+            return [val.strip()] if val.strip() else []
+
+        selected_skills_needed = parse_skills(skills_needed)
 
         return render_template(
             "opportunities.html",
@@ -534,6 +660,8 @@ def opportunities():
             selected_type=opportunity_type,
             selected_category=category,
             selected_location=location,
+            selected_skills_needed=selected_skills_needed,
+            skills_master=skills_master,
         )
     except Exception as e:
         flash(f"Error loading opportunities: {str(e)}", "error")
@@ -597,14 +725,35 @@ def talent_search():
         for student in students:
             student["is_saved"] = student["id"] in saved_profile_ids
 
+        # Pass allowed skills for dropdown
+        # Parse selected_skills robustly (list or string)
+        def parse_skills(val):
+            import json
+            if not val:
+                return []
+            if isinstance(val, list):
+                return val
+            try:
+                loaded = json.loads(val)
+                if isinstance(loaded, list):
+                    return loaded
+            except Exception:
+                pass
+            if "," in val:
+                return [s.strip() for s in val.split(",") if s.strip()]
+            return [val.strip()] if val.strip() else []
+
+        selected_skills_list = parse_skills(skills)
+
         return render_template(
             "talent_search.html",
             students=students,
             search_query=search_query,
-            selected_skills=skills,
+            selected_skills=selected_skills_list,
             selected_school=school,
             selected_grade=grade,
             saved_profile_ids=list(saved_profile_ids),
+            skills_master=skills_master,
         )
     except Exception as e:
         flash(f"Error searching talent: {str(e)}", "error")
@@ -639,6 +788,8 @@ def create_opportunity(opportunity_id=None):
     if request.method == "POST":
         # Get form data and map to database fields
         status = request.form.get("status", "active")
+        # Normalize and validate skills_needed from form
+        skills_needed_json = normalize_and_validate_skills(request.form.get("skills_needed"))
         opportunity_data = {
             "title": request.form.get("title") or None,
             "description": request.form.get("description") or None,
@@ -649,6 +800,7 @@ def create_opportunity(opportunity_id=None):
             "compensation": request.form.get("compensation") or None,
             "duration": request.form.get("duration") or None,
             "application_deadline": request.form.get("application_deadline") or None,
+            "skills_needed": skills_needed_json,
             "status": status,
         }
 
@@ -760,7 +912,7 @@ def create_opportunity(opportunity_id=None):
             flash(error_message, "error")
 
     return render_template(
-        "create_opportunity.html", opportunity=opportunity, is_editing=is_editing
+        "create_opportunity.html", opportunity=opportunity, is_editing=is_editing, skills_master=skills_master
     )
 
 

@@ -474,17 +474,18 @@ class SupabaseService:
         grade: str = "",
     ) -> List[Dict[str, Any]]:
         """
-        Search for student profiles with filters.
+        Search for student profiles with filters. Skills filter matches ALL selected skills.
 
         Args:
             search_query: Text to search in name and bio
-            skills: Filter by skills
+            skills: Filter by skills (JSON array or comma-separated string)
             school: Filter by school
             grade: Filter by grade
 
         Returns:
             List of matching student profiles
         """
+        import json
         try:
             query = self.client.table("profiles").select("*").eq("user_type", "student")
 
@@ -493,10 +494,6 @@ class SupabaseService:
                 query = query.or_(
                     f"name.ilike.%{search_query}%,bio.ilike.%{search_query}%"
                 )
-
-            # Apply skills filter
-            if skills:
-                query = query.ilike("skills", f"%{skills}%")
 
             # Apply school filter
             if school:
@@ -510,7 +507,46 @@ class SupabaseService:
             query = query.order("created_at", desc=True)
 
             response = query.execute()
-            return response.data if response.data else []
+            students = response.data if response.data else []
+
+            # Robustly parse skills filter
+            def parse_skills(val):
+                if not val:
+                    return []
+                if isinstance(val, list):
+                    return val
+                try:
+                    loaded = json.loads(val)
+                    if isinstance(loaded, list):
+                        return loaded
+                except Exception:
+                    pass
+                if "," in val:
+                    return [s.strip() for s in val.split(",") if s.strip()]
+                return [val.strip()] if val.strip() else []
+
+            selected_skills = set(parse_skills(skills))
+            if selected_skills:
+                # Only keep students who have ALL selected skills
+                def student_has_all_skills(student):
+                    profile_skills = student.get("skills", [])
+                    # Robustly parse profile_skills
+                    if isinstance(profile_skills, str):
+                        try:
+                            loaded = json.loads(profile_skills)
+                            if isinstance(loaded, list):
+                                profile_skills = loaded
+                        except Exception:
+                            if "," in profile_skills:
+                                profile_skills = [s.strip() for s in profile_skills.split(",") if s.strip()]
+                            else:
+                                profile_skills = [profile_skills.strip()] if profile_skills.strip() else []
+                    if not isinstance(profile_skills, list):
+                        return False
+                    return selected_skills.issubset(set(profile_skills))
+                students = [s for s in students if student_has_all_skills(s)]
+
+            return students
 
         except Exception as e:
             logger.error(f"Error searching students: {str(e)}")
@@ -565,19 +601,22 @@ class SupabaseService:
         opportunity_type: str = "",
         category: str = "",
         location: str = "",
+        skills_needed: str = "",
     ) -> List[Dict[str, Any]]:
         """
-        Search opportunities with text and filters.
+        Search opportunities with text and filters, including skills_needed.
 
         Args:
             search_query: Text to search in title and description
             opportunity_type: Filter by opportunity type
             category: Filter by category
             location: Filter by location
+            skills_needed: Filter by required skills (JSON array or comma-separated string)
 
         Returns:
             List of matching opportunity records
         """
+        import json
         try:
             # Select opportunities with organization profile information
             query = self.client.table("opportunities").select(
@@ -609,7 +648,46 @@ class SupabaseService:
             query = query.order("created_at", desc=True)
 
             response = query.execute()
-            return response.data if response.data else []
+            opportunities = response.data if response.data else []
+
+            # Robustly parse skills_needed filter
+            def parse_skills(val):
+                if not val:
+                    return []
+                if isinstance(val, list):
+                    return val
+                try:
+                    loaded = json.loads(val)
+                    if isinstance(loaded, list):
+                        return loaded
+                except Exception:
+                    pass
+                if "," in val:
+                    return [s.strip() for s in val.split(",") if s.strip()]
+                return [val.strip()] if val.strip() else []
+
+            selected_skills_needed = set(parse_skills(skills_needed))
+            if selected_skills_needed:
+                # Only keep opportunities that require ALL selected skills
+                def opp_has_all_skills(opp):
+                    opp_skills = opp.get("skills_needed", [])
+                    # Robustly parse opp_skills
+                    if isinstance(opp_skills, str):
+                        try:
+                            loaded = json.loads(opp_skills)
+                            if isinstance(loaded, list):
+                                opp_skills = loaded
+                        except Exception:
+                            if "," in opp_skills:
+                                opp_skills = [s.strip() for s in opp_skills.split(",") if s.strip()]
+                            else:
+                                opp_skills = [opp_skills.strip()] if opp_skills.strip() else []
+                    if not isinstance(opp_skills, list):
+                        return False
+                    return selected_skills_needed.issubset(set(opp_skills))
+                opportunities = [o for o in opportunities if opp_has_all_skills(o)]
+
+            return opportunities
 
         except Exception as e:
             logger.error(f"Error searching opportunities: {str(e)}")

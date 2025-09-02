@@ -135,6 +135,17 @@
                             <p class="mt-2 text-sm text-gray-500">Specify if this is paid, unpaid, or offers other
                                 benefits.</p>
                         </div>
+                        <div class="sm:col-span-6">
+                            <label for="skills-needed-bubble-input" class="block text-sm font-medium text-gray-700">Skills Needed</label>
+                            <div class="mt-1">
+                                <div id="skills-needed-bubble-container" class="flex flex-wrap gap-2 mb-2"></div>
+                                <input type="text" id="skills-needed-bubble-input" name="skills-needed-bubble-input" autocomplete="off"
+                                    placeholder="Type a skill and press Enter..." class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">
+                                <input type="hidden" name="skills_needed" id="skills-needed-hidden-input" value="{{ opportunity.skills_needed|tojson|safe if opportunity and opportunity.skills_needed else '[]' }}">
+                                <div id="skills-needed-autocomplete-list" class="absolute z-10 bg-white border border-gray-300 rounded-md mt-1 w-full" style="display:none;"></div>
+                            </div>
+                            <p class="mt-2 text-sm text-gray-500">Add required skills as bubbles. Only skills from the master list are allowed.</p>
+                        </div>
                     </div>
                 </div>
 
@@ -233,6 +244,105 @@
         </div>
         {% endif %}
     </div>
+<script>
+const allowedSkills = JSON.parse('{{ skills_master|tojson|safe }}');
+function renderSkillBubbles(skills, container) {
+    container.innerHTML = '';
+    skills.forEach(skill => {
+        if (!allowedSkills.includes(skill)) return;
+        const bubble = document.createElement('span');
+        bubble.className = 'skill-bubble inline-flex items-center px-3 py-1 rounded-full bg-blue-100 text-blue-800 text-sm font-medium mr-2 mb-2';
+        bubble.textContent = skill;
+        const removeBtn = document.createElement('button');
+        removeBtn.type = 'button';
+        removeBtn.className = 'ml-2 text-blue-500 hover:text-red-600 focus:outline-none';
+        removeBtn.innerHTML = '<i class="fas fa-times"></i>';
+        removeBtn.onclick = () => {
+            container.removeChild(bubble);
+            updateHiddenInput(container);
+        };
+        bubble.appendChild(removeBtn);
+        container.appendChild(bubble);
+    });
+}
+function setupAutocomplete(input, container) {
+    input.addEventListener('input', function() {
+        const val = input.value.trim().toLowerCase();
+        let matches = allowedSkills.filter(s => s.toLowerCase().includes(val) && !getCurrentSkills(container).includes(s));
+        matches = matches.slice(0, 5);
+        const autocompleteList = document.getElementById('skills-needed-autocomplete-list');
+        autocompleteList.innerHTML = '';
+        matches.forEach(skill => {
+            const item = document.createElement('div');
+            item.className = 'px-3 py-2 cursor-pointer hover:bg-blue-50';
+            item.textContent = skill;
+            item.onclick = () => {
+                addSkillBubble(skill, container);
+                input.value = '';
+                autocompleteList.style.display = 'none';
+            };
+            autocompleteList.appendChild(item);
+        });
+        autocompleteList.style.display = matches.length ? 'block' : 'none';
+        const inputRect = input.getBoundingClientRect();
+        autocompleteList.style.position = 'absolute';
+        autocompleteList.style.maxHeight = '180px';
+        autocompleteList.style.overflowY = 'auto';
+        autocompleteList.style.zIndex = '50';
+        autocompleteList.style.top = (input.offsetTop + input.offsetHeight) + 'px';
+        autocompleteList.style.left = input.offsetLeft + 'px';
+        autocompleteList.style.width = '350px';
+        autocompleteList.style.maxWidth = '350px';
+        autocompleteList.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)';
+    });
+    input.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' || e.key === ',') {
+            const skill = input.value.trim();
+            if (skill && allowedSkills.includes(skill) && !getCurrentSkills(container).includes(skill)) {
+                addSkillBubble(skill, container);
+            }
+            input.value = '';
+            e.preventDefault();
+        }
+    });
+}
+function addSkillBubble(skill, container) {
+    if (!allowedSkills.includes(skill)) return;
+    if (getCurrentSkills(container).includes(skill)) return;
+    const bubble = document.createElement('span');
+    bubble.className = 'skill-bubble inline-flex items-center px-3 py-1 rounded-full bg-blue-100 text-blue-800 text-sm font-medium mr-2 mb-2';
+    bubble.textContent = skill;
+    const removeBtn = document.createElement('button');
+    removeBtn.type = 'button';
+    removeBtn.className = 'ml-2 text-blue-500 hover:text-red-600 focus:outline-none';
+    removeBtn.innerHTML = '<i class="fas fa-times"></i>';
+    removeBtn.onclick = () => {
+        container.removeChild(bubble);
+        updateHiddenInput(container);
+    };
+    bubble.appendChild(removeBtn);
+    container.appendChild(bubble);
+    updateHiddenInput(container);
+}
+function getCurrentSkills(container) {
+    return Array.from(container.children).map(b => b.textContent.replace(/\s*\u00d7\s*$/, ''));
+}
+function updateHiddenInput(container) {
+    const skills = getCurrentSkills(container);
+    document.getElementById('skills-needed-hidden-input').value = JSON.stringify(skills);
+}
+document.addEventListener('DOMContentLoaded', function() {
+    const skillsContainer = document.getElementById('skills-needed-bubble-container');
+    const skillsInput = document.getElementById('skills-needed-bubble-input');
+    let initialSkills = [];
+    try {
+        initialSkills = JSON.parse(document.getElementById('skills-needed-hidden-input').value);
+    } catch (e) {}
+    renderSkillBubbles(initialSkills, skillsContainer);
+    setupAutocomplete(skillsInput, skillsContainer);
+    updateHiddenInput(skillsContainer);
+});
+</script>
 <script>
   window.OPP_EDITING = {{ 'true' if is_editing else 'false' }};
 </script>

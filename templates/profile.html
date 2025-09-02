@@ -5,12 +5,12 @@
 {% block content %}
 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
     {% if not is_own_profile and back_to_talent_search %}
-    <div class="mb-4">
-        <a href="{{ url_for('talent_search', search=search_query, skills=selected_skills, school=selected_school, grade=selected_grade) }}"
-            class="inline-flex items-center text-blue-600 hover:text-blue-800">
-            <i class="fas fa-arrow-left mr-2"></i>Back to Talent Search
-        </a>
-    </div>
+        <div class="mb-4">
+            <a href="{{ url_for('talent_search', search=search_query, skills=selected_skills|tojson|safe, school=selected_school, grade=selected_grade) }}"
+                class="inline-flex items-center text-blue-600 hover:text-blue-800">
+                <i class="fas fa-arrow-left mr-2"></i>Back to Talent Search
+            </a>
+        </div>
     {% endif %}
     <div class="mb-8 flex items-center justify-between">
         <div>
@@ -43,9 +43,10 @@
         {% endif %}
     </div>
 
-    <div class="bg-white shadow rounded-lg">
+    {# Ensure all if blocks above are closed before starting new sections #}
         {% if is_own_profile %}
-        <form method="POST" class="divide-y divide-gray-200">
+    <div class="bg-white shadow rounded-lg">
+    <form method="POST" class="divide-y divide-gray-200">
             {% endif %}
             <!-- Profile Header -->
             <div class="px-4 py-5 sm:p-6">
@@ -79,7 +80,7 @@
                         {% endif %}
                     </div>
                     <div class="flex-grow">
-                        <h3 class="text-lg leading-6 font-medium text-gray-900">{{ profile.name or session.user_name or
+                    <!-- Removed bg-white shadow rounded-lg wrapper -->
                             'User' }}</h3>
                         <p class="mt-1 max-w-2xl text-sm text-gray-500">
                             {% if user_type == 'student' %}Student Profile{% else %}Organization Profile{% endif %}
@@ -167,59 +168,38 @@
                         </div>
                     </div>
                     <div class="sm:col-span-3">
-                        <label class="block text-sm font-medium text-gray-700">Grade <span
-                                class="text-red-500">*</span></label>
+                        <label class="block text-sm font-medium text-gray-700">Grade <span class="text-red-500">*</span></label>
                         <div class="mt-1">
                             {% if is_own_profile %}
-                            <select name="grade" id="grade" required
-                                class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">
-                                <option value="">Select Grade</option>
-                                <option value="9th Grade" {% if profile.grade=='9th Grade' %}selected{% endif %}>9th
-                                    Grade</option>
-                                <option value="10th Grade" {% if profile.grade=='10th Grade' %}selected{% endif %}>10th
-                                    Grade</option>
-                                <option value="11th Grade" {% if profile.grade=='11th Grade' %}selected{% endif %}>11th
-                                    Grade</option>
-                                <option value="12th Grade" {% if profile.grade=='12th Grade' %}selected{% endif %}>12th
-                                    Grade</option>
-                            </select>
+                            <input type="text" name="grade" id="grade" value="{{ profile.grade or '' }}" required placeholder="e.g., 11th Grade" class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">
                             {% else %}
                             <span class="block w-full sm:text-sm text-gray-900">{{ profile.grade or '' }}</span>
                             {% endif %}
                         </div>
                     </div>
                     <div class="sm:col-span-6">
-                        <label class="block text-sm font-medium text-gray-700">Bio <span
-                                class="text-red-500">*</span></label>
+                        <label for="skills-bubble-input" class="block text-sm font-medium text-gray-700">Skills</label>
                         <div class="mt-1">
                             {% if is_own_profile %}
-                            <textarea name="bio" id="bio" rows="4" required
-                                placeholder="Tell us about yourself, your interests, and what kind of opportunities you're looking for..."
-                                class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">{{ profile.bio or '' }}</textarea>
+                            <div id="skills-bubble-container" class="flex flex-wrap gap-2 mb-2"></div>
+                            <input type="text" id="skills-bubble-input" name="skills-bubble-input" autocomplete="off"
+                                placeholder="Type a skill and press Enter..." class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">
+                            <input type="hidden" name="skills" id="skills-hidden-input">
+                            <div id="skills-autocomplete-list" class="absolute z-10 bg-white border border-gray-300 rounded-md mt-1 w-full" style="display:none;"></div>
                             {% else %}
-                            <span class="block w-full sm:text-sm text-gray-900">{{ profile.bio or '' }}</span>
+                            {% if profile.skills and profile.skills|length > 0 %}
+                                <div class="flex flex-wrap gap-2">
+                                    {% for skill in profile.skills %}
+                                        <span class="inline-flex items-center px-3 py-1 rounded-full bg-blue-100 text-blue-800 text-sm font-medium">{{ skill }}</span>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <span class="block w-full sm:text-sm text-gray-900">Not specified</span>
+                            {% endif %}
                             {% endif %}
                         </div>
                         {% if is_own_profile %}
-                        <p class="mt-1 text-sm text-gray-500">Required - Tell organizations about yourself and your
-                            interests</p>
-                        {% endif %}
-                    </div>
-                    <div class="sm:col-span-6">
-                        <label for="skills" class="block text-sm font-medium text-gray-700">Skills</label>
-                        <div class="mt-1">
-                            {% if is_own_profile %}
-                            <textarea name="skills" id="skills" rows="2"
-                                placeholder="List your skills separated by commas (e.g., Python, JavaScript, Data Analysis)"
-                                class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">{{ profile.skills or '' }}</textarea>
-                            {% else %}
-                            <span class="block w-full sm:text-sm text-gray-900">{{ profile.skills or 'Not specified'
-                                }}</span>
-                            {% endif %}
-                        </div>
-                        {% if is_own_profile %}
-                        <p class="mt-2 text-sm text-gray-500">This helps organizations find students with relevant
-                            skills.</p>
+                        <p class="mt-2 text-sm text-gray-500">Add your skills as bubbles. Start typing for suggestions. This helps organizations find students with relevant skills.</p>
                         {% endif %}
                     </div>
                     <div class="sm:col-span-2">
@@ -346,7 +326,7 @@
             {% endif %}
             {% if is_own_profile %}
         </form>
-        {% endif %}
+    {% endif %}
     </div>
 
     <!-- Profile Picture Upload Section (standalone, outside main profile form) -->
@@ -472,16 +452,126 @@
 </div>
 
 {% if not is_own_profile %}
+{% set skills_json = profile.skills|default([], true) %}
 <script>
-    window.PROFILE_STATE = { profileId: '{{ profile.id }}', isSaved: {{ 'true' if is_saved else 'false' }} };
+    window.PROFILE_STATE = { profileId: {{ profile.id|tojson|safe }}, isSaved: {{ is_saved|tojson|safe }} };
 </script>
-{% endif %}
-{% if is_own_profile %}
+<script>
+    {% set skills_list = skills_json|default([], true) %}
+    var initialSkills = JSON.parse('{{ skills_list|tojson|safe }}');
+</script>
 <script>
     window.PROFILE_EDIT = { userType: '{{ user_type }}' };
 </script>
 {% endif %}
-<script src="{{ url_for('static', filename='js/profile.js') }}"></script>
+<script>
+// --- Skills Bubble Input & Autocomplete ---
+const allowedSkills = JSON.parse('{{ skills_master|tojson|safe }}');
+let selectedSkills = [];
+
+function renderSkillBubbles(skills, container, readOnly=false) {
+    container.innerHTML = '';
+    skills.forEach(skill => {
+        if (!allowedSkills.includes(skill)) return;
+        const bubble = document.createElement('span');
+        bubble.className = 'skill-bubble inline-flex items-center px-3 py-1 rounded-full bg-blue-100 text-blue-800 text-sm font-medium mr-2 mb-2';
+        bubble.textContent = skill;
+        if (!readOnly) {
+            const removeBtn = document.createElement('button');
+            removeBtn.type = 'button';
+            removeBtn.className = 'ml-2 text-blue-500 hover:text-red-600 focus:outline-none';
+            removeBtn.innerHTML = '<i class="fas fa-times"></i>';
+            removeBtn.onclick = () => {
+                container.removeChild(bubble);
+                updateHiddenInput(container);
+            };
+            bubble.appendChild(removeBtn);
+        }
+        container.appendChild(bubble);
+    });
+}
+
+function setupAutocomplete(input, container) {
+    input.addEventListener('input', function() {
+        const val = input.value.trim().toLowerCase();
+        let matches = allowedSkills.filter(s => s.toLowerCase().includes(val) && !getCurrentSkills(container).includes(s));
+        matches = matches.slice(0, 5); // Show only top 5 matches
+        const autocompleteList = document.getElementById('skills-autocomplete-list');
+        autocompleteList.innerHTML = '';
+        matches.forEach(skill => {
+            const item = document.createElement('div');
+            item.className = 'px-3 py-2 cursor-pointer hover:bg-blue-50';
+            item.textContent = skill;
+            item.onclick = () => {
+                addSkillBubble(skill, container);
+                input.value = '';
+                autocompleteList.style.display = 'none';
+            };
+            autocompleteList.appendChild(item);
+        });
+        autocompleteList.style.display = matches.length ? 'block' : 'none';
+        // Adjust dropdown position and max height to reduce overlap
+    // Position dropdown directly below input and limit width
+    const inputRect = input.getBoundingClientRect();
+    autocompleteList.style.position = 'absolute';
+    autocompleteList.style.maxHeight = '180px';
+    autocompleteList.style.overflowY = 'auto';
+    autocompleteList.style.zIndex = '50';
+    autocompleteList.style.top = (input.offsetTop + input.offsetHeight) + 'px';
+    autocompleteList.style.left = input.offsetLeft + 'px';
+    autocompleteList.style.width = '350px';
+    autocompleteList.style.maxWidth = '350px';
+    autocompleteList.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)';
+    });
+    input.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' || e.key === ',') {
+            const skill = input.value.trim();
+            if (skill && allowedSkills.includes(skill) && !getCurrentSkills(container).includes(skill)) {
+                addSkillBubble(skill, container);
+            }
+            input.value = '';
+            e.preventDefault();
+        }
+    });
+}
+
+function addSkillBubble(skill, container) {
+    if (!allowedSkills.includes(skill)) return;
+    if (getCurrentSkills(container).includes(skill)) return;
+    const bubble = document.createElement('span');
+    bubble.className = 'skill-bubble inline-flex items-center px-3 py-1 rounded-full bg-blue-100 text-blue-800 text-sm font-medium mr-2 mb-2';
+    bubble.textContent = skill;
+    const removeBtn = document.createElement('button');
+    removeBtn.type = 'button';
+    removeBtn.className = 'ml-2 text-blue-500 hover:text-red-600 focus:outline-none';
+    removeBtn.innerHTML = '<i class="fas fa-times"></i>';
+    removeBtn.onclick = () => {
+        container.removeChild(bubble);
+        updateHiddenInput(container);
+    };
+    bubble.appendChild(removeBtn);
+    container.appendChild(bubble);
+    updateHiddenInput(container);
+}
+
+function getCurrentSkills(container) {
+    return Array.from(container.children).map(b => b.textContent);
+}
+
+function updateHiddenInput(container) {
+    const skills = getCurrentSkills(container);
+    document.getElementById('skills-hidden-input').value = JSON.stringify(skills);
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const skillsContainer = document.getElementById('skills-bubble-container');
+    const skillsInput = document.getElementById('skills-bubble-input');
+    const initialSkills = JSON.parse('{{ skills_json|tojson|safe }}');
+    renderSkillBubbles(initialSkills, skillsContainer);
+    setupAutocomplete(skillsInput, skillsContainer);
+    updateHiddenInput(skillsContainer);
+});
+</script>
 <script>
 function previewAvatar(event) {
   const [file] = event.target.files;

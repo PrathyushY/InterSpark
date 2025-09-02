@@ -1,3 +1,13 @@
+{% set back_to_opportunities_search = request.args.get('search') is not none or request.args.get('type') is not none or request.args.get('category') is not none or request.args.get('location') is not none %}
+{% if back_to_opportunities_search %}
+    <div class="mb-6">
+        <a href="{{ url_for('opportunities', search=request.args.get('search',''), type=request.args.get('type',''), category=request.args.get('category',''), location=request.args.get('location','')) }}"
+            class="inline-flex items-center px-5 py-2.5 rounded-lg bg-blue-600 text-white font-semibold shadow hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors">
+            <i class="fas fa-arrow-left mr-2"></i>
+            Back to Opportunities Search
+        </a>
+    </div>
+{% endif %}
 {% extends "base.html" %}
 
 {% block title %}{{ opportunity.title }} - InterSpark{% endblock %}
@@ -107,6 +117,15 @@
             <div class="bg-white rounded-lg shadow-md p-6">
                 <h3 class="text-xl font-semibold text-gray-900 mb-4">About This Opportunity</h3>
                 <p class="text-gray-700 leading-relaxed">{{ opportunity.description }}</p>
+                {% if opportunity.skills_needed %}
+                <div class="flex flex-wrap gap-2 mt-4">
+                    {% for skill in opportunity.skills_needed %}
+                        {% if skills_master and skill in skills_master %}
+                        <span class="inline-flex items-center px-3 py-1 rounded-full bg-blue-100 text-blue-800 text-sm font-medium mr-2 mb-2">{{ skill }}</span>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+                {% endif %}
             </div>
 
             <!-- Responsibilities -->
@@ -229,7 +248,7 @@
 </div>
 
 <script>
-  window.OPPORTUNITY_STATE = { id: {{ opportunity.id }}, isSaved: {{ 'true' if is_saved else 'false' }} };
+    window.OPPORTUNITY_STATE = { id: "{{ opportunity.id }}", isSaved: "{{ 'true' if is_saved else 'false' }}" };
 </script>
 <script src="{{ url_for('static', filename='js/opportunity_details.js') }}"></script>
 {% endblock %}
