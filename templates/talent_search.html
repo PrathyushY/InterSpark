@@ -110,6 +110,9 @@
                                         {% for skill in skills_list[:3] %}
                                             <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">{{ skill }}</span>
                                         {% endfor %}
+                                        {% if skills_list|length > 3 %}
+                                        <span class="text-xs text-gray-500">+{{ skills_list|length - 3 }} more</span>
+                                        {% endif %}
                                     </div>
                                 {% endif %}
                             {% endif %}

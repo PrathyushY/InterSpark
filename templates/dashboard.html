@@ -431,8 +431,32 @@
                             {% endif %}
                         </div>
                         {% if profile.skills %}
-                        <p class="text-[11px] text-gray-400 mt-2 line-clamp-2">{{ profile.skills }}</p>
-                        {% elif profile.bio %}
+                        <div class="flex flex-wrap gap-1 mt-2">
+                            {% if profile.skills is iterable and profile.skills is not string %}
+                                {% for skill in profile.skills[:3] %}
+                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">{{ skill }}</span>
+                                {% endfor %}
+                                {% if profile.skills|length > 3 %}
+                                <span class="text-xs text-gray-500">+{{ profile.skills|length - 3 }} more</span>
+                                {% endif %}
+                            {% else %}
+                                {% set skills_str = profile.skills | replace('[','') | replace(']','') | replace('"','') | replace("'",'') %}
+                                {% set skills_list = [] %}
+                                {% for skill in skills_str.split(',') %}
+                                    {% if skill.strip() %}
+                                        {% set _ = skills_list.append(skill.strip()) %}
+                                    {% endif %}
+                                {% endfor %}
+                                {% for skill in skills_list[:3] %}
+                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">{{ skill }}</span>
+                                {% endfor %}
+                                {% if skills_list|length > 3 %}
+                                <span class="text-xs text-gray-500">+{{ skills_list|length - 3 }} more</span>
+                                {% endif %}
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                        {% if profile.bio %}
                         <p class="text-[11px] text-gray-400 mt-2 line-clamp-2">{{ profile.bio }}</p>
                         {% else %}
                         <span class="mt-2 text-[11px] text-transparent select-none">placeholder</span>
