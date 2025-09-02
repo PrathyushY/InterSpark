@@ -304,43 +304,17 @@
                         Cancel
                     </button>
                     <button type="submit" id="save-profile-submit-btn"
-                        class="bg-orange-600 border border-transparent rounded-md shadow-sm py-2 px-4 inline-flex justify-center text-sm font-medium text-white hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500">
+                        class="bg-blue-600 border border-transparent rounded-md shadow-sm py-2 px-4 inline-flex justify-center text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
                         Save Changes
                     </button>
                 </div>
             </div>
 
-            {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-            <div class="mt-4">
-                {% for category, message in messages %}
-                <div
-                    class="rounded-md px-4 py-2 mb-2 text-sm font-medium {% if category == 'success' %}bg-green-100 text-green-800{% elif category == 'error' %}bg-red-100 text-red-800{% else %}bg-gray-100 text-gray-800{% endif %}">
-                    {{ message }}
-                </div>
-                {% endfor %}
-            </div>
-            {% endif %}
-            {% endwith %}
             {% endif %}
             {% if is_own_profile %}
         </form>
     {% endif %}
     </div>
-
-    <!-- Profile Picture Upload Section (standalone, outside main profile form) -->
-    {% if is_own_profile %}
-    <div class="flex-shrink-0 relative mb-6">
-      <form id="profile-picture-form" method="POST" action="/upload_profile_picture" enctype="multipart/form-data" style="display:inline;">
-        <img id="avatar-preview" src="{{ profile.profile_image or url_for('static', filename='img/default_avatar.png') }}" alt="Profile Picture" class="h-20 w-20 rounded-full object-cover border-2 border-gray-200">
-        <input type="file" id="profile-picture-input" name="profile_picture" accept="image/*" style="display: none;" onchange="previewAvatar(event)">
-        <div class="absolute inset-0 rounded-full bg-black bg-opacity-50 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity cursor-pointer"
-          onclick="document.getElementById('profile-picture-input').click()">
-          <i class="fas fa-camera text-white text-lg"></i>
-        </div>
-      </form>
-    </div>
-    {% endif %}
 
     <!-- Profile Completion Status -->
     {% if user_type == 'student' and is_own_profile %}
