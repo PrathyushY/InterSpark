@@ -1,6 +1,6 @@
-import os
 import json
 import logging
+import os
 from datetime import datetime
 
 from dotenv import load_dotenv
@@ -14,6 +14,8 @@ from flask import (
     flash,
     session,
 )
+from google import genai
+from google.genai import types
 
 from supabase_config import SupabaseService
 
@@ -105,8 +107,7 @@ app = Flask(__name__)
 app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "2a15f8283ab2353f15089e80d8acf104")
 
 # Initialize Google Gemini client
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
-gemini_model = genai.GenerativeModel('gemini-1.5-flash')
+client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
 # Initialize Supabase service after environment variables are loaded
 supabase_service = SupabaseService()
@@ -619,11 +620,11 @@ def view_profile(user_id):
     selected_skills_list = parse_skills(skills)
     # Show button if any talent search param is present in the URL (even if empty)
     back_to_talent_search = (
-        "search" in request.args
-        or "skills" in request.args
-        or "school" in request.args
-        or "grade" in request.args
-    ) or any([bool(search_query), bool(skills), bool(school), bool(grade)])
+                                    "search" in request.args
+                                    or "skills" in request.args
+                                    or "school" in request.args
+                                    or "grade" in request.args
+                            ) or any([bool(search_query), bool(skills), bool(school), bool(grade)])
 
     return render_template(
         "profile.html",
@@ -1274,6 +1275,7 @@ def chat():
 
     return render_template("chat.html", chat_history=session["chat_history"])
 
+
 @app.route("/chat/send", methods=["POST"])
 def chat_send():
     """Handle chat message and return AI response."""
@@ -1323,6 +1325,7 @@ def chat_send():
         logger.error(f"Error in chat_send: {str(e)}")
         return jsonify({"success": False, "error": "An error occurred while processing your message"}), 500
 
+
 def search_database_for_context(query):
     """
     Search database for relevant profiles and opportunities based on user query.
@@ -1363,6 +1366,7 @@ def search_database_for_context(query):
         logger.error(f"Error searching database: {str(e)}")
         return {"profiles": [], "opportunities": [], "total_matches": 0}
 
+
 def generate_ai_response(user_message, db_results):
     """
     Generate AI response using Google Gemini with database context.
@@ -1374,7 +1378,8 @@ def generate_ai_response(user_message, db_results):
         if db_results["profiles"]:
             context_parts.append("RELEVANT STUDENT PROFILES:")
             for profile in db_results["profiles"]:
-                context_parts.append(f"- {profile.get('name', 'Unknown')} from {profile.get('school', 'Unknown school')}")
+                context_parts.append(
+                    f"- {profile.get('name', 'Unknown')} from {profile.get('school', 'Unknown school')}")
                 if profile.get('skills'):
                     skills = profile.get('skills', [])
                     if isinstance(skills, str):
@@ -1388,8 +1393,10 @@ def generate_ai_response(user_message, db_results):
         if db_results["opportunities"]:
             context_parts.append("\nRELEVANT OPPORTUNITIES:")
             for opp in db_results["opportunities"]:
-                context_parts.append(f"- {opp.get('title', 'Unknown title')} at {opp.get('profiles', {}).get('name', 'Unknown organization')}")
-                context_parts.append(f"  Type: {opp.get('type', 'Unknown')} | Location: {opp.get('location', 'Unknown')}")
+                context_parts.append(
+                    f"- {opp.get('title', 'Unknown title')} at {opp.get('profiles', {}).get('name', 'Unknown organization')}")
+                context_parts.append(
+                    f"  Type: {opp.get('type', 'Unknown')} | Location: {opp.get('location', 'Unknown')}")
                 context_parts.append(f"  View opportunity: /opportunity/{opp['id']}")
 
         # Build the system prompt
@@ -1413,10 +1420,12 @@ Remember: You're helping users navigate InterSpark and find meaningful connectio
 Please provide a helpful response. If there are relevant database matches above, incorporate them naturally into your response with clickable links."""
 
         # Generate response using Google Gemini
-        response = gemini_model.generate_content([
-            system_prompt,
-            user_prompt
-        ])
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            config=types.GenerateContentConfig(
+                system_instruction=system_prompt),
+            contents=user_prompt
+        )
 
         return response.text
 
@@ -1436,7 +1445,8 @@ def generate_ai_response_with_context(user_message, db_results, chat_history):
         if db_results["profiles"]:
             context_parts.append("RELEVANT STUDENT PROFILES:")
             for profile in db_results["profiles"]:
-                context_parts.append(f"- {profile.get('name', 'Unknown')} from {profile.get('school', 'Unknown school')}")
+                context_parts.append(
+                    f"- {profile.get('name', 'Unknown')} from {profile.get('school', 'Unknown school')}")
                 if profile.get('skills'):
                     skills = profile.get('skills', [])
                     if isinstance(skills, str):
@@ -1450,8 +1460,10 @@ def generate_ai_response_with_context(user_message, db_results, chat_history):
         if db_results["opportunities"]:
             context_parts.append("\nRELEVANT OPPORTUNITIES:")
             for opp in db_results["opportunities"]:
-                context_parts.append(f"- {opp.get('title', 'Unknown title')} at {opp.get('profiles', {}).get('name', 'Unknown organization')}")
-                context_parts.append(f"  Type: {opp.get('type', 'Unknown')} | Location: {opp.get('location', 'Unknown')}")
+                context_parts.append(
+                    f"- {opp.get('title', 'Unknown title')} at {opp.get('profiles', {}).get('name', 'Unknown organization')}")
+                context_parts.append(
+                    f"  Type: {opp.get('type', 'Unknown')} | Location: {opp.get('location', 'Unknown')}")
                 context_parts.append(f"  View opportunity: /opportunity/{opp['id']}")
 
         # Build conversation context from recent messages
@@ -1487,16 +1499,19 @@ Remember: You're helping users navigate InterSpark and find meaningful connectio
 Please provide a helpful response. If there are relevant database matches above, incorporate them naturally into your response with clickable links. If no matches are found, reply naturally: I didn't find any matching profiles or opportunities. Want to try rephrasing your request?"""
 
         # Generate response using Google Gemini
-        response = gemini_model.generate_content([
-            system_prompt,
-            user_prompt
-        ])
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            config=types.GenerateContentConfig(
+                system_instruction=system_prompt),
+            contents=user_prompt
+        )
 
         return response.text
 
     except Exception as e:
         logger.error(f"Error generating AI response: {str(e)}")
         return "I apologize, but I'm having trouble processing your request right now. Please try again later or contact support if the issue persists."
+
 
 @app.route("/chat/clear", methods=["POST"])
 def chat_clear():
@@ -1506,6 +1521,7 @@ def chat_clear():
 
     session["chat_history"] = []
     return jsonify({"success": True, "message": "Chat history cleared"})
+
 
 if __name__ == "__main__":
     app.run(debug=True, port=5000)
