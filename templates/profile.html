@@ -5,12 +5,12 @@
 {% block content %}
 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
     {% if not is_own_profile and back_to_talent_search %}
-        <div class="mb-4">
-            <a href="{{ url_for('talent_search', search=search_query, skills=selected_skills|tojson|safe, school=selected_school, grade=selected_grade) }}"
-                class="inline-flex items-center text-blue-600 hover:text-blue-800">
-                <i class="fas fa-arrow-left mr-2"></i>Back to Talent Search
-            </a>
-        </div>
+    <div class="mb-4">
+        <a href="{{ url_for('talent_search', search=search_query, skills=selected_skills|tojson|safe, school=selected_school, grade=selected_grade) }}"
+            class="inline-flex items-center text-blue-600 hover:text-blue-800">
+            <i class="fas fa-arrow-left mr-2"></i>Back to Talent Search
+        </a>
+    </div>
     {% endif %}
     <div class="mb-8 flex items-center justify-between">
         <div>
@@ -44,9 +44,9 @@
     </div>
 
     {# Ensure all if blocks above are closed before starting new sections #}
-        {% if is_own_profile %}
+    {% if is_own_profile %}
     <div class="bg-white shadow rounded-lg">
-    <form method="POST" class="divide-y divide-gray-200">
+        <form method="POST" class="divide-y divide-gray-200">
             {% endif %}
             <!-- Profile Header -->
             <div class="px-4 py-5 sm:p-6">
@@ -167,10 +167,13 @@
                         </div>
                     </div>
                     <div class="sm:col-span-3">
-                        <label class="block text-sm font-medium text-gray-700">Grade <span class="text-red-500">*</span></label>
+                        <label class="block text-sm font-medium text-gray-700">Grade <span
+                                class="text-red-500">*</span></label>
                         <div class="mt-1">
                             {% if is_own_profile %}
-                            <input type="text" name="grade" id="grade" value="{{ profile.grade or '' }}" required placeholder="e.g., 11th Grade" class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">
+                            <input type="text" name="grade" id="grade" value="{{ profile.grade or '' }}" required
+                                placeholder="e.g., 11th Grade"
+                                class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">
                             {% else %}
                             <span class="block w-full sm:text-sm text-gray-900">{{ profile.grade or '' }}</span>
                             {% endif %}
@@ -182,23 +185,30 @@
                             {% if is_own_profile %}
                             <div id="skills-bubble-container" class="flex flex-wrap gap-2 mb-2"></div>
                             <input type="text" id="skills-bubble-input" name="skills-bubble-input" autocomplete="off"
-                                placeholder="Type a skill and press Enter..." class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">
+                                placeholder="Type a skill and press Enter..."
+                                class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">
                             <input type="hidden" name="skills" id="skills-hidden-input">
-                            <div id="skills-autocomplete-list" class="absolute z-10 bg-white border border-gray-300 rounded-md mt-1 w-full" style="display:none;"></div>
+                            <div id="skills-autocomplete-list"
+                                class="absolute z-10 bg-white border border-gray-300 rounded-md mt-1 w-full"
+                                style="display:none;"></div>
                             {% else %}
                             {% if skills_json and skills_json|length > 0 %}
-                                <div class="flex flex-wrap gap-2">
-                                    {% for skill in skills_json %}
-                                        <span class="inline-flex items-center px-3 py-1 rounded-full bg-blue-100 text-blue-800 text-sm font-medium">{{ skill }}</span>
-                                    {% endfor %}
-                                </div>
+                            <div class="flex flex-wrap gap-2">
+                                {% for skill in skills_json %}
+                                <span
+                                    class="inline-flex items-center px-3 py-1 rounded-full bg-blue-100 text-blue-800 text-sm font-medium">{{
+                                    skill }}</span>
+                                {% endfor %}
+                            </div>
                             {% else %}
-                                <span class="block w-full sm:text-sm text-gray-900">Not specified</span>
+                            <span class="block w-full sm:text-sm text-gray-900">Not specified</span>
                             {% endif %}
                             {% endif %}
                         </div>
                         {% if is_own_profile %}
-                        <p class="mt-2 text-sm text-gray-500">Add your skills as bubbles. Start typing for suggestions. This helps organizations find students with relevant skills.</p>
+                        <p class="mt-2 text-sm text-gray-500">Add your skills as bubbles. Start typing for suggestions,
+                            or add new skills by typing them and pressing Enter. This helps organizations find students
+                            with relevant skills.</p>
                         {% endif %}
                     </div>
                     <div class="sm:col-span-2">
@@ -304,43 +314,17 @@
                         Cancel
                     </button>
                     <button type="submit" id="save-profile-submit-btn"
-                        class="bg-orange-600 border border-transparent rounded-md shadow-sm py-2 px-4 inline-flex justify-center text-sm font-medium text-white hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500">
+                        class="bg-blue-600 border border-transparent rounded-md shadow-sm py-2 px-4 inline-flex justify-center text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
                         Save Changes
                     </button>
                 </div>
             </div>
 
-            {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-            <div class="mt-4">
-                {% for category, message in messages %}
-                <div
-                    class="rounded-md px-4 py-2 mb-2 text-sm font-medium {% if category == 'success' %}bg-green-100 text-green-800{% elif category == 'error' %}bg-red-100 text-red-800{% else %}bg-gray-100 text-gray-800{% endif %}">
-                    {{ message }}
-                </div>
-                {% endfor %}
-            </div>
-            {% endif %}
-            {% endwith %}
             {% endif %}
             {% if is_own_profile %}
         </form>
-    {% endif %}
+        {% endif %}
     </div>
-
-    <!-- Profile Picture Upload Section (standalone, outside main profile form) -->
-    {% if is_own_profile %}
-    <div class="flex-shrink-0 relative mb-6">
-      <form id="profile-picture-form" method="POST" action="/upload_profile_picture" enctype="multipart/form-data" style="display:inline;">
-        <img id="avatar-preview" src="{{ profile.profile_image or url_for('static', filename='img/default_avatar.png') }}" alt="Profile Picture" class="h-20 w-20 rounded-full object-cover border-2 border-gray-200">
-        <input type="file" id="profile-picture-input" name="profile_picture" accept="image/*" style="display: none;" onchange="previewAvatar(event)">
-        <div class="absolute inset-0 rounded-full bg-black bg-opacity-50 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity cursor-pointer"
-          onclick="document.getElementById('profile-picture-input').click()">
-          <i class="fas fa-camera text-white text-lg"></i>
-        </div>
-      </form>
-    </div>
-    {% endif %}
 
     <!-- Profile Completion Status -->
     {% if user_type == 'student' and is_own_profile %}
@@ -453,10 +437,10 @@
 {% if not is_own_profile %}
 {% set skills_json = profile.skills|default([], true) %}
 <script>
-    window.PROFILE_STATE = { profileId: {{ profile.id|tojson|safe }}, isSaved: {{ is_saved|tojson|safe }} };
+    window.PROFILE_STATE = { profileId: {{ profile.id | tojson | safe }}, isSaved: { { is_saved | tojson | safe } } };
 </script>
 <script>
-    {% set skills_list = skills_json|default([], true) %}
+    {% set skills_list = skills_json |default ([], true) %}
     var initialSkills = JSON.parse('{{ skills_list|tojson|safe }}');
 </script>
 <script>
@@ -464,127 +448,221 @@
 </script>
 {% endif %}
 <script>
-// --- Skills Bubble Input & Autocomplete ---
-const allowedSkills = JSON.parse('{{ skills_master|tojson|safe }}');
-let selectedSkills = [];
+    // --- Skills Bubble Input & Autocomplete ---
+    const allowedSkills = JSON.parse('{{ skills_master|tojson|safe }}');
+    let selectedSkills = [];
 
-function renderSkillBubbles(skills, container, readOnly=false) {
-    container.innerHTML = '';
-    skills.forEach(skill => {
-        if (!allowedSkills.includes(skill)) return;
+    function renderSkillBubbles(skills, container, readOnly = false) {
+        container.innerHTML = '';
+        skills.forEach(skill => {
+            const bubble = document.createElement('span');
+            bubble.className = 'skill-bubble inline-flex items-center px-3 py-1 rounded-full bg-blue-100 text-blue-800 text-sm font-medium mr-2 mb-2';
+            bubble.textContent = skill;
+            if (!readOnly) {
+                const removeBtn = document.createElement('button');
+                removeBtn.type = 'button';
+                removeBtn.className = 'ml-2 text-blue-500 hover:text-red-600 focus:outline-none';
+                removeBtn.innerHTML = '<i class="fas fa-times"></i>';
+                removeBtn.onclick = () => {
+                    container.removeChild(bubble);
+                    updateHiddenInput(container);
+                };
+                bubble.appendChild(removeBtn);
+            }
+            container.appendChild(bubble);
+        });
+    }
+
+    function setupAutocomplete(input, container) {
+        input.addEventListener('input', function () {
+            const val = input.value.trim().toLowerCase();
+            let matches = allowedSkills.filter(s => s.toLowerCase().includes(val) && !getCurrentSkills(container).includes(s));
+            matches = matches.slice(0, 5); // Show only top 5 matches
+            const autocompleteList = document.getElementById('skills-autocomplete-list');
+            autocompleteList.innerHTML = '';
+
+            // Show existing skill matches
+            matches.forEach(skill => {
+                const item = document.createElement('div');
+                item.className = 'px-3 py-2 cursor-pointer hover:bg-blue-50';
+                item.textContent = skill;
+                item.onclick = () => {
+                    addSkillBubble(skill, container);
+                    input.value = '';
+                    autocompleteList.style.display = 'none';
+                };
+                autocompleteList.appendChild(item);
+            });
+
+            // If no matches and user has typed something, show "Add new skill" option
+            if (matches.length === 0 && val.length >= 2) {
+                // Check if the skill already exists (case-insensitive)
+                const existsAlready = allowedSkills.some(s => s.toLowerCase() === val.toLowerCase());
+                if (!existsAlready) {
+                    const newSkillItem = document.createElement('div');
+                    newSkillItem.className = 'px-3 py-2 cursor-pointer hover:bg-green-50 text-green-700 border-t border-gray-200';
+                    newSkillItem.innerHTML = `<i class="fas fa-plus mr-2"></i>Add "${val}" as a new skill`;
+                    newSkillItem.onclick = () => {
+                        addNewSkillToDatabase(val, container, input, autocompleteList);
+                    };
+                    autocompleteList.appendChild(newSkillItem);
+                }
+            }
+
+            autocompleteList.style.display = (matches.length > 0 || (matches.length === 0 && val.length >= 2)) ? 'block' : 'none';
+
+            // Adjust dropdown position and max height to reduce overlap
+            const inputRect = input.getBoundingClientRect();
+            autocompleteList.style.position = 'absolute';
+            autocompleteList.style.maxHeight = '180px';
+            autocompleteList.style.overflowY = 'auto';
+            autocompleteList.style.zIndex = '50';
+            autocompleteList.style.top = (input.offsetTop + input.offsetHeight) + 'px';
+            autocompleteList.style.left = input.offsetLeft + 'px';
+            autocompleteList.style.width = '350px';
+            autocompleteList.style.maxWidth = '350px';
+            autocompleteList.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)';
+        });
+        input.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' || e.key === ',') {
+                const skill = input.value.trim();
+                if (skill) {
+                    // Check if skill exists in allowed list (case insensitive)
+                    const existingSkill = allowedSkills.find(s => s.toLowerCase() === skill.toLowerCase());
+                    if (existingSkill) {
+                        // Use the properly cased version from the list
+                        if (!getCurrentSkills(container).includes(existingSkill)) {
+                            addSkillBubble(existingSkill, container);
+                        }
+                        input.value = '';
+                        document.getElementById('skills-autocomplete-list').style.display = 'none';
+                    } else {
+                        // Add as new skill via backend
+                        addNewSkillToDatabase(skill, container, input, document.getElementById('skills-autocomplete-list'));
+                    }
+                }
+                e.preventDefault();
+            }
+        });
+    }
+
+    function addSkillBubble(skill, container) {
+        if (getCurrentSkills(container).includes(skill)) return;
         const bubble = document.createElement('span');
         bubble.className = 'skill-bubble inline-flex items-center px-3 py-1 rounded-full bg-blue-100 text-blue-800 text-sm font-medium mr-2 mb-2';
         bubble.textContent = skill;
-        if (!readOnly) {
-            const removeBtn = document.createElement('button');
-            removeBtn.type = 'button';
-            removeBtn.className = 'ml-2 text-blue-500 hover:text-red-600 focus:outline-none';
-            removeBtn.innerHTML = '<i class="fas fa-times"></i>';
-            removeBtn.onclick = () => {
-                container.removeChild(bubble);
-                updateHiddenInput(container);
-            };
-            bubble.appendChild(removeBtn);
-        }
+        const removeBtn = document.createElement('button');
+        removeBtn.type = 'button';
+        removeBtn.className = 'ml-2 text-blue-500 hover:text-red-600 focus:outline-none';
+        removeBtn.innerHTML = '<i class="fas fa-times"></i>';
+        removeBtn.onclick = () => {
+            container.removeChild(bubble);
+            updateHiddenInput(container);
+        };
+        bubble.appendChild(removeBtn);
         container.appendChild(bubble);
-    });
-}
+        updateHiddenInput(container);
+    }
 
-function setupAutocomplete(input, container) {
-    input.addEventListener('input', function() {
-        const val = input.value.trim().toLowerCase();
-        let matches = allowedSkills.filter(s => s.toLowerCase().includes(val) && !getCurrentSkills(container).includes(s));
-        matches = matches.slice(0, 5); // Show only top 5 matches
-        const autocompleteList = document.getElementById('skills-autocomplete-list');
-        autocompleteList.innerHTML = '';
-        matches.forEach(skill => {
-            const item = document.createElement('div');
-            item.className = 'px-3 py-2 cursor-pointer hover:bg-blue-50';
-            item.textContent = skill;
-            item.onclick = () => {
-                addSkillBubble(skill, container);
+    function getCurrentSkills(container) {
+        return Array.from(container.children).map(b => b.textContent);
+    }
+
+    function updateHiddenInput(container) {
+        const skills = getCurrentSkills(container);
+        document.getElementById('skills-hidden-input').value = JSON.stringify(skills);
+    }
+
+    async function addNewSkillToDatabase(skillName, container, input, autocompleteList) {
+        try {
+            // Show loading state
+            input.disabled = true;
+            input.placeholder = "Adding skill...";
+
+            const response = await fetch('/add_skill', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ skill: skillName })
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                // Add to local allowed skills list
+                const formattedSkill = result.skill.name;
+                if (!allowedSkills.includes(formattedSkill)) {
+                    allowedSkills.push(formattedSkill);
+                    allowedSkills.sort(); // Keep it sorted
+                }
+
+                // Add the skill bubble
+                addSkillBubble(formattedSkill, container);
+
+                // Clear input and hide dropdown
                 input.value = '';
                 autocompleteList.style.display = 'none';
-            };
-            autocompleteList.appendChild(item);
-        });
-        autocompleteList.style.display = matches.length ? 'block' : 'none';
-        // Adjust dropdown position and max height to reduce overlap
-    // Position dropdown directly below input and limit width
-    const inputRect = input.getBoundingClientRect();
-    autocompleteList.style.position = 'absolute';
-    autocompleteList.style.maxHeight = '180px';
-    autocompleteList.style.overflowY = 'auto';
-    autocompleteList.style.zIndex = '50';
-    autocompleteList.style.top = (input.offsetTop + input.offsetHeight) + 'px';
-    autocompleteList.style.left = input.offsetLeft + 'px';
-    autocompleteList.style.width = '350px';
-    autocompleteList.style.maxWidth = '350px';
-    autocompleteList.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)';
-    });
-    input.addEventListener('keydown', function(e) {
-        if (e.key === 'Enter' || e.key === ',') {
-            const skill = input.value.trim();
-            if (skill && allowedSkills.includes(skill) && !getCurrentSkills(container).includes(skill)) {
-                addSkillBubble(skill, container);
+
+                // Show success message briefly
+                input.placeholder = "Skill added successfully!";
+                setTimeout(() => {
+                    input.placeholder = "Type a skill and press Enter...";
+                }, 2000);
+
+            } else {
+                // Handle errors
+                if (result.error === "Skill already exists") {
+                    // If skill exists, use the existing one
+                    const existingSkill = result.existing_skill || skillName;
+                    if (!allowedSkills.includes(existingSkill)) {
+                        allowedSkills.push(existingSkill);
+                        allowedSkills.sort();
+                    }
+                    addSkillBubble(existingSkill, container);
+                    input.value = '';
+                    autocompleteList.style.display = 'none';
+                    input.placeholder = "Used existing skill";
+                    setTimeout(() => {
+                        input.placeholder = "Type a skill and press Enter...";
+                    }, 2000);
+                } else {
+                    alert('Error adding skill: ' + result.error);
+                }
             }
-            input.value = '';
-            e.preventDefault();
+        } catch (error) {
+            console.error('Error adding skill:', error);
+            alert('Error adding skill. Please try again.');
+        } finally {
+            // Re-enable input
+            input.disabled = false;
+            if (input.placeholder === "Adding skill...") {
+                input.placeholder = "Type a skill and press Enter...";
+            }
         }
+    } document.addEventListener('DOMContentLoaded', function () {
+        const skillsContainer = document.getElementById('skills-bubble-container');
+        const skillsInput = document.getElementById('skills-bubble-input');
+        const initialSkills = JSON.parse('{{ skills_json|tojson|safe }}');
+        renderSkillBubbles(initialSkills, skillsContainer);
+        setupAutocomplete(skillsInput, skillsContainer);
+        updateHiddenInput(skillsContainer);
     });
-}
-
-function addSkillBubble(skill, container) {
-    if (!allowedSkills.includes(skill)) return;
-    if (getCurrentSkills(container).includes(skill)) return;
-    const bubble = document.createElement('span');
-    bubble.className = 'skill-bubble inline-flex items-center px-3 py-1 rounded-full bg-blue-100 text-blue-800 text-sm font-medium mr-2 mb-2';
-    bubble.textContent = skill;
-    const removeBtn = document.createElement('button');
-    removeBtn.type = 'button';
-    removeBtn.className = 'ml-2 text-blue-500 hover:text-red-600 focus:outline-none';
-    removeBtn.innerHTML = '<i class="fas fa-times"></i>';
-    removeBtn.onclick = () => {
-        container.removeChild(bubble);
-        updateHiddenInput(container);
-    };
-    bubble.appendChild(removeBtn);
-    container.appendChild(bubble);
-    updateHiddenInput(container);
-}
-
-function getCurrentSkills(container) {
-    return Array.from(container.children).map(b => b.textContent);
-}
-
-function updateHiddenInput(container) {
-    const skills = getCurrentSkills(container);
-    document.getElementById('skills-hidden-input').value = JSON.stringify(skills);
-}
-
-document.addEventListener('DOMContentLoaded', function() {
-    const skillsContainer = document.getElementById('skills-bubble-container');
-    const skillsInput = document.getElementById('skills-bubble-input');
-    const initialSkills = JSON.parse('{{ skills_json|tojson|safe }}');
-    renderSkillBubbles(initialSkills, skillsContainer);
-    setupAutocomplete(skillsInput, skillsContainer);
-    updateHiddenInput(skillsContainer);
-});
 </script>
 <script>
-function previewAvatar(event) {
-  const [file] = event.target.files;
-  if (file) {
-    if (file.size > 1024 * 1024) { // 1MB limit
-      alert("Profile picture must be less than 1MB.");
-      event.target.value = ""; // Clear the file input
-      document.getElementById('avatar-preview').src = "{{ profile.profile_image or url_for('static', filename='img/default_avatar.png') }}";
-      return;
+    function previewAvatar(event) {
+        const [file] = event.target.files;
+        if (file) {
+            if (file.size > 1024 * 1024) { // 1MB limit
+                alert("Profile picture must be less than 1MB.");
+                event.target.value = ""; // Clear the file input
+                document.getElementById('avatar-preview').src = "{{ profile.profile_image or url_for('static', filename='img/default_avatar.png') }}";
+                return;
+            }
+            document.getElementById('avatar-preview').src = URL.createObjectURL(file);
+            // Automatically submit the form after selecting a valid file
+            document.getElementById('profile-picture-form').submit();
+        }
     }
-    document.getElementById('avatar-preview').src = URL.createObjectURL(file);
-    // Automatically submit the form after selecting a valid file
-    document.getElementById('profile-picture-form').submit();
-  }
-}
 </script>
 {% endblock %}

@@ -1,36 +1,86 @@
 import os
 import json
-with open(os.path.join(os.path.dirname(__file__), 'src', 'utils', 'skills_master.json'), encoding='utf-8') as f:
-    skills_master = json.load(f)["skills"]
+import logging
+from datetime import datetime
+
+from dotenv import load_dotenv
+from flask import (
+    Flask,
+    jsonify,
+    render_template,
+    request,
+    redirect,
+    url_for,
+    flash,
+    session,
+)
+
+from supabase_config import SupabaseService
+
+# Load environment variables
+load_dotenv()
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+
+def get_all_available_skills():
+    """Get all available skills from database only."""
+    try:
+        db_skills = supabase_service.get_all_skills()
+        return sorted(db_skills)
+    except Exception as e:
+        logger.error(f"Error loading skills from database: {e}")
+        return []  # Return empty list if DB fails
+
 
 def normalize_and_validate_skills(value):
     """
-    Normalize input to a list of valid, non-empty, stripped skills from skills_master.
+    Normalize input to a list of valid, non-empty, stripped skills.
+    Now checks only against database skills.
     """
     if value is None:
         return []
+
+    # Get all valid skills from database only
+    try:
+        all_valid_skills = set(supabase_service.get_all_skills())
+    except Exception as e:
+        logger.error(f"Could not load skills from database: {e}")
+        all_valid_skills = set()
+
     if isinstance(value, list):
-        return [s.strip() for s in value if isinstance(s, str) and s.strip() in skills_master]
+        return [
+            s.strip()
+            for s in value
+            if isinstance(s, str) and s.strip() in all_valid_skills
+        ]
     if isinstance(value, str):
         try:
             loaded = json.loads(value)
             if isinstance(loaded, list):
-                return [s.strip() for s in loaded if isinstance(s, str) and s.strip() in skills_master]
+                return [
+                    s.strip()
+                    for s in loaded
+                    if isinstance(s, str) and s.strip() in all_valid_skills
+                ]
         except Exception:
             pass
         # Comma-separated string
         if "," in value:
-            return [s.strip() for s in value.split(",") if s.strip() in skills_master]
+            return [
+                s.strip() for s in value.split(",") if s.strip() in all_valid_skills
+            ]
         val = value.strip()
-        return [val] if val in skills_master else []
+        return [val] if val in all_valid_skills else []
     return []
-import json
 
-# --- Skills normalization helper ---
-def normalize_skills(value):
+
+def normalize_skills_for_draft(value):
     """
-    Normalize skills input to a list of non-empty, stripped strings.
-    Accepts list, JSON string, comma-separated string, or single string.
+    Normalize skills input for drafts - accepts all skills without validation against database.
+    This allows saving new skills in drafts before they're added to the database.
     """
     if value is None:
         return []
@@ -49,33 +99,7 @@ def normalize_skills(value):
         val = value.strip()
         return [val] if val else []
     return []
-import os
-import json
-import logging
-from datetime import datetime
 
-from dotenv import load_dotenv
-from flask import (
-    Flask,
-    jsonify,
-    render_template,
-    request,
-    redirect,
-    url_for,
-    flash,
-    session,
-)
-import google.generativeai as genai
-
-# Load environment variables
-load_dotenv()
-
-# Import the class, not the instance
-from supabase_config import SupabaseService
-
-# Set up logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "2a15f8283ab2353f15089e80d8acf104")
@@ -474,6 +498,7 @@ def profile():
             if isinstance(v, list):
                 return len(v) > 0
             return True
+
         profile_data = {k: v for k, v in profile_data.items() if is_valid_value(v)}
 
         print(f"DEBUG - Profile update attempt:")
@@ -524,7 +549,7 @@ def profile():
             is_own_profile=True,
             read_only=False,
             skills_json=skills_json,
-            skills_master=skills_master,
+            skills_master=get_all_available_skills(),
         )
     except Exception as e:
         flash(f"Error loading profile: {str(e)}", "error")
@@ -567,7 +592,6 @@ def view_profile(user_id):
     # Always pass skills_json as a Python list of valid skills
     skills_json = normalize_and_validate_skills(profile.get("skills"))
 
-
     # Get Talent Search filter params from query string
     search_query = request.args.get("search")
     skills = request.args.get("skills")
@@ -577,6 +601,7 @@ def view_profile(user_id):
     # Robustly parse selected_skills for Jinja2
     def parse_skills(val):
         import json
+
         if not val:
             return []
         if isinstance(val, list):
@@ -594,14 +619,11 @@ def view_profile(user_id):
     selected_skills_list = parse_skills(skills)
     # Show button if any talent search param is present in the URL (even if empty)
     back_to_talent_search = (
-        ("search" in request.args or "skills" in request.args or "school" in request.args or "grade" in request.args)
-        or any([
-            bool(search_query),
-            bool(skills),
-            bool(school),
-            bool(grade)
-        ])
-    )
+        "search" in request.args
+        or "skills" in request.args
+        or "school" in request.args
+        or "grade" in request.args
+    ) or any([bool(search_query), bool(skills), bool(school), bool(grade)])
 
     return render_template(
         "profile.html",
@@ -617,7 +639,7 @@ def view_profile(user_id):
         selected_school=school,
         selected_grade=grade,
         skills_json=skills_json,
-        skills_master=skills_master,
+        skills_master=get_all_available_skills(),
     )
 
 
@@ -645,6 +667,7 @@ def opportunities():
 
         # Parse skills_needed (comma-separated or JSON)
         import json
+
         def parse_skills(val):
             if not val:
                 return []
@@ -670,7 +693,7 @@ def opportunities():
             selected_category=category,
             selected_location=location,
             selected_skills_needed=selected_skills_needed,
-            skills_master=skills_master,
+            skills_master=get_all_available_skills(),
         )
     except Exception as e:
         flash(f"Error loading opportunities: {str(e)}", "error")
@@ -714,10 +737,15 @@ def talent_search():
         skills = request.args.get("skills", "")
         school = request.args.get("school", "")
         grade = request.args.get("grade", "")
+        location = request.args.get("location", "")
 
         # Search students with filters
         students = supabase_service.search_students(
-            search_query=search_query, skills=skills, school=school, grade=grade
+            search_query=search_query,
+            skills=skills,
+            school=school,
+            grade=grade,
+            location=location,
         )
 
         # Get saved profiles to determine which ones are bookmarked
@@ -738,6 +766,7 @@ def talent_search():
         # Parse selected_skills robustly (list or string)
         def parse_skills(val):
             import json
+
             if not val:
                 return []
             if isinstance(val, list):
@@ -761,8 +790,9 @@ def talent_search():
             selected_skills=selected_skills_list,
             selected_school=school,
             selected_grade=grade,
+            selected_location=location,
             saved_profile_ids=list(saved_profile_ids),
-            skills_master=skills_master,
+            skills_master=get_all_available_skills(),
         )
     except Exception as e:
         flash(f"Error searching talent: {str(e)}", "error")
@@ -794,11 +824,30 @@ def create_opportunity(opportunity_id=None):
             flash("You can only edit your own opportunities", "error")
             return redirect(url_for("dashboard"))
 
+        # Debug: Log the skills_needed data
+        print(f"DEBUG - Loading draft opportunity {opportunity_id}:")
+        print(f"  Skills needed from DB: {opportunity.get('skills_needed')}")
+        print(f"  Type of skills_needed: {type(opportunity.get('skills_needed'))}")
+
     if request.method == "POST":
         # Get form data and map to database fields
         status = request.form.get("status", "active")
-        # Normalize and validate skills_needed from form
-        skills_needed_json = normalize_and_validate_skills(request.form.get("skills_needed"))
+
+        # For drafts, allow any skills without validation. For active opportunities, validate against database
+        if status == "draft":
+            skills_needed_json = normalize_skills_for_draft(
+                request.form.get("skills_needed")
+            )
+        else:
+            skills_needed_json = normalize_and_validate_skills(
+                request.form.get("skills_needed")
+            )
+
+        # Debug: Log the skills processing
+        print(f"DEBUG - Saving opportunity with status: {status}")
+        print(f"  Raw skills_needed from form: {request.form.get('skills_needed')}")
+        print(f"  Processed skills_needed: {skills_needed_json}")
+        print(f"  Type: {type(skills_needed_json)}")
         opportunity_data = {
             "title": request.form.get("title") or None,
             "description": request.form.get("description") or None,
@@ -873,6 +922,10 @@ def create_opportunity(opportunity_id=None):
             elif is_editing:
                 # Regular update, redirect back to referrer
                 opportunity_data["status"] = "draft"
+                # Re-normalize skills for draft since status changed
+                opportunity_data["skills_needed"] = normalize_skills_for_draft(
+                    request.form.get("skills_needed")
+                )
                 result = supabase_service.update_opportunity(
                     opportunity_id, opportunity_data
                 )
@@ -897,7 +950,12 @@ def create_opportunity(opportunity_id=None):
                 success_message = "Opportunity created successfully!"
                 redirect_route = referrer_url
             else:
+                # Creating a new draft
                 opportunity_data["status"] = "draft"
+                # Re-normalize skills for draft since status is draft
+                opportunity_data["skills_needed"] = normalize_skills_for_draft(
+                    request.form.get("skills_needed")
+                )
                 result = supabase_service.create_opportunity(opportunity_data)
                 success_message = "Draft saved successfully!"
                 redirect_route = url_for("dashboard")
@@ -921,7 +979,10 @@ def create_opportunity(opportunity_id=None):
             flash(error_message, "error")
 
     return render_template(
-        "create_opportunity.html", opportunity=opportunity, is_editing=is_editing, skills_master=skills_master
+        "create_opportunity.html",
+        opportunity=opportunity,
+        is_editing=is_editing,
+        skills_master=get_all_available_skills(),
     )
 
 
@@ -1162,16 +1223,55 @@ def delete_profile_picture():
         return {"success": False, "error": str(e)}, 500
 
 
+@app.route("/add_skill", methods=["POST"])
+def add_skill():
+    """Add a new skill to the skills database."""
+    if "user_id" not in session:
+        return {"success": False, "error": "Authentication required"}, 401
+
+    try:
+        data = request.get_json()
+        if not data or "skill" not in data:
+            return {"success": False, "error": "Skill name is required"}, 400
+
+        skill_name = data["skill"].strip()
+        if not skill_name:
+            return {"success": False, "error": "Skill name cannot be empty"}, 400
+
+        # Validate skill name (no special characters, reasonable length)
+        if len(skill_name) > 100:
+            return {"success": False, "error": "Skill name too long"}, 400
+
+        if not skill_name.replace(" ", "").replace("-", "").replace(".", "").isalnum():
+            return {
+                "success": False,
+                "error": "Skill name contains invalid characters",
+            }, 400
+
+        # Add the skill to the database
+        result = supabase_service.add_new_skill(skill_name, session.get("user_id"))
+
+        if result["success"]:
+            # No need to maintain in-memory list - always fetch from database
+            return {"success": True, "skill": result["skill"]}
+        else:
+            return {"success": False, "error": result["error"]}, 400
+
+    except Exception as e:
+        logger.error(f"Error adding skill: {str(e)}")
+        return {"success": False, "error": str(e)}, 500
+
+
 @app.route("/chat")
 def chat():
     """AI chatbot interface for InterSpark."""
     if "user_id" not in session:
         return redirect(url_for("login"))
-    
+
     # Initialize chat history in session if it doesn't exist
     if "chat_history" not in session:
         session["chat_history"] = []
-    
+
     return render_template("chat.html", chat_history=session["chat_history"])
 
 @app.route("/chat/send", methods=["POST"])
@@ -1179,46 +1279,46 @@ def chat_send():
     """Handle chat message and return AI response."""
     if "user_id" not in session:
         return jsonify({"success": False, "error": "Not authenticated"}), 401
-    
+
     try:
         user_message = request.json.get("message", "").strip()
         if not user_message:
             return jsonify({"success": False, "error": "Message cannot be empty"}), 400
-        
+
         # Initialize chat history if not exists
         if "chat_history" not in session:
             session["chat_history"] = []
-        
+
         # Add user message to history
         session["chat_history"].append({
             "role": "user",
             "content": user_message,
             "timestamp": datetime.now().isoformat()
         })
-        
+
         # Search database for relevant results
         db_results = search_database_for_context(user_message)
-        
+
         # Generate AI response with conversation context
         ai_response = generate_ai_response_with_context(user_message, db_results, session["chat_history"])
-        
+
         # Add AI response to history
         session["chat_history"].append({
             "role": "assistant",
             "content": ai_response,
             "timestamp": datetime.now().isoformat()
         })
-        
+
         # Keep only last 20 messages to prevent session bloat
         if len(session["chat_history"]) > 20:
             session["chat_history"] = session["chat_history"][-20:]
-        
+
         return jsonify({
             "success": True,
             "response": ai_response,
             "db_results": db_results
         })
-        
+
     except Exception as e:
         logger.error(f"Error in chat_send: {str(e)}")
         return jsonify({"success": False, "error": "An error occurred while processing your message"}), 500
@@ -1234,7 +1334,7 @@ def search_database_for_context(query):
             "opportunities": [],
             "total_matches": 0
         }
-        
+
         # Search in profiles table
         profile_results = supabase_service.search_students(
             search_query=query,
@@ -1242,7 +1342,7 @@ def search_database_for_context(query):
             school="",
             grade=""
         )
-        
+
         # Search in opportunities table
         opportunity_results = supabase_service.search_opportunities(
             search_query=query,
@@ -1251,14 +1351,14 @@ def search_database_for_context(query):
             location="",
             skills_needed=""
         )
-        
+
         # Limit results to top matches
         results["profiles"] = profile_results[:5]  # Top 5 profiles
         results["opportunities"] = opportunity_results[:5]  # Top 5 opportunities
         results["total_matches"] = len(profile_results) + len(opportunity_results)
-        
+
         return results
-        
+
     except Exception as e:
         logger.error(f"Error searching database: {str(e)}")
         return {"profiles": [], "opportunities": [], "total_matches": 0}
@@ -1270,7 +1370,7 @@ def generate_ai_response(user_message, db_results):
     try:
         # Build context from database results
         context_parts = []
-        
+
         if db_results["profiles"]:
             context_parts.append("RELEVANT STUDENT PROFILES:")
             for profile in db_results["profiles"]:
@@ -1284,14 +1384,14 @@ def generate_ai_response(user_message, db_results):
                             skills = [skills]
                     context_parts.append(f"  Skills: {', '.join(skills[:5])}")
                 context_parts.append(f"  View profile: /profile/{profile['id']}")
-        
+
         if db_results["opportunities"]:
             context_parts.append("\nRELEVANT OPPORTUNITIES:")
             for opp in db_results["opportunities"]:
                 context_parts.append(f"- {opp.get('title', 'Unknown title')} at {opp.get('profiles', {}).get('name', 'Unknown organization')}")
                 context_parts.append(f"  Type: {opp.get('type', 'Unknown')} | Location: {opp.get('location', 'Unknown')}")
                 context_parts.append(f"  View opportunity: /opportunity/{opp['id']}")
-        
+
         # Build the system prompt
         system_prompt = f"""You are Spark AI, a helpful AI assistant for InterSpark - a platform connecting students with internship and volunteer opportunities.
 
@@ -1317,9 +1417,9 @@ Please provide a helpful response. If there are relevant database matches above,
             system_prompt,
             user_prompt
         ])
-        
+
         return response.text
-        
+
     except Exception as e:
         logger.error(f"Error generating AI response: {str(e)}")
         return "I apologize, but I'm having trouble processing your request right now. Please try again later or contact support if the issue persists."
@@ -1332,7 +1432,7 @@ def generate_ai_response_with_context(user_message, db_results, chat_history):
     try:
         # Build context from database results
         context_parts = []
-        
+
         if db_results["profiles"]:
             context_parts.append("RELEVANT STUDENT PROFILES:")
             for profile in db_results["profiles"]:
@@ -1346,14 +1446,14 @@ def generate_ai_response_with_context(user_message, db_results, chat_history):
                             skills = [skills]
                     context_parts.append(f"  Skills: {', '.join(skills[:5])}")
                 context_parts.append(f"  View profile: /profile/{profile['id']}")
-        
+
         if db_results["opportunities"]:
             context_parts.append("\nRELEVANT OPPORTUNITIES:")
             for opp in db_results["opportunities"]:
                 context_parts.append(f"- {opp.get('title', 'Unknown title')} at {opp.get('profiles', {}).get('name', 'Unknown organization')}")
                 context_parts.append(f"  Type: {opp.get('type', 'Unknown')} | Location: {opp.get('location', 'Unknown')}")
                 context_parts.append(f"  View opportunity: /opportunity/{opp['id']}")
-        
+
         # Build conversation context from recent messages
         conversation_context = ""
         if len(chat_history) > 2:  # More than just current user message
@@ -1362,7 +1462,7 @@ def generate_ai_response_with_context(user_message, db_results, chat_history):
             for msg in recent_messages:
                 role = "User" if msg["role"] == "user" else "Assistant"
                 conversation_context += f"{role}: {msg['content']}\n"
-        
+
         # Build the system prompt
         system_prompt = f"""You are Spark AI, a helpful AI assistant for InterSpark - a platform connecting students with internship and volunteer opportunities.
 
@@ -1391,9 +1491,9 @@ Please provide a helpful response. If there are relevant database matches above,
             system_prompt,
             user_prompt
         ])
-        
+
         return response.text
-        
+
     except Exception as e:
         logger.error(f"Error generating AI response: {str(e)}")
         return "I apologize, but I'm having trouble processing your request right now. Please try again later or contact support if the issue persists."
@@ -1403,7 +1503,7 @@ def chat_clear():
     """Clear chat history."""
     if "user_id" not in session:
         return jsonify({"success": False, "error": "Not authenticated"}), 401
-    
+
     session["chat_history"] = []
     return jsonify({"success": True, "message": "Chat history cleared"})
 

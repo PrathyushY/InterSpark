@@ -472,6 +472,7 @@ class SupabaseService:
         skills: str = "",
         school: str = "",
         grade: str = "",
+        location: str = "",
     ) -> List[Dict[str, Any]]:
         """
         Search for student profiles with filters. Skills filter matches ALL selected skills.
@@ -481,11 +482,13 @@ class SupabaseService:
             skills: Filter by skills (JSON array or comma-separated string)
             school: Filter by school
             grade: Filter by grade
+            location: Filter by location
 
         Returns:
             List of matching student profiles
         """
         import json
+
         try:
             query = self.client.table("profiles").select("*").eq("user_type", "student")
 
@@ -502,6 +505,10 @@ class SupabaseService:
             # Apply grade filter
             if grade:
                 query = query.ilike("grade", f"%{grade}%")
+
+            # Apply location filter
+            if location:
+                query = query.ilike("location", f"%{location}%")
 
             # Order by creation date, newest first
             query = query.order("created_at", desc=True)
@@ -538,12 +545,21 @@ class SupabaseService:
                                 profile_skills = loaded
                         except Exception:
                             if "," in profile_skills:
-                                profile_skills = [s.strip() for s in profile_skills.split(",") if s.strip()]
+                                profile_skills = [
+                                    s.strip()
+                                    for s in profile_skills.split(",")
+                                    if s.strip()
+                                ]
                             else:
-                                profile_skills = [profile_skills.strip()] if profile_skills.strip() else []
+                                profile_skills = (
+                                    [profile_skills.strip()]
+                                    if profile_skills.strip()
+                                    else []
+                                )
                     if not isinstance(profile_skills, list):
                         return False
                     return selected_skills.issubset(set(profile_skills))
+
                 students = [s for s in students if student_has_all_skills(s)]
 
             return students
@@ -617,6 +633,7 @@ class SupabaseService:
             List of matching opportunity records
         """
         import json
+
         try:
             # Select opportunities with organization profile information
             query = self.client.table("opportunities").select(
@@ -679,12 +696,19 @@ class SupabaseService:
                                 opp_skills = loaded
                         except Exception:
                             if "," in opp_skills:
-                                opp_skills = [s.strip() for s in opp_skills.split(",") if s.strip()]
+                                opp_skills = [
+                                    s.strip()
+                                    for s in opp_skills.split(",")
+                                    if s.strip()
+                                ]
                             else:
-                                opp_skills = [opp_skills.strip()] if opp_skills.strip() else []
+                                opp_skills = (
+                                    [opp_skills.strip()] if opp_skills.strip() else []
+                                )
                     if not isinstance(opp_skills, list):
                         return False
                     return selected_skills_needed.issubset(set(opp_skills))
+
                 opportunities = [o for o in opportunities if opp_has_all_skills(o)]
 
             return opportunities
@@ -1487,6 +1511,98 @@ class SupabaseService:
         except Exception as e:
             logger.error(f"Error getting profile picture URL: {str(e)}")
             return None
+
+    # --- Skills Management ---
+
+    def add_new_skill(self, skill_name: str, user_id: str = None) -> Dict[str, Any]:
+        """
+        Add a new skill to the skills table.
+
+        Args:
+            skill_name: The name of the skill to add
+            user_id: The user adding the skill (optional)
+
+        Returns:
+            Dictionary with success status and skill data or error
+        """
+        try:
+            # Check if skill already exists (case-insensitive)
+            existing_response = (
+                self.service_client.table("skills")
+                .select("id, name")
+                .ilike("name", skill_name)
+                .execute()
+            )
+
+            if existing_response.data:
+                return {
+                    "success": False,
+                    "error": "Skill already exists",
+                    "existing_skill": existing_response.data[0]["name"],
+                }
+
+            # Add the new skill
+            skill_data = {"name": skill_name.strip(), "created_by": user_id}
+
+            response = self.service_client.table("skills").insert(skill_data).execute()
+
+            if response.data:
+                return {"success": True, "skill": response.data[0]}
+            else:
+                return {"success": False, "error": "Failed to add skill"}
+
+        except Exception as e:
+            logger.error(f"Error adding new skill: {str(e)}")
+            return {"success": False, "error": str(e)}
+
+    def get_all_skills(self) -> List[str]:
+        """
+        Get all available skills from the database.
+
+        Returns:
+            List of skill names
+        """
+        try:
+            response = (
+                self.client.table("skills")
+                .select("name")
+                .order("name", desc=False)
+                .execute()
+            )
+
+            if response.data:
+                return [skill["name"] for skill in response.data]
+            else:
+                return []
+
+        except Exception as e:
+            logger.error(f"Error getting all skills: {str(e)}")
+            return []
+
+    def skill_exists(self, skill_name: str) -> bool:
+        """
+        Check if a skill exists in the database (case-insensitive).
+
+        Args:
+            skill_name: The skill name to check
+
+        Returns:
+            True if skill exists, False otherwise
+        """
+        try:
+            response = (
+                self.client.table("skills")
+                .select("id")
+                .ilike("name", skill_name)
+                .limit(1)
+                .execute()
+            )
+
+            return len(response.data) > 0
+
+        except Exception as e:
+            logger.error(f"Error checking if skill exists: {str(e)}")
+            return False
 
 
 # Global instance - will be created in app.py after environment variables are loaded
