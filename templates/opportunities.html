@@ -10,165 +10,212 @@
             <p class="mt-2 text-gray-600">Discover internships and volunteer opportunities that match your interests</p>
         </div>
 
-        <!-- Filters Section -->
-        <div class="bg-white p-6 rounded-lg shadow-sm mb-8">
-            <h3 class="text-lg font-medium text-gray-900 mb-4">Filter Opportunities</h3>
-            <form class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                <div>
-                    <label for="type" class="block text-sm font-medium text-gray-700 mb-2">Type</label>
+    <!-- Unified Search Bar -->
+    <div class="bg-white p-4 rounded-lg shadow-sm mb-8 border border-blue-200">
+        <form method="GET">
+            <!-- Main search row -->
+            <div class="flex flex-wrap items-center gap-3 mb-3">
+                <!-- Unified Search Input -->
+                <div class="flex-1 min-w-[300px] relative">
+                    <input type="text" id="unified-search" name="search" value="{{ search_query or '' }}"
+                        placeholder="Search opportunities, companies, or skills... (type skill names to filter)"
+                        class="block w-full px-4 py-2 pr-10 border border-blue-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                        autocomplete="off">
+                    <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                        <i class="fas fa-search text-blue-400"></i>
+                    </div>
+                    <!-- Skills dropdown for autocomplete -->
+                    <div id="skills-autocomplete-list"
+                        class="absolute z-50 bg-white border border-gray-300 rounded-md mt-1 w-full shadow-lg"
+                        style="display:none;"></div>
+                    <!-- Hidden input for selected skills -->
+                    <input type="hidden" name="skills_needed" id="skills-hidden-input"
+                        value="{{ selected_skills_needed|tojson|safe }}">
+                </div>
+
+                <div class="relative">
                     <select id="type" name="type"
-                            class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
-                        <option value="" {% if not selected_type %}selected{% endif %}>All Types</option>
-                        <option value="Internship" {% if selected_type == 'Internship' %}selected{% endif %}>
-                            Internship
+                        class="block px-4 py-2 border border-blue-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-white text-gray-900 text-sm">
+                        <option value="">All Types</option>
+                        <option value="Internship" {% if selected_type=='Internship' %}selected{% endif %}>Internship
                         </option>
-                        <option value="Volunteer" {% if selected_type == 'Volunteer' %}selected{% endif %}>Volunteer
+                        <option value="Volunteer" {% if selected_type=='Volunteer' %}selected{% endif %}>Volunteer
                         </option>
-                        <option value="Full Time" {% if selected_type == 'Full Time' %}selected{% endif %}>Full Time
+                        <option value="Full Time" {% if selected_type=='Full Time' %}selected{% endif %}>Full Time
                         </option>
                     </select>
                 </div>
-                <div>
-                    <label for="category" class="block text-sm font-medium text-gray-700 mb-2">Category</label>
+
+                <div class="relative">
                     <select id="category" name="category"
-                            class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
-                        <option value="" {% if not selected_category %}selected{% endif %}>All Categories</option>
-                        <option value="Technology" {% if selected_category == 'Technology' %}selected{% endif %}>
-                            Technology
+                        class="block px-4 py-2 border border-blue-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-white text-gray-900 text-sm">
+                        <option value="">All Categories</option>
+                        <option value="Technology" {% if selected_category=='Technology' %}selected{% endif %}>
+                            Technology</option>
+                        <option value="Environment" {% if selected_category=='Environment' %}selected{% endif %}>
+                            Environment</option>
+                        <option value="Healthcare" {% if selected_category=='Healthcare' %}selected{% endif %}>
+                            Healthcare</option>
+                        <option value="Education" {% if selected_category=='Education' %}selected{% endif %}>Education
                         </option>
-                        <option value="Environment" {% if selected_category == 'Environment' %}selected{% endif %}>
-                            Environment
+                        <option value="Marketing" {% if selected_category=='Marketing' %}selected{% endif %}>Marketing
                         </option>
-                        <option value="Healthcare" {% if selected_category == 'Healthcare' %}selected{% endif %}>
-                            Healthcare
-                        </option>
-                        <option value="Education" {% if selected_category == 'Education' %}selected{% endif %}>
-                            Education
-                        </option>
-                        <option value="Marketing" {% if selected_category == 'Marketing' %}selected{% endif %}>
-                            Marketing
-                        </option>
-                        <option value="Science" {% if selected_category == 'Science' %}selected{% endif %}>Science
+                        <option value="Science" {% if selected_category=='Science' %}selected{% endif %}>Science
                         </option>
                     </select>
                 </div>
-                <div>
-                    <label for="location" class="block text-sm font-medium text-gray-700 mb-2">Location</label>
-                    <input type="text" id="location" name="location" placeholder="Enter city or state"
-                           value="{{ selected_location }}"
-                           class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+
+                <div class="relative">
+                    <input type="text" id="location" name="location" placeholder="Location..."
+                        value="{{ selected_location }}"
+                        class="block px-4 py-2 border border-blue-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-sm">
                 </div>
-                <div class="flex items-end">
+
+                <div class="flex items-center gap-2">
                     <button type="submit"
-                            class="w-full bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                        Apply Filters
+                        class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors font-medium inline-flex items-center text-sm">
+                        <i class="fas fa-search mr-2"></i>
+                        Search
                     </button>
+                    <a href="{{ url_for('opportunities') }}"
+                        class="bg-gray-100 text-gray-700 px-3 py-2 rounded-lg hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors font-medium inline-flex items-center border border-gray-300 text-sm">
+                        <i class="fas fa-times mr-1"></i>
+                        Clear
+                    </a>
                 </div>
-            </form>
-        </div>
+            </div>
+
+            <!-- Skills bubbles row - only show when skills are selected -->
+            <div id="skills-bubble-container" class="flex flex-wrap gap-2" style="display:none;"></div>
+
+            <!-- Search hint -->
+            <div class="text-xs text-gray-500 mt-2">
+                <i class="fas fa-lightbulb mr-1"></i>
+                <span>Tip: Type to search for anything, or select skills from the dropdown. Press Enter to search or
+                    click on skills to filter by them.</span>
+            </div>
+        </form>
+    </div>
 
         <!-- Opportunities Grid -->
 
-        {% if opportunities %}
-            <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                {% for opportunity in opportunities %}
-                    <div class="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
-                        {% if opportunity.image %}
-                            <div class="h-48 bg-gray-200 bg-cover bg-center"
-                                 style="background-image: url('{{ opportunity.image }}')">
-                            </div>
-                        {% else %}
-                            <div class="h-48 bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-                                <i class="fas fa-briefcase text-white text-4xl"></i>
-                            </div>
-                        {% endif %}
+    {% if opportunities %}
+    <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        {% for opportunity in opportunities %}
+        <a href="{{ url_for('opportunity_details', id=opportunity.id) }}?type={{ selected_type }}&category={{ selected_category }}&location={{ selected_location }}&search={{ search_query }}&skills_needed={{ selected_skills_needed|join(',') }}"
+            class="block">
+            <div class="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow cursor-pointer">
+                {% if opportunity.image %}
+                <div class="h-48 bg-gray-200 bg-cover bg-center"
+                    style="background-image: url('{{ opportunity.image }}')">
+                </div>
+                {% else %}
+                <div class="h-48 bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                    <i class="fas fa-briefcase text-white text-4xl"></i>
+                </div>
+                {% endif %}
 
-                        <div class="p-6">
-                            <div class="flex items-center justify-between mb-3">
-                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
+                <div class="p-6">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
                             {% if opportunity.type == 'Internship' %}bg-blue-100 text-blue-800
                             {% elif opportunity.type == 'Full Time' %}bg-purple-100 text-purple-800
                             {% else %}bg-green-100 text-green-800{% endif %}">
-                        {{ opportunity.type if opportunity.type else 'Draft' }}
-                    </span>
-                            </div>
-                            {% if opportunity.category %}
-                                <div class="mb-2">
-                                    <span class="inline-block bg-gray-200 text-gray-700 text-xs px-2 py-1 rounded">{{ opportunity.category|capitalize }}</span>
-                                </div>
-                            {% endif %}
+                            {{ opportunity.type if opportunity.type else 'Draft' }}
+                        </span>
+                    </div>
+                    {% if opportunity.category %}
+                    <div class="mb-2">
+                        <span class="inline-block bg-gray-200 text-gray-700 text-xs px-2 py-1 rounded">{{
+                            opportunity.category|capitalize }}</span>
+                    </div>
+                    {% endif %}
 
-                            <h3 class="text-lg font-semibold text-gray-900 mb-2 hover:text-blue-600">
-                                <a href="{{ url_for('opportunity_details', id=opportunity.id) }}?type={{ selected_type }}&category={{ selected_category }}&location={{ selected_location }}&search={{ search_query }}">
-                                    {{ opportunity.title if opportunity.title else 'Untitled' }}
-                                </a>
-                            </h3>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-2 hover:text-blue-600">
+                        {{ opportunity.title if opportunity.title else 'Untitled' }}
+                    </h3>
 
-                            <div class="flex items-center mb-2">
-                                {% if opportunity.profiles and opportunity.profiles.profile_image %}
-                                    <img src="{{ opportunity.profiles.profile_image }}"
-                                         alt="{{ opportunity.profiles.name or opportunity.profiles.organization_name }}"
-                                         class="w-6 h-6 rounded-full mr-2">
-                                {% endif %}
-                                <p class="text-sm text-gray-600 font-medium">{{ opportunity.profiles.name or
-                        opportunity.profiles.organization_name or 'Organization' }}</p>
-                            </div>
+                    <div class="flex items-center mb-2">
+                        {% if opportunity.profiles and opportunity.profiles.profile_image %}
+                        <img src="{{ opportunity.profiles.profile_image }}"
+                            alt="{{ opportunity.profiles.name or opportunity.profiles.organization_name }}"
+                            class="w-6 h-6 rounded-full mr-2">
+                        {% endif %}
+                        <p class="text-sm text-gray-600 font-medium">{{ opportunity.profiles.name or
+                            opportunity.profiles.organization_name or 'Organization' }}</p>
+                    </div>
 
-                            <div class="space-y-1 mb-4 text-sm text-gray-500">
-                                <div class="flex items-center">
-                                    <i class="fas fa-map-marker-alt mr-2 w-4"></i>
-                                    <span>{{ opportunity.location if opportunity.location else 'Location not specified' }}</span>
-                                </div>
-                                <div class="flex items-center">
-                                    <i class="fas fa-clock mr-2 w-4"></i>
-                                    <span>{{ opportunity.duration if opportunity.duration else 'Duration not specified' }}</span>
-                                </div>
-                                <div class="flex items-center">
-                                    <i class="fas fa-calendar mr-2 w-4"></i>
-                                    <span>{{ opportunity.created_at | format_date }}</span>
-                                </div>
-                            </div>
-
-                            <p class="text-gray-700 text-sm mb-4 line-clamp-3">
-                                {{ opportunity.description[:150] if opportunity.description else '' }}
-                                        {% if opportunity.description and opportunity.description|length > 150 %}
-                                            ...{% endif %}
-                            </p>
-
-                            <div class="flex items-center justify-between">
-                                <div class="text-sm text-gray-500">
-                                    <i class="fas fa-exclamation-circle mr-1"></i>
-                                    Deadline: {{ opportunity.application_deadline | format_date if opportunity.application_deadline else 'No deadline' }}
-                                </div>
-                                <a href="{{ url_for('opportunity_details', id=opportunity.id) }}"
-                                   class="text-blue-600 hover:text-blue-800 font-medium text-sm"
-                                   href="{{ url_for('opportunity_details', id=opportunity.id) }}?type={{ selected_type }}&category={{ selected_category }}&location={{ selected_location }}&search={{ search_query }}">
-                                    Learn More →
-                                </a>
-                            </div>
+                    <div class="space-y-1 mb-4 text-sm text-gray-500">
+                        <div class="flex items-center">
+                            <i class="fas fa-map-marker-alt mr-2 w-4"></i>
+                            <span>{{ opportunity.location if opportunity.location else 'Location not specified'
+                                }}</span>
+                        </div>
+                        <div class="flex items-center">
+                            <i class="fas fa-clock mr-2 w-4"></i>
+                            <span>{{ opportunity.duration if opportunity.duration else 'Duration not specified'
+                                }}</span>
+                        </div>
+                        <div class="flex items-center">
+                            <i class="fas fa-calendar mr-2 w-4"></i>
+                            <span>{{ opportunity.created_at | format_date }}</span>
                         </div>
                     </div>
-                {% endfor %}
-            </div>
-        {% else %}
-            <div class="text-center py-12">
-                <div class="mx-auto h-24 w-24 text-gray-400">
-                    <i class="fas fa-search text-6xl"></i>
-                </div>
-                <h3 class="mt-4 text-lg font-medium text-gray-900">No opportunities found</h3>
-                <p class="mt-2 text-gray-500">
-                    Try adjusting your filters or check back later for new opportunities.
-                </p>
-                {% if not session.user_id %}
-                    <div class="mt-6">
-                        <a href="{{ url_for('signup') }}"
-                           class="inline-flex items-center px-4 py-2 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
-                            Create Account to Get Notified
-                        </a>
+
+                    <p class="text-gray-700 text-sm mb-3 line-clamp-3">
+                        {{ opportunity.description[:150] if opportunity.description else '' }}{% if
+                        opportunity.description and opportunity.description|length > 150 %}...{% endif %}
+                    </p>
+
+                    {% if opportunity.skills_needed %}
+                    <div class="mb-4">
+                        <div class="flex flex-wrap gap-1">
+                            {% for skill in opportunity.skills_needed[:3] %}
+                            <span
+                                class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">{{
+                                skill }}</span>
+                            {% endfor %}
+                            {% if opportunity.skills_needed|length > 3 %}
+                            <span class="text-xs text-gray-500">+{{ opportunity.skills_needed|length - 3 }} more</span>
+                            {% endif %}
+                        </div>
                     </div>
-                {% endif %}
+                    {% endif %}
+
+                    <div class="flex items-center justify-between">
+                        <div class="text-sm text-gray-500">
+                            <i class="fas fa-exclamation-circle mr-1"></i>
+                            Deadline: {{ opportunity.application_deadline | format_date if
+                            opportunity.application_deadline else 'No deadline' }}
+                        </div>
+                        <span class="text-blue-600 hover:text-blue-800 font-medium text-sm">
+                            Learn More →
+                        </span>
+                    </div>
+                </div>
             </div>
+        </a>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center py-12">
+        <div class="mx-auto h-24 w-24 text-gray-400">
+            <i class="fas fa-search text-6xl"></i>
+        </div>
+        <h3 class="mt-4 text-lg font-medium text-gray-900">No opportunities found</h3>
+        <p class="mt-2 text-gray-500">
+            Try adjusting your filters or check back later for new opportunities.
+        </p>
+        {% if not session.user_id %}
+        <div class="mt-6">
+            <a href="{{ url_for('signup') }}"
+                class="inline-flex items-center px-4 py-2 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
+                Create Account to Get Notified
+            </a>
+        </div>
         {% endif %}
+    </div>
+    {% endif %}
 
         <!-- Call to Action for Organizations -->
         {% if session.user_type == 'organization' %}
@@ -197,13 +244,253 @@
         {% endif %}
     </div>
 
-    <style>
-        .line-clamp-3 {
-            display: -webkit-box;
-            -webkit-line-clamp: 3;
-            line-clamp: 3;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
+<style>
+    .line-clamp-3 {
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        line-clamp: 3;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    #skills-filter-autocomplete-list {
+        max-height: 120px;
+        overflow-y: auto;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .skill-bubble {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.25rem 0.5rem;
+        border-radius: 9999px;
+        background-color: #DBEAFE;
+        color: #1D4ED8;
+        font-size: 0.75rem;
+        font-weight: 500;
+    }
+
+    .skill-bubble button {
+        margin-left: 0.25rem;
+        color: #2563EB;
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-size: 0.75rem;
+        padding: 0;
+        width: 12px;
+        height: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .skill-bubble button:hover {
+        color: #DC2626;
+    }
+</style>
+<script>
+    // --- Unified Search with Skills Integration ---
+    const allowedSkills = JSON.parse('{{ skills_master|tojson|safe }}');
+
+    function renderSkillBubbles(skills, container) {
+        container.innerHTML = '';
+        const hasSkills = skills && skills.length > 0;
+        container.style.display = hasSkills ? 'flex' : 'none';
+
+        if (hasSkills) {
+            skills.forEach(skill => {
+                if (!allowedSkills.includes(skill)) return;
+                const bubble = document.createElement('span');
+                bubble.className = 'skill-bubble inline-flex items-center px-2 py-1 rounded-full bg-blue-100 text-blue-800 text-xs font-medium';
+
+                // Create skill text with tag icon for clarity
+                const skillText = document.createElement('span');
+                skillText.className = 'mr-1';
+                skillText.innerHTML = `<i class="fas fa-tag mr-1"></i>${skill}`;
+                bubble.appendChild(skillText);
+
+                const removeBtn = document.createElement('button');
+                removeBtn.type = 'button';
+                removeBtn.className = 'ml-1 text-blue-500 hover:text-red-600 focus:outline-none';
+                removeBtn.innerHTML = '<i class="fas fa-times text-xs"></i>';
+                removeBtn.onclick = (e) => {
+                    e.preventDefault();
+                    container.removeChild(bubble);
+                    updateHiddenInput(container);
+                };
+                bubble.appendChild(removeBtn);
+                container.appendChild(bubble);
+            });
         }
-    </style>
+    }
+
+    function setupUnifiedSearch(input, container) {
+        let debounceTimeout;
+
+        input.addEventListener('input', function () {
+            clearTimeout(debounceTimeout);
+            debounceTimeout = setTimeout(() => {
+                const val = input.value.trim().toLowerCase();
+                const autocompleteList = document.getElementById('skills-autocomplete-list');
+
+                if (val.length < 2) {
+                    autocompleteList.style.display = 'none';
+                    return;
+                }
+
+                // Filter skills that match and aren't already selected
+                let matches = allowedSkills.filter(s =>
+                    s.toLowerCase().includes(val) &&
+                    !getCurrentSkills(container).includes(s)
+                );
+                matches = matches.slice(0, 8);
+
+                autocompleteList.innerHTML = '';
+
+                if (matches.length > 0) {
+                    // Add a header to clarify these are skill filters
+                    const header = document.createElement('div');
+                    header.className = 'px-3 py-2 text-xs font-medium text-gray-500 bg-gray-50 border-b border-gray-200';
+                    header.innerHTML = '<i class="fas fa-tag mr-2"></i>Click to filter by skills:';
+                    autocompleteList.appendChild(header);
+
+                    matches.forEach(skill => {
+                        const item = document.createElement('div');
+                        item.className = 'px-3 py-2 cursor-pointer hover:bg-blue-50 text-sm border-b border-gray-100 last:border-b-0 flex items-center';
+                        item.innerHTML = `<i class="fas fa-plus-circle mr-2 text-blue-500"></i>${skill}`;
+                        item.onclick = () => {
+                            addSkillFilter(skill, container);
+                            autocompleteList.style.display = 'none';
+                            // Don't clear the input completely, just remove the skill part
+                            const currentVal = input.value.trim();
+                            const skillIndex = currentVal.toLowerCase().indexOf(skill.toLowerCase());
+                            if (skillIndex !== -1) {
+                                const beforeSkill = currentVal.substring(0, skillIndex).trim();
+                                const afterSkill = currentVal.substring(skillIndex + skill.length).trim();
+                                input.value = (beforeSkill + ' ' + afterSkill).trim();
+                            }
+                        };
+                        autocompleteList.appendChild(item);
+                    });
+
+                    autocompleteList.style.display = 'block';
+                } else {
+                    autocompleteList.style.display = 'none';
+                }
+
+                // Limit dropdown height for compactness
+                autocompleteList.style.maxHeight = '120px';
+                autocompleteList.style.overflowY = 'auto';
+            }, 300);
+        });
+
+        input.addEventListener('keydown', function (e) {
+            const autocompleteList = document.getElementById('skills-autocomplete-list');
+
+            if (e.key === 'Enter') {
+                // Allow normal form submission for general search
+                autocompleteList.style.display = 'none';
+                return true;
+            }
+
+            if (e.key === 'Escape') {
+                autocompleteList.style.display = 'none';
+                e.preventDefault();
+            }
+        });
+
+        // Hide dropdown when clicking outside
+        document.addEventListener('click', function (e) {
+            const autocompleteList = document.getElementById('skills-autocomplete-list');
+            if (!input.contains(e.target) && !autocompleteList.contains(e.target)) {
+                autocompleteList.style.display = 'none';
+            }
+        });
+    }
+
+    function addSkillFilter(skill, container) {
+        if (!allowedSkills.includes(skill)) return;
+        if (getCurrentSkills(container).includes(skill)) return;
+
+        const bubble = document.createElement('span');
+        bubble.className = 'skill-bubble inline-flex items-center px-2 py-1 rounded-full bg-blue-100 text-blue-800 text-xs font-medium';
+
+        const skillText = document.createElement('span');
+        skillText.className = 'mr-1';
+        skillText.innerHTML = `<i class="fas fa-tag mr-1"></i>${skill}`;
+        bubble.appendChild(skillText);
+
+        const removeBtn = document.createElement('button');
+        removeBtn.type = 'button';
+        removeBtn.className = 'ml-1 text-blue-500 hover:text-red-600 focus:outline-none';
+        removeBtn.innerHTML = '<i class="fas fa-times text-xs"></i>';
+        removeBtn.onclick = (e) => {
+            e.preventDefault();
+            container.removeChild(bubble);
+            updateHiddenInput(container);
+        };
+        bubble.appendChild(removeBtn);
+        container.appendChild(bubble);
+        updateHiddenInput(container);
+    }
+
+    function getCurrentSkills(container) {
+        return Array.from(container.children).map(bubble => {
+            const skillSpan = bubble.querySelector('span');
+            if (skillSpan) {
+                // Get text content and remove any icon characters
+                const skillText = skillSpan.textContent || skillSpan.innerText;
+                return skillText.replace(/^\s*[\uf02b\uf02c\uf005]?\s*/, '').trim();
+            }
+            return '';
+        }).filter(skill => skill.length > 0);
+    }
+
+    function updateHiddenInput(container) {
+        const skills = getCurrentSkills(container);
+        document.getElementById('skills-hidden-input').value = JSON.stringify(skills);
+        // Show/hide the container based on whether there are skills
+        container.style.display = skills.length > 0 ? 'flex' : 'none';
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const skillsContainer = document.getElementById('skills-bubble-container');
+        const unifiedInput = document.getElementById('unified-search');
+
+        // Initialize with any existing selected skills
+        let initialSkills = [];
+        try {
+            initialSkills = JSON.parse('{{ selected_skills_needed|tojson|safe }}');
+        } catch (e) {
+            try {
+                initialSkills = JSON.parse(document.getElementById('skills-hidden-input').value || '[]');
+            } catch (e2) { }
+        }
+
+        renderSkillBubbles(initialSkills, skillsContainer);
+        setupUnifiedSearch(unifiedInput, skillsContainer);
+        updateHiddenInput(skillsContainer);
+
+        // Update placeholder based on whether skills are selected
+        function updatePlaceholder() {
+            const hasSkills = getCurrentSkills(skillsContainer).length > 0;
+            if (hasSkills) {
+                unifiedInput.placeholder = "Search opportunities, companies... (skill filters active below)";
+            } else {
+                unifiedInput.placeholder = "Search opportunities, companies, or skills... (type skill names to filter)";
+            }
+        }
+
+        // Call initially and whenever skills change
+        updatePlaceholder();
+
+        // Override the updateHiddenInput to also update placeholder
+        const originalUpdate = updateHiddenInput;
+        updateHiddenInput = function (container) {
+            originalUpdate(container);
+            updatePlaceholder();
+        };
+    });
+</script>
 {% endblock %}

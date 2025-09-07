@@ -413,43 +413,69 @@
                             <div class="flex-1 flex flex-col">
                                 <h4 class="text-sm font-medium text-gray-900 truncate">{{ profile.name or
                             profile.organization_name or 'Anonymous' }}</h4>
-                                <p class="text-xs text-gray-500 truncate">{{ profile.email or 'No email' }}</p>
-                                <div class="flex items-center mt-2 space-x-2">
-                                    {% if profile.school %}
-                                        <span
-                                                class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">{{ profile.school }}</span>
-                                    {% endif %}
-                                    {% if profile.grade %}
-                                        <span
-                                                class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">{{ profile.grade }}</span>
-                                    {% endif %}
-                                    {% if not profile.school and not profile.grade %}
-                                        <span
-                                                class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-transparent text-transparent select-none">info</span>
-                                    {% endif %}
-                                </div>
-                                {% if profile.skills %}
-                                    <p class="text-[11px] text-gray-400 mt-2 line-clamp-2">{{ profile.skills }}</p>
-                                {% elif profile.bio %}
-                                    <p class="text-[11px] text-gray-400 mt-2 line-clamp-2">{{ profile.bio }}</p>
-                                {% else %}
-                                    <span class="mt-2 text-[11px] text-transparent select-none">placeholder</span>
-                                {% endif %}
-                            </div>
-                            <div class="flex flex-row items-center justify-between mt-4">
-                                <a href="{{ url_for('view_profile', user_id=profile.id or saved_profile.profile_id) }}"
-                                   class="text-blue-600 hover:text-blue-800 text-xs">View</a>
-                                <button title="Remove"
-                                        onclick="unsaveProfile('{{ profile.id or saved_profile.profile_id }}', 'modal-saved-profile-{{ profile.id or saved_profile.profile_id }}')"
-                                        class="text-red-500 hover:text-red-700 text-xs"><i class="fas fa-times"></i>
-                                </button>
-                            </div>
+                        <p class="text-xs text-gray-500 truncate">{{ profile.email or 'No email' }}</p>
+                        <div class="flex items-center mt-2 space-x-2">
+                            {% if profile.school %}
+                            <span
+                                class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">{{
+                                profile.school }}</span>
+                            {% endif %}
+                            {% if profile.grade %}
+                            <span
+                                class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">{{
+                                profile.grade }}</span>
+                            {% endif %}
+                            {% if not profile.school and not profile.grade %}
+                            <span
+                                class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-transparent text-transparent select-none">info</span>
+                            {% endif %}
                         </div>
-                    {% endfor %}
+                        {% if profile.skills %}
+                        <div class="flex flex-wrap gap-1 mt-2">
+                            {% if profile.skills is iterable and profile.skills is not string %}
+                                {% for skill in profile.skills[:3] %}
+                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">{{ skill }}</span>
+                                {% endfor %}
+                                {% if profile.skills|length > 3 %}
+                                <span class="text-xs text-gray-500">+{{ profile.skills|length - 3 }} more</span>
+                                {% endif %}
+                            {% else %}
+                                {% set skills_str = profile.skills | replace('[','') | replace(']','') | replace('"','') | replace("'",'') %}
+                                {% set skills_list = [] %}
+                                {% for skill in skills_str.split(',') %}
+                                    {% if skill.strip() %}
+                                        {% set _ = skills_list.append(skill.strip()) %}
+                                    {% endif %}
+                                {% endfor %}
+                                {% for skill in skills_list[:3] %}
+                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">{{ skill }}</span>
+                                {% endfor %}
+                                {% if skills_list|length > 3 %}
+                                <span class="text-xs text-gray-500">+{{ skills_list|length - 3 }} more</span>
+                                {% endif %}
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                        {% if profile.bio %}
+                        <p class="text-[11px] text-gray-400 mt-2 line-clamp-2">{{ profile.bio }}</p>
+                        {% else %}
+                        <span class="mt-2 text-[11px] text-transparent select-none">placeholder</span>
+                        {% endif %}
+                    </div>
+                    <div class="flex flex-row items-center justify-between mt-4">
+                        <a href="{{ url_for('view_profile', user_id=profile.id or saved_profile.profile_id) }}"
+                            class="text-blue-600 hover:text-blue-800 text-xs">View</a>
+                        <button title="Remove"
+                            onclick="unsaveProfile('{{ profile.id or saved_profile.profile_id }}', 'modal-saved-profile-{{ profile.id or saved_profile.profile_id }}')"
+                            class="text-red-500 hover:text-red-700 text-xs"><i class="fas fa-times"></i>
+                        </button>
+                    </div>
                 </div>
+                {% endfor %}
             </div>
         </div>
     </div>
+</div>
 
     <!-- Saved Opportunities Modal -->
     <div id="savedOpportunitiesModal"
