@@ -9,7 +9,7 @@
         const textSpan = document.getElementById('save-profile-text');
         btn.disabled = true;
         const url = state.isSaved ? `/unsave_profile/${state.profileId}` : `/save_profile/${state.profileId}`;
-        fetch(url, {method: 'POST'}).then(r => r.json()).then(data => {
+        fetch(url, { method: 'POST' }).then(r => r.json()).then(data => {
             if (data.success) {
                 state.isSaved = !state.isSaved;
                 if (state.isSaved) {
@@ -253,12 +253,6 @@
     // Export functions to global scope
     window.handleProfilePictureUpload = handleProfilePictureUpload;
     window.deleteProfilePicture = deleteProfilePicture;
-    
-    // Add test function
-    window.testProfileUpload = function() {
-        console.log('Test function called');
-        console.log('handleProfilePictureUpload:', typeof window.handleProfilePictureUpload);
-    };
 
     document.addEventListener('DOMContentLoaded', () => {
         const saveBtn = document.getElementById('save-profile-submit-btn');

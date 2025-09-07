@@ -222,12 +222,6 @@ def login():
                 user = auth_result["user"]
                 profile = auth_result["profile"]
 
-                print(f"DEBUG - Login attempt:")
-                print(f"  Profile exists: {profile is not None}")
-                if profile:
-                    print(f"  Profile user_type: '{profile.get('user_type')}'")
-                    print(f"  Profile name: '{profile.get('name')}'")
-
                 # Check if profile exists and has user_type
                 if profile and profile.get("user_type"):
                     session["user_id"] = user["id"]
@@ -494,11 +488,6 @@ def profile():
             return True
 
         profile_data = {k: v for k, v in profile_data.items() if is_valid_value(v)}
-
-        print(f"DEBUG - Profile update attempt:")
-        print(f"  User ID: {user_id}")
-        print(f"  User Type: {user_type}")
-        print(f"  Profile data: {profile_data}")
 
         try:
             # Persist skills as JSON array (not double-encoded)
@@ -1063,14 +1052,8 @@ def save_profile(profile_id):
     user_id = session.get("user_id")
     user_type = session.get("user_type")
 
-    print(f"DEBUG - Save profile request:")
-    print(f"  User ID: {user_id}")
-    print(f"  User Type: {user_type}")
-    print(f"  Profile ID to save: {profile_id}")
-
     try:
         result = supabase_service.save_profile(user_id, profile_id)
-        print(f"DEBUG - Supabase save_profile result: {result}")
 
         if result["success"]:
             return jsonify({"success": True, "message": "Profile saved successfully"})
@@ -1085,7 +1068,6 @@ def save_profile(profile_id):
                 400,
             )
     except Exception as e:
-        print(f"DEBUG - Exception in save_profile route: {str(e)}")
         return jsonify({"success": False, "error": str(e)}), 500
 
 
