@@ -153,7 +153,7 @@
     }
 
     function updateProfileImageDisplay(imageUrl) {
-        const profileImage = document.getElementById('profile-image');
+        const profileImage = document.getElementById('avatar-preview');
         const placeholder = document.getElementById('profile-image-placeholder');
         const deleteBtn = document.getElementById('delete-profile-picture-btn');
 
@@ -165,7 +165,7 @@
             } else {
                 // Create new image element
                 const newImg = document.createElement('img');
-                newImg.id = 'profile-image';
+                newImg.id = 'avatar-preview';
                 newImg.src = imageUrl;
                 newImg.alt = 'Profile Picture';
                 newImg.className = 'h-20 w-20 rounded-full object-cover border-2 border-gray-200';
@@ -253,6 +253,12 @@
     // Export functions to global scope
     window.handleProfilePictureUpload = handleProfilePictureUpload;
     window.deleteProfilePicture = deleteProfilePicture;
+    
+    // Add test function
+    window.testProfileUpload = function() {
+        console.log('Test function called');
+        console.log('handleProfilePictureUpload:', typeof window.handleProfilePictureUpload);
+    };
 
     document.addEventListener('DOMContentLoaded', () => {
         const saveBtn = document.getElementById('save-profile-submit-btn');
