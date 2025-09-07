@@ -11,97 +11,97 @@
 </head>
 
 <body class="bg-gray-50 min-h-screen flex flex-col">
-    <!-- Navigation -->
-    <nav class="bg-white shadow-sm border-b border-gray-100">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between h-16">
-                <div class="flex items-center">
-                    <a href="{% if session.user_id %}{{ url_for('dashboard') }}{% else %}{{ url_for('home') }}{% endif %}"
-                        class="flex-shrink-0 flex items-center">
-                        <span class="text-blue-600 text-xl font-bold">InterSpark</span>
-                    </a>
-                    <div class="hidden sm:ml-6 sm:flex sm:space-x-8">
-                        {% if not session.user_id %}
+<!-- Navigation -->
+<nav class="bg-white shadow-sm border-b border-gray-100">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between h-16">
+            <div class="flex items-center">
+                <a href="{% if session.user_id %}{{ url_for('dashboard') }}{% else %}{{ url_for('home') }}{% endif %}"
+                   class="flex-shrink-0 flex items-center">
+                    <span class="text-blue-600 text-xl font-bold">InterSpark</span>
+                </a>
+                <div class="hidden sm:ml-6 sm:flex sm:space-x-8">
+                    {% if not session.user_id %}
                         <a href="{{ url_for('home') }}"
-                            class="{% if request.endpoint == 'home' %}border-blue-500 text-blue-700 font-bold{% else %}border-transparent text-gray-500 hover:border-blue-500 hover:text-gray-700{% endif %} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">Home</a>
-                        {% endif %}
-                        <a href="{{ url_for('opportunities') }}"
-                            class="{% if request.endpoint == 'opportunities' %}border-blue-500 text-blue-700 font-bold{% else %}border-transparent text-gray-500 hover:border-blue-500 hover:text-gray-700{% endif %} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">Opportunities</a>
-                        <a href="{{ url_for('talent_search') }}"
-                            class="{% if request.endpoint == 'talent_search' %}border-blue-500 text-blue-700 font-bold{% else %}border-transparent text-gray-500 hover:border-blue-500 hover:text-gray-700{% endif %} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">Find
-                            Talent</a>
+                           class="{% if request.endpoint == 'home' %}border-blue-500 text-blue-700 font-bold{% else %}border-transparent text-gray-500 hover:border-blue-500 hover:text-gray-700{% endif %} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">Home</a>
+                    {% endif %}
+                    <a href="{{ url_for('opportunities') }}"
+                       class="{% if request.endpoint == 'opportunities' %}border-blue-500 text-blue-700 font-bold{% else %}border-transparent text-gray-500 hover:border-blue-500 hover:text-gray-700{% endif %} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">Opportunities</a>
+                    <a href="{{ url_for('talent_search') }}"
+                       class="{% if request.endpoint == 'talent_search' %}border-blue-500 text-blue-700 font-bold{% else %}border-transparent text-gray-500 hover:border-blue-500 hover:text-gray-700{% endif %} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">Find
+                        Talent</a>
                         <a href="{{ url_for('chat') }}"
                             class="{% if request.endpoint == 'chat' %}border-blue-500 text-blue-700 font-bold{% else %}border-transparent text-gray-500 hover:border-blue-500 hover:text-gray-700{% endif %} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
                             <i class="fas fa-robot mr-1"></i>Spark AI
                         </a>
-                    </div>
                 </div>
-                <div class="hidden sm:ml-6 sm:flex sm:items-center">
-                    {% if session.user_id %}
+            </div>
+            <div class="hidden sm:ml-6 sm:flex sm:items-center">
+                {% if session.user_id %}
                     <div class="flex items-center space-x-4">
                         <a href="{{ url_for('dashboard') }}"
-                            class="{% if request.endpoint == 'dashboard' %}text-blue-700 font-bold{% else %}text-gray-500 hover:text-gray-700{% endif %} px-3 py-2 rounded-md text-sm font-medium">Dashboard</a>
+                           class="{% if request.endpoint == 'dashboard' %}text-blue-700 font-bold{% else %}text-gray-500 hover:text-gray-700{% endif %} px-3 py-2 rounded-md text-sm font-medium">Dashboard</a>
                         <a href="{{ url_for('profile') }}" class="flex items-center">
                             <div
-                                class="h-8 w-8 rounded-full overflow-hidden bg-blue-100 flex items-center justify-center">
+                                    class="h-8 w-8 rounded-full overflow-hidden bg-blue-100 flex items-center justify-center">
                                 {% if current_user_profile and current_user_profile.profile_image %}
-                                <img src="{{ current_user_profile.profile_image }}" alt="Profile Picture"
-                                    class="w-full h-full object-cover">
+                                    <img src="{{ current_user_profile.profile_image }}" alt="Profile Picture"
+                                         class="w-full h-full object-cover">
                                 {% else %}
-                                <i class="fas fa-user text-blue-600"></i>
+                                    <i class="fas fa-user text-blue-600"></i>
                                 {% endif %}
                             </div>
                         </a>
                         <a href="{{ url_for('logout') }}"
-                            class="border border-gray-300 text-gray-700 px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-50">Log
+                           class="border border-gray-300 text-gray-700 px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-50">Log
                             out</a>
                     </div>
-                    {% else %}
+                {% else %}
                     <div class="flex items-center space-x-4">
                         <a href="{{ url_for('login') }}"
-                            class="text-gray-500 hover:text-gray-700 px-3 py-2 rounded-md text-sm font-medium">Log
+                           class="text-gray-500 hover:text-gray-700 px-3 py-2 rounded-md text-sm font-medium">Log
                             in</a>
                         <a href="{{ url_for('signup') }}"
-                            class="bg-blue-600 text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-blue-700">Sign
+                           class="bg-blue-600 text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-blue-700">Sign
                             up</a>
                     </div>
-                    {% endif %}
-                </div>
-                <!-- Mobile menu button -->
-                <div class="sm:hidden">
-                    <button onclick="toggleMobileMenu()"
+                {% endif %}
+            </div>
+            <!-- Mobile menu button -->
+            <div class="sm:hidden">
+                <button onclick="toggleMobileMenu()"
                         class="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100">
-                        <i class="fas fa-bars h-6 w-6"></i>
-                    </button>
-                </div>
+                    <i class="fas fa-bars h-6 w-6"></i>
+                </button>
             </div>
         </div>
-        <!-- Mobile menu -->
-        <div id="mobile-menu" class="sm:hidden hidden">
-            <div class="pt-2 pb-3 space-y-1">
-                {% if not session.user_id %}
+    </div>
+    <!-- Mobile menu -->
+    <div id="mobile-menu" class="sm:hidden hidden">
+        <div class="pt-2 pb-3 space-y-1">
+            {% if not session.user_id %}
                 <a href="{{ url_for('home') }}"
-                    class="block px-3 py-2 text-base font-medium {% if request.endpoint == 'home' %}bg-blue-100 text-blue-700 font-bold{% else %}text-gray-500 hover:bg-gray-50 hover:text-gray-700{% endif %}">Home</a>
-                {% endif %}
-                <a href="{{ url_for('opportunities') }}"
-                    class="block px-3 py-2 text-base font-medium {% if request.endpoint == 'opportunities' %}bg-blue-100 text-blue-700 font-bold{% else %}text-gray-500 hover:bg-gray-50 hover:text-gray-700{% endif %}">Opportunities</a>
-                <a href="{{ url_for('talent_search') }}"
-                    class="block px-3 py-2 text-base font-medium {% if request.endpoint == 'talent_search' %}bg-blue-100 text-blue-700 font-bold{% else %}text-gray-500 hover:bg-gray-50 hover:text-gray-700{% endif %}">Find
-                    Talent</a>
+                   class="block px-3 py-2 text-base font-medium {% if request.endpoint == 'home' %}bg-blue-100 text-blue-700 font-bold{% else %}text-gray-500 hover:bg-gray-50 hover:text-gray-700{% endif %}">Home</a>
+            {% endif %}
+            <a href="{{ url_for('opportunities') }}"
+               class="block px-3 py-2 text-base font-medium {% if request.endpoint == 'opportunities' %}bg-blue-100 text-blue-700 font-bold{% else %}text-gray-500 hover:bg-gray-50 hover:text-gray-700{% endif %}">Opportunities</a>
+            <a href="{{ url_for('talent_search') }}"
+               class="block px-3 py-2 text-base font-medium {% if request.endpoint == 'talent_search' %}bg-blue-100 text-blue-700 font-bold{% else %}text-gray-500 hover:bg-gray-50 hover:text-gray-700{% endif %}">Find
+                Talent</a>
                 <a href="{{ url_for('chat') }}"
                     class="block px-3 py-2 text-base font-medium {% if request.endpoint == 'chat' %}bg-blue-100 text-blue-700 font-bold{% else %}text-gray-500 hover:bg-gray-50 hover:text-gray-700{% endif %}">
                     <i class="fas fa-robot mr-2"></i>Spark AI
                 </a>
-            </div>
-            {% if session.user_id %}
+        </div>
+        {% if session.user_id %}
             <div class="pt-4 pb-3 border-t border-gray-200">
                 <div class="flex items-center px-4">
                     <div class="h-10 w-10 rounded-full overflow-hidden bg-blue-100 flex items-center justify-center">
                         {% if current_user_profile and current_user_profile.profile_image %}
-                        <img src="{{ current_user_profile.profile_image }}" alt="Profile Picture"
-                            class="w-full h-full object-cover">
+                            <img src="{{ current_user_profile.profile_image }}" alt="Profile Picture"
+                                 class="w-full h-full object-cover">
                         {% else %}
-                        <i class="fas fa-user text-blue-600"></i>
+                            <i class="fas fa-user text-blue-600"></i>
                         {% endif %}
                     </div>
                     <div class="ml-3">
@@ -110,140 +110,140 @@
                 </div>
                 <div class="mt-3 space-y-1">
                     <a href="{{ url_for('dashboard') }}"
-                        class="block px-4 py-2 text-base font-medium {% if request.endpoint == 'dashboard' %}bg-blue-100 text-blue-700 font-bold{% else %}text-gray-500 hover:bg-gray-50 hover:text-gray-700{% endif %}">Dashboard</a>
+                       class="block px-4 py-2 text-base font-medium {% if request.endpoint == 'dashboard' %}bg-blue-100 text-blue-700 font-bold{% else %}text-gray-500 hover:bg-gray-50 hover:text-gray-700{% endif %}">Dashboard</a>
                     <a href="{{ url_for('profile') }}"
-                        class="block px-4 py-2 text-base font-medium text-gray-500 hover:bg-gray-50 hover:text-gray-700">Your
+                       class="block px-4 py-2 text-base font-medium text-gray-500 hover:bg-gray-50 hover:text-gray-700">Your
                         Profile</a>
                     <a href="{{ url_for('logout') }}"
-                        class="block px-4 py-2 text-base font-medium text-gray-500 hover:bg-gray-50 hover:text-gray-700">Log
+                       class="block px-4 py-2 text-base font-medium text-gray-500 hover:bg-gray-50 hover:text-gray-700">Log
                         out</a>
                 </div>
             </div>
-            {% else %}
+        {% else %}
             <div class="pt-4 pb-3 border-t border-gray-200">
                 <div class="mt-3 space-y-1">
                     <a href="{{ url_for('login') }}"
-                        class="block px-4 py-2 text-base font-medium text-gray-500 hover:bg-gray-50 hover:text-gray-700">Log
+                       class="block px-4 py-2 text-base font-medium text-gray-500 hover:bg-gray-50 hover:text-gray-700">Log
                         in</a>
                     <a href="{{ url_for('signup') }}"
-                        class="block px-4 py-2 text-base font-medium text-gray-500 hover:bg-gray-50 hover:text-gray-700">Sign
+                       class="block px-4 py-2 text-base font-medium text-gray-500 hover:bg-gray-50 hover:text-gray-700">Sign
                         up</a>
                 </div>
             </div>
-            {% endif %}
-        </div>
-    </nav>
+        {% endif %}
+    </div>
+</nav>
 
-    <!-- Flash Messages -->
-    {% with messages = get_flashed_messages(with_categories=true) %}
+<!-- Flash Messages -->
+{% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
-    <div id="alert-container"
-        class="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 w-full max-w-md px-4 space-y-3">
-        {% for category, message in messages %}
-        <div class="alert alert-{{ category }} p-4 rounded-lg shadow-lg relative backdrop-blur-sm
+        <div id="alert-container"
+             class="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 w-full max-w-md px-4 space-y-3">
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} p-4 rounded-lg shadow-lg relative backdrop-blur-sm
                         {% if category == 'error' %}bg-red-50/95 border border-red-200 text-red-700
                         {% elif category == 'success' %}bg-green-50/95 border border-green-200 text-green-700
                         {% else %}bg-blue-50/95 border border-blue-200 text-blue-700{% endif %}"
-            id="alert-{{ loop.index }}" style="animation: slideDown 0.3s ease-out;">
-            <div class="flex justify-between items-start">
-                <div class="flex">
-                    <div class="flex-shrink-0">
-                        {% if category == 'error' %}
-                        <i class="fas fa-exclamation-circle text-red-400"></i>
-                        {% elif category == 'success' %}
-                        <i class="fas fa-check-circle text-green-400"></i>
-                        {% else %}
-                        <i class="fas fa-info-circle text-blue-400"></i>
-                        {% endif %}
-                    </div>
-                    <div class="ml-3">
-                        <p class="text-sm font-medium">{{ message }}</p>
-                    </div>
-                </div>
-                <div class="ml-auto pl-3">
-                    <div class="-mx-1.5 -my-1.5">
-                        <button type="button" onclick="dismissAlert('alert-{{ loop.index }}')" class="inline-flex rounded-md p-1.5 
+                     id="alert-{{ loop.index }}" style="animation: slideDown 0.3s ease-out;">
+                    <div class="flex justify-between items-start">
+                        <div class="flex">
+                            <div class="flex-shrink-0">
+                                {% if category == 'error' %}
+                                    <i class="fas fa-exclamation-circle text-red-400"></i>
+                                {% elif category == 'success' %}
+                                    <i class="fas fa-check-circle text-green-400"></i>
+                                {% else %}
+                                    <i class="fas fa-info-circle text-blue-400"></i>
+                                {% endif %}
+                            </div>
+                            <div class="ml-3">
+                                <p class="text-sm font-medium">{{ message }}</p>
+                            </div>
+                        </div>
+                        <div class="ml-auto pl-3">
+                            <div class="-mx-1.5 -my-1.5">
+                                <button type="button" onclick="dismissAlert('alert-{{ loop.index }}')" class="inline-flex rounded-md p-1.5
                                        {% if category == 'error' %}text-red-500 hover:bg-red-100 focus:ring-red-600 focus:ring-offset-red-50
                                        {% elif category == 'success' %}text-green-500 hover:bg-green-100 focus:ring-green-600 focus:ring-offset-green-50
                                        {% else %}text-blue-500 hover:bg-blue-100 focus:ring-blue-600 focus:ring-offset-blue-50{% endif %}
                                        focus:outline-none focus:ring-2 focus:ring-offset-2">
-                            <span class="sr-only">Dismiss</span>
-                            <i class="fas fa-times text-sm"></i>
-                        </button>
+                                    <span class="sr-only">Dismiss</span>
+                                    <i class="fas fa-times text-sm"></i>
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
-            </div>
+            {% endfor %}
         </div>
-        {% endfor %}
-    </div>
     {% endif %}
-    {% endwith %} <!-- Main Content -->
-    <main class="flex-grow">
-        {% block content %}{% endblock %}
-    </main>
+{% endwith %} <!-- Main Content -->
+<main class="flex-grow">
+    {% block content %}{% endblock %}
+</main>
 
-    <!-- Footer -->
-    <footer class="bg-gray-900">
-        <div class="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
-                <div class="col-span-1 md:col-span-2">
-                    <h3 class="text-white text-lg font-bold mb-4">InterSpark</h3>
-                    <p class="text-gray-300 text-sm">
-                        Connecting students with meaningful internships and volunteer opportunities.
-                        Building bridges between young talent and organizations making a difference.
-                    </p>
-                </div>
-                <div>
-                    <h4 class="text-white font-semibold mb-4">Students</h4>
-                    <ul class="text-gray-300 text-sm space-y-2">
-                        <li><a href="{{ url_for('opportunities') }}" class="hover:text-white">Browse Opportunities</a>
-                        </li>
-                        <li><a href="{{ url_for('signup') }}" class="hover:text-white">Create Profile</a></li>
-                        <li><a href="#" class="hover:text-white">Resources</a></li>
-                    </ul>
-                </div>
-                <div>
-                    <h4 class="text-white font-semibold mb-4">Organizations</h4>
-                    <ul class="text-gray-300 text-sm space-y-2">
-                        <li><a href="{{ url_for('talent_search') }}" class="hover:text-white">Find Talent</a></li>
-                        <li><a href="{{ url_for('signup') }}" class="hover:text-white">Post Opportunities</a></li>
-                        <li><a href="#" class="hover:text-white">Resources</a></li>
-                    </ul>
-                </div>
+<!-- Footer -->
+<footer class="bg-gray-900">
+    <div class="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+            <div class="col-span-1 md:col-span-2">
+                <h3 class="text-white text-lg font-bold mb-4">InterSpark</h3>
+                <p class="text-gray-300 text-sm">
+                    Connecting students with meaningful internships and volunteer opportunities.
+                    Building bridges between young talent and organizations making a difference.
+                </p>
             </div>
-            <div class="mt-8 border-t border-gray-700 pt-8 text-center">
-                <p class="text-gray-300 text-sm">© 2024 InterSpark. All rights reserved.</p>
+            <div>
+                <h4 class="text-white font-semibold mb-4">Students</h4>
+                <ul class="text-gray-300 text-sm space-y-2">
+                    <li><a href="{{ url_for('opportunities') }}" class="hover:text-white">Browse Opportunities</a>
+                    </li>
+                    <li><a href="{{ url_for('signup') }}" class="hover:text-white">Create Profile</a></li>
+                    <li><a href="#" class="hover:text-white">Resources</a></li>
+                </ul>
+            </div>
+            <div>
+                <h4 class="text-white font-semibold mb-4">Organizations</h4>
+                <ul class="text-gray-300 text-sm space-y-2">
+                    <li><a href="{{ url_for('talent_search') }}" class="hover:text-white">Find Talent</a></li>
+                    <li><a href="{{ url_for('signup') }}" class="hover:text-white">Post Opportunities</a></li>
+                    <li><a href="#" class="hover:text-white">Resources</a></li>
+                </ul>
             </div>
         </div>
-    </footer>
+        <div class="mt-8 border-t border-gray-700 pt-8 text-center">
+            <p class="text-gray-300 text-sm">© 2024 InterSpark. All rights reserved.</p>
+        </div>
+    </div>
+</footer>
 
-    <style>
-        @keyframes slideDown {
-            from {
-                transform: translateY(-100%);
-                opacity: 0;
-            }
-
-            to {
-                transform: translateY(0);
-                opacity: 1;
-            }
+<style>
+    @keyframes slideDown {
+        from {
+            transform: translateY(-100%);
+            opacity: 0;
         }
 
-        @keyframes slideUp {
-            from {
-                transform: translateY(0);
-                opacity: 1;
-            }
-
-            to {
-                transform: translateY(-100%);
-                opacity: 0;
-            }
+        to {
+            transform: translateY(0);
+            opacity: 1;
         }
-    </style>
+    }
 
-    <script src="{{ url_for('static', filename='js/base.js') }}"></script>
+    @keyframes slideUp {
+        from {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        to {
+            transform: translateY(-100%);
+            opacity: 0;
+        }
+    }
+</style>
+
+<script src="{{ url_for('static', filename='js/base.js') }}"></script>
 </body>
 
 </html>

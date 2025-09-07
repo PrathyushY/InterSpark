@@ -3,11 +3,12 @@ Supabase configuration and service module for InterSpark Flask application.
 Handles authentication, user management, and database operations.
 """
 
-import os
-from supabase import create_client, Client
-from typing import Dict, Any, Optional, List
-from dotenv import load_dotenv
 import logging
+import os
+from typing import Dict, Any, Optional, List
+
+from dotenv import load_dotenv
+from supabase import create_client, Client
 
 # Load environment variables
 load_dotenv()
@@ -43,7 +44,7 @@ class SupabaseService:
         logger.info("Supabase client initialized successfully")
 
     def is_profile_complete(
-        self, profile: Dict[str, Any], user_type: str = None
+            self, profile: Dict[str, Any], user_type: str = None
     ) -> Dict[str, Any]:
         """
         Check if a user profile has all required fields completed.
@@ -63,9 +64,9 @@ class SupabaseService:
 
         # Required fields for all users
         if (
-            not profile.get("name")
-            or profile.get("name").strip() == ""
-            or profile.get("name") == "User"
+                not profile.get("name")
+                or profile.get("name").strip() == ""
+                or profile.get("name") == "User"
         ):
             missing_fields.append("name")
 
@@ -81,8 +82,8 @@ class SupabaseService:
         # Additional required fields for organizations
         elif user_type == "organization":
             if (
-                not profile.get("description")
-                or profile.get("description").strip() == ""
+                    not profile.get("description")
+                    or profile.get("description").strip() == ""
             ):
                 missing_fields.append("description")
 
@@ -90,7 +91,7 @@ class SupabaseService:
 
     # Authentication Methods
     def create_user(
-        self, email: str, password: str, user_data: Dict[str, Any]
+            self, email: str, password: str, user_data: Dict[str, Any]
     ) -> Dict[str, Any]:
         """
         Create a new user account with profile data.
@@ -339,7 +340,7 @@ class SupabaseService:
 
     # Profile Management Methods
     def ensure_profile_exists(
-        self, user_id: str, email: str, name: str = "", user_type: str = "student"
+            self, user_id: str, email: str, name: str = "", user_type: str = "student"
     ) -> Dict[str, Any]:
         """
         Ensure a profile exists for a user, create if missing.
@@ -428,7 +429,7 @@ class SupabaseService:
             return None
 
     def update_profile(
-        self, user_id: str, profile_data: Dict[str, Any]
+            self, user_id: str, profile_data: Dict[str, Any]
     ) -> Dict[str, Any]:
         """
         Update user profile data.
@@ -570,7 +571,7 @@ class SupabaseService:
 
     # Opportunities Management Methods
     def get_opportunities(
-        self, filters: Optional[Dict[str, Any]] = None, limit: Optional[int] = None
+            self, filters: Optional[Dict[str, Any]] = None, limit: Optional[int] = None
     ) -> List[Dict[str, Any]]:
         """
         Get all opportunities with optional filters and limit.
@@ -799,7 +800,7 @@ class SupabaseService:
             return {"success": False, "error": str(e)}
 
     def update_opportunity(
-        self, opportunity_id: int, opportunity_data: Dict[str, Any]
+            self, opportunity_id: int, opportunity_data: Dict[str, Any]
     ) -> Dict[str, Any]:
         """
         Update an existing opportunity.
@@ -849,9 +850,9 @@ class SupabaseService:
 
             # Treat non-empty response.data as success
             if (
-                response.data
-                and isinstance(response.data, list)
-                and len(response.data) > 0
+                    response.data
+                    and isinstance(response.data, list)
+                    and len(response.data) > 0
             ):
                 logger.info(f"Opportunity deleted successfully: {opportunity_id}")
                 return {"success": True}
@@ -864,7 +865,7 @@ class SupabaseService:
             return {"success": False, "error": str(e)}
 
     def get_organization_opportunities(
-        self, organization_id: str
+            self, organization_id: str
     ) -> List[Dict[str, Any]]:
         """
         Get all opportunities for a specific organization, including drafts and all statuses.
@@ -955,8 +956,8 @@ class SupabaseService:
             # Check if it's a duplicate key constraint error
             error_str = str(e)
             if (
-                "duplicate key value violates unique constraint" in error_str
-                or "23505" in error_str
+                    "duplicate key value violates unique constraint" in error_str
+                    or "23505" in error_str
             ):
                 logger.info(
                     f"Opportunity {opportunity_id} already saved by user {user_id}"
@@ -1028,8 +1029,8 @@ class SupabaseService:
             # Check if it's a duplicate key constraint error
             error_str = str(e)
             if (
-                "duplicate key value violates unique constraint" in error_str
-                or "23505" in error_str
+                    "duplicate key value violates unique constraint" in error_str
+                    or "23505" in error_str
             ):
                 logger.info(f"Profile {profile_id} already saved by user {user_id}")
                 return {
@@ -1208,8 +1209,8 @@ class SupabaseService:
             # Bucket might already exist
             error_str = str(e)
             if (
-                "already exists" in error_str.lower()
-                or "duplicate" in error_str.lower()
+                    "already exists" in error_str.lower()
+                    or "duplicate" in error_str.lower()
             ):
                 logger.info("Profile pictures bucket already exists")
                 return {"success": True, "message": "Bucket already exists"}
@@ -1305,7 +1306,7 @@ class SupabaseService:
             return True  # Don't fail the upload because of cleanup error
 
     def upload_profile_picture(
-        self, user_id: str, file_data: bytes, file_name: str, content_type: str = None
+            self, user_id: str, file_data: bytes, file_name: str, content_type: str = None
     ) -> Dict[str, Any]:
         """
         Upload a profile picture for a user.
@@ -1422,7 +1423,7 @@ class SupabaseService:
             return {"success": False, "error": str(e)}
 
     def delete_profile_picture(
-        self, user_id: str, file_path: str = None
+            self, user_id: str, file_path: str = None
     ) -> Dict[str, Any]:
         """
         Delete a user's profile picture from storage.

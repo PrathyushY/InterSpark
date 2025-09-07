@@ -188,12 +188,14 @@
                 </h3>
                 {% if session.user_id %}
                 {% if session.user_type == 'student' %}
-                <button class="w-full bg-blue-600 text-white px-4 py-3 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 mb-3">
+                <button
+                    class="w-full bg-blue-600 text-white px-4 py-3 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 mb-3">
                     <i class="fas fa-paper-plane mr-2"></i>
                     Apply for This Position
                 </button>
                 {% endif %}
-                <button id="save-opportunity-btn" onclick="OpportunityDetails.toggleSave()" class="w-full border px-4 py-2 rounded-md transition-colors {% if is_saved %}bg-blue-50 border-blue-300 text-blue-700{% else %}border-gray-300 text-gray-700 hover:bg-blue-50{% endif %}">
+                <button id="save-opportunity-btn" onclick="OpportunityDetails.toggleSave()"
+                    class="w-full border px-4 py-2 rounded-md transition-colors {% if is_saved %}bg-blue-50 border-blue-300 text-blue-700{% else %}border-gray-300 text-gray-700 hover:bg-blue-50{% endif %}">
                     <i class="{% if is_saved %}fas fa-bookmark{% else %}far fa-bookmark{% endif %} mr-2"></i>
                     <span id="save-text">{% if is_saved %}Saved{% else %}Save for Later{% endif %}</span>
                 </button>
@@ -201,46 +203,49 @@
             {% else %}
             <div class="text-center">
                 <p class="text-gray-600 mb-4">Create an account to apply for this opportunity</p>
-                <a href="{{ url_for('signup') }}" class="w-full inline-flex justify-center items-center px-4 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 mb-3">Sign Up to Apply</a>
+                <a href="{{ url_for('signup') }}"
+                    class="w-full inline-flex justify-center items-center px-4 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 mb-3">Sign
+                    Up to Apply</a>
                 <a href="{{ url_for('login') }}"
                     class="w-full inline-flex justify-center items-center px-4 py-2 border border-gray-300 text-base font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
                     Already have an account?
                 </a>
             </div>
             {% endif %}
-        </div>
 
-        <!-- Organization Details -->
-        <div class="bg-white rounded-lg shadow-md p-6">
-            <h3 class="text-lg font-semibold text-gray-900 mb-4">About {{ opportunity.profiles.name or
-                opportunity.profiles.organization_name or 'Organization' }}</h3>
-            {% if opportunity.profiles and opportunity.profiles.description %}
-            <p class="text-gray-700 text-sm mb-4">{{ opportunity.profiles.description }}</p>
-            {% endif %}
+            <!-- Organization Details -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">About {{ opportunity.profiles.name or
+                    opportunity.profiles.organization_name or 'Organization' }}</h3>
+                {% if opportunity.profiles and opportunity.profiles.description %}
+                <p class="text-gray-700 text-sm mb-4">{{ opportunity.profiles.description }}</p>
+                {% endif %}
 
-            <div class="space-y-3 text-sm">
-                {% if opportunity.profiles and opportunity.profiles.email %}
-                <div class="flex items-center">
-                    <i class="fas fa-envelope text-gray-400 w-4 mr-3"></i>
-                    <a href="mailto:{{ opportunity.profiles.email }}" class="text-blue-600 hover:text-blue-800">
-                        {{ opportunity.profiles.email }}
-                    </a>
+                <div class="space-y-3 text-sm">
+                    {% if opportunity.profiles and opportunity.profiles.email %}
+                    <div class="flex items-center">
+                        <i class="fas fa-envelope text-gray-400 w-4 mr-3"></i>
+                        <a href="mailto:{{ opportunity.profiles.email }}" class="text-blue-600 hover:text-blue-800">
+                            {{ opportunity.profiles.email }}
+                        </a>
+                    </div>
+                    {% endif %}
+                    {% if opportunity.profiles and opportunity.profiles.phone %}
+                    <div class="flex items-center">
+                        <i class="fas fa-phone text-gray-400 w-4 mr-3"></i>
+                        <span class="text-gray-700">{{ opportunity.profiles.phone }}</span>
+                    </div>
+                    {% endif %}
+                    {% if opportunity.profiles and opportunity.profiles.website %}
+                    <div class="flex items-center">
+                        <i class="fas fa-globe text-gray-400 w-4 mr-3"></i>
+                        <a href="{{ opportunity.profiles.website }}" target="_blank"
+                            class="text-blue-600 hover:text-blue-800">
+                            Visit Website
+                        </a>
+                    </div>
+                    {% endif %}
                 </div>
-                {% endif %}
-                {% if opportunity.profiles and opportunity.profiles.phone %}
-                <div class="flex items-center">
-                    <i class="fas fa-phone text-gray-400 w-4 mr-3"></i>
-                    <span class="text-gray-700">{{ opportunity.profiles.phone }}</span>
-                </div>
-                {% endif %}
-                {% if opportunity.profiles and opportunity.profiles.website %}
-                <div class="flex items-center">
-                    <i class="fas fa-globe text-gray-400 w-4 mr-3"></i>
-                    <a href="{{ opportunity.profiles.website }}" target="_blank" class="text-blue-600 hover:text-blue-800">
-                        Visit Website
-                    </a>
-                </div>
-                {% endif %}
             </div>
         </div>
     </div>

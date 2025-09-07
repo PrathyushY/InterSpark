@@ -3,12 +3,12 @@
 {% block title %}Opportunities - InterSpark{% endblock %}
 
 {% block content %}
-<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-    <!-- Header -->
-    <div class="mb-8">
-        <h1 class="text-3xl font-bold text-gray-900">Opportunities</h1>
-        <p class="mt-2 text-gray-600">Discover internships and volunteer opportunities that match your interests</p>
-    </div>
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Header -->
+        <div class="mb-8">
+            <h1 class="text-3xl font-bold text-gray-900">Opportunities</h1>
+            <p class="mt-2 text-gray-600">Discover internships and volunteer opportunities that match your interests</p>
+        </div>
 
     <!-- Unified Search Bar -->
     <div class="bg-white p-4 rounded-lg shadow-sm mb-8 border border-blue-200">
@@ -97,7 +97,7 @@
         </form>
     </div>
 
-    <!-- Opportunities Grid -->
+        <!-- Opportunities Grid -->
 
     {% if opportunities %}
     <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -217,30 +217,32 @@
     </div>
     {% endif %}
 
-    <!-- Call to Action for Organizations -->
-    {% if session.user_type == 'organization' %}
-    <div class="mt-12 bg-blue-50 rounded-lg p-8 text-center">
-        <h3 class="text-lg font-medium text-gray-900 mb-2">Looking to post an opportunity?</h3>
-        <p class="text-gray-600 mb-4">Connect with talented students by creating your own internship or volunteer
-            opportunity.</p>
-        <a href="{{ url_for('create_opportunity') }}"
-            class="inline-flex items-center px-4 py-2 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
-            <i class="fas fa-plus mr-2"></i>
-            Create Opportunity
-        </a>
+        <!-- Call to Action for Organizations -->
+        {% if session.user_type == 'organization' %}
+            <div class="mt-12 bg-blue-50 rounded-lg p-8 text-center">
+                <h3 class="text-lg font-medium text-gray-900 mb-2">Looking to post an opportunity?</h3>
+                <p class="text-gray-600 mb-4">Connect with talented students by creating your own internship or
+                    volunteer
+                    opportunity.</p>
+                <a href="{{ url_for('create_opportunity') }}"
+                   class="inline-flex items-center px-4 py-2 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
+                    <i class="fas fa-plus mr-2"></i>
+                    Create Opportunity
+                </a>
+            </div>
+        {% elif not session.user_id %}
+            <div class="mt-12 bg-gray-50 rounded-lg p-8 text-center">
+                <h3 class="text-lg font-medium text-gray-900 mb-2">Ready to apply?</h3>
+                <p class="text-gray-600 mb-4">Create your profile to start applying for opportunities and connecting
+                    with
+                    organizations.</p>
+                <a href="{{ url_for('signup') }}"
+                   class="inline-flex items-center px-4 py-2 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
+                    Create Your Profile
+                </a>
+            </div>
+        {% endif %}
     </div>
-    {% elif not session.user_id %}
-    <div class="mt-12 bg-gray-50 rounded-lg p-8 text-center">
-        <h3 class="text-lg font-medium text-gray-900 mb-2">Ready to apply?</h3>
-        <p class="text-gray-600 mb-4">Create your profile to start applying for opportunities and connecting with
-            organizations.</p>
-        <a href="{{ url_for('signup') }}"
-            class="inline-flex items-center px-4 py-2 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
-            Create Your Profile
-        </a>
-    </div>
-    {% endif %}
-</div>
 
 <style>
     .line-clamp-3 {
