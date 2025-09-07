@@ -3,415 +3,415 @@
 {% block title %}Dashboard - InterSpark{% endblock %}
 
 {% block content %}
-<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-    <!-- Welcome Header -->
-    <div class="mb-8">
-        <h1 class="text-3xl font-bold text-gray-900">Welcome back, {{ user.name }}!</h1>
-        <p class="text-gray-600 mt-2">
-            {% if user_type == 'student' %}
-            Explore opportunities and manage your applications
-            {% else %}
-            Manage your opportunities and find talented candidates
-            {% endif %}
-        </p>
-    </div>
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Welcome Header -->
+        <div class="mb-8">
+            <h1 class="text-3xl font-bold text-gray-900">Welcome back, {{ user.name }}!</h1>
+            <p class="text-gray-600 mt-2">
+                {% if user_type == 'student' %}
+                    Explore opportunities and manage your applications
+                {% else %}
+                    Manage your opportunities and find talented candidates
+                {% endif %}
+            </p>
+        </div>
 
-    <!-- Profile Summary -->
-    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">
-        <div class="flex items-center justify-between">
-            <div class="flex items-center space-x-4">
-                <div class="h-16 w-16 rounded-full overflow-hidden bg-blue-100 flex items-center justify-center">
-                    {% if user.profile_image %}
-                    <img src="{{ user.profile_image }}" alt="Profile Picture" class="w-full h-full object-cover">
-                    {% else %}
-                    <i class="fas fa-user text-blue-600 text-2xl"></i>
-                    {% endif %}
-                </div>
-                <div>
-                    <h2 class="text-xl font-semibold text-gray-900">{{ user.name }}</h2>
-                    <p class="text-gray-600">{{ user.email }}</p>
-                    <span
-                        class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+        <!-- Profile Summary -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                    <div class="h-16 w-16 rounded-full overflow-hidden bg-blue-100 flex items-center justify-center">
+                        {% if user.profile_image %}
+                            <img src="{{ user.profile_image }}" alt="Profile Picture"
+                                 class="w-full h-full object-cover">
+                        {% else %}
+                            <i class="fas fa-user text-blue-600 text-2xl"></i>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-semibold text-gray-900">{{ user.name }}</h2>
+                        <p class="text-gray-600">{{ user.email }}</p>
+                        <span
+                                class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                         {{ user_type.title() }}
                     </span>
+                    </div>
                 </div>
+                <a href="{{ url_for('profile') }}"
+                   class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition duration-200">
+                    Edit Profile
+                </a>
             </div>
-            <a href="{{ url_for('profile') }}"
-                class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition duration-200">
-                Edit Profile
-            </a>
         </div>
-    </div>
 
-    <!-- Saved Items Section (Under Profile Summary) -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-        <!-- Saved Profiles -->
-        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <div class="flex items-center justify-between mb-4">
-                <h3 class="text-lg font-semibold text-gray-900 flex items-center">
-                    <i class="fas fa-bookmark text-blue-600 mr-2"></i>
-                    Saved Profiles
-                </h3>
+        <!-- Saved Items Section (Under Profile Summary) -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <!-- Saved Profiles -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-semibold text-gray-900 flex items-center">
+                        <i class="fas fa-bookmark text-blue-600 mr-2"></i>
+                        Saved Profiles
+                    </h3>
+                    {% if saved_profiles|length > 0 %}
+                        <span id="saved-profiles-count"
+                              class="bg-gray-100 text-gray-800 text-sm px-2 py-1 rounded-full">{{ saved_profiles|length }}</span>
+                    {% endif %}
+                </div>
                 {% if saved_profiles|length > 0 %}
-                <span id="saved-profiles-count" class="bg-gray-100 text-gray-800 text-sm px-2 py-1 rounded-full">{{
-                    saved_profiles|length }}</span>
-                {% endif %}
-            </div>
-            {% if saved_profiles|length > 0 %}
-            <div id="saved-profiles-list" class="grid grid-cols-1 gap-3 items-stretch">
-                {% for saved_profile in saved_profiles[:2] %}
-                {% set profile = saved_profile.profiles if saved_profile.profiles else saved_profile %}
-                {% set pid = profile.id or saved_profile.profile_id %}
-                <div id="saved-profile-{{ pid }}"
-                    class="group border border-gray-200 rounded-lg p-6 hover:bg-gray-50 transition duration-200 flex flex-col justify-between min-h-[180px] h-full">
-                    <div class="flex-1 flex flex-col">
-                        <a href="{{ url_for('view_profile', user_id=pid) }}" class="flex-1 min-w-0 flex flex-col">
-                            <h4 class="text-sm font-medium text-gray-900 truncate">{{ profile.name or
+                    <div id="saved-profiles-list" class="grid grid-cols-1 gap-3 items-stretch">
+                        {% for saved_profile in saved_profiles[:2] %}
+                            {% set profile = saved_profile.profiles if saved_profile.profiles else saved_profile %}
+                            {% set pid = profile.id or saved_profile.profile_id %}
+                            <div id="saved-profile-{{ pid }}"
+                                 class="group border border-gray-200 rounded-lg p-6 hover:bg-gray-50 transition duration-200 flex flex-col justify-between min-h-[180px] h-full">
+                                <div class="flex-1 flex flex-col">
+                                    <a href="{{ url_for('view_profile', user_id=pid) }}"
+                                       class="flex-1 min-w-0 flex flex-col">
+                                        <h4 class="text-sm font-medium text-gray-900 truncate">{{ profile.name or
                                 profile.organization_name or 'Anonymous' }}</h4>
-                            <p class="text-xs text-gray-500 truncate">{{ profile.email or 'No email' }}</p>
-                            <div class="flex items-center mt-2 space-x-2">
-                                {% if profile.school %}
-                                <span
-                                    class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">{{
-                                    profile.school }}</span>
-                                {% endif %}
-                                {% if profile.grade %}
-                                <span
-                                    class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">{{
-                                    profile.grade }}</span>
-                                {% endif %}
-                                {% if not profile.school and not profile.grade %}
-                                <span
-                                    class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-transparent text-transparent select-none">info</span>
-                                {% endif %}
+                                        <p class="text-xs text-gray-500 truncate">{{ profile.email or 'No email' }}</p>
+                                        <div class="flex items-center mt-2 space-x-2">
+                                            {% if profile.school %}
+                                                <span
+                                                        class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">{{ profile.school }}</span>
+                                            {% endif %}
+                                            {% if profile.grade %}
+                                                <span
+                                                        class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">{{ profile.grade }}</span>
+                                            {% endif %}
+                                            {% if not profile.school and not profile.grade %}
+                                                <span
+                                                        class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-transparent text-transparent select-none">info</span>
+                                            {% endif %}
+                                        </div>
+                                        {% if profile.bio %}
+                                            <p class="text-[11px] text-gray-400 mt-2 line-clamp-2">{{ profile.bio }}</p>
+                                        {% else %}
+                                            <span class="mt-2 text-[11px] text-transparent select-none">Biography not available</span>
+                                        {% endif %}
+                                    </a>
+                                </div>
+                                <div class="flex flex-row items-center justify-between mt-4">
+                                    <a href="{{ url_for('view_profile', user_id=pid) }}"
+                                       class="text-blue-600 hover:text-blue-800 text-xs">View</a>
+                                    <button title="Remove"
+                                            onclick="unsaveProfile('{{ pid }}', 'saved-profile-{{ pid }}')"
+                                            class="text-red-500 hover:text-red-700 text-xs"><i class="fas fa-times"></i>
+                                    </button>
+                                </div>
                             </div>
-                            {% if profile.bio %}
-                            <p class="text-[11px] text-gray-400 mt-2 line-clamp-2">{{ profile.bio }}</p>
-                            {% else %}
-                            <span class="mt-2 text-[11px] text-transparent select-none">Biography not available</span>
-                            {% endif %}
-                        </a>
+                        {% endfor %}
                     </div>
-                    <div class="flex flex-row items-center justify-between mt-4">
-                        <a href="{{ url_for('view_profile', user_id=pid) }}"
-                            class="text-blue-600 hover:text-blue-800 text-xs">View</a>
-                        <button title="Remove" onclick="unsaveProfile('{{ pid }}', 'saved-profile-{{ pid }}')"
-                            class="text-red-500 hover:text-red-700 text-xs"><i class="fas fa-times"></i></button>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-            {% if saved_profiles|length > 2 %}
-            <button id="saved-profiles-view-all-btn" onclick="openModal('savedProfilesModal')"
-                class="mt-4 w-full bg-blue-50 text-blue-600 px-4 py-2 rounded-md hover:bg-blue-100 transition duration-200">
-                View All Saved Profiles
-            </button>
-            {% endif %}
-            {% else %}
-            <p class="text-gray-500 text-center py-8">No saved profiles yet</p>
-            {% endif %}
-        </div>
-
-        <!-- Saved Opportunities -->
-        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <div class="flex items-center justify-between mb-4">
-                <h3 class="text-lg font-semibold text-gray-900 flex items-center">
-                    <i class="fas fa-star text-blue-600 mr-2"></i>
-                    Saved Opportunities
-                </h3>
-                {% if saved_opportunities|length > 0 %}
-                <span id="saved-opps-count" class="bg-gray-100 text-gray-800 text-sm px-2 py-1 rounded-full">{{
-                    saved_opportunities|length }}</span>
+                    {% if saved_profiles|length > 2 %}
+                        <button id="saved-profiles-view-all-btn" onclick="openModal('savedProfilesModal')"
+                                class="mt-4 w-full bg-blue-50 text-blue-600 px-4 py-2 rounded-md hover:bg-blue-100 transition duration-200">
+                            View All Saved Profiles
+                        </button>
+                    {% endif %}
+                {% else %}
+                    <p class="text-gray-500 text-center py-8">No saved profiles yet</p>
                 {% endif %}
             </div>
-            {% if saved_opportunities|length > 0 %}
-            <div id="saved-opportunities-list" class="grid grid-cols-1 gap-3 items-stretch">
-                {% for saved_opportunity in saved_opportunities[:2] %}
-                {% set opportunity = saved_opportunity.opportunities if saved_opportunity.opportunities else
-                saved_opportunity %}
-                {% set oid = opportunity.id or saved_opportunity.opportunity_id %}
-                <div id="saved-opp-{{ oid }}"
-                    class="group border border-gray-200 rounded-lg p-6 hover:bg-gray-50 transition duration-200 flex flex-col justify-between min-h-[180px] h-full">
-                    <div class="flex-1 flex flex-col">
-                        <a href="{{ url_for('opportunity_details', id=oid) }}" class="flex-1 min-w-0 flex flex-col">
-                            <h4 class="text-sm font-medium text-gray-900 truncate">{{ opportunity.title or 'Untitled
-                                Opportunity' }}</h4>
-                            <p class="text-xs text-gray-500 truncate">
-                                {% if opportunity.profiles and opportunity.profiles.organization_name %}
-                                {{ opportunity.profiles.organization_name }}
-                                {% elif opportunity.profiles and opportunity.profiles.name %}
-                                {{ opportunity.profiles.name }}
-                                {% else %}
-                                Company
-                                {% endif %}
-                            </p>
-                            <div class="flex items-center mt-2 space-x-2">
-                                <span
-                                    class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">{{
-                                    opportunity.type or 'Opportunity' }}</span>
-                                {% if opportunity.location %}
-                                <span
-                                    class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600"><i
-                                        class="fas fa-map-marker-alt mr-1"></i>{{ opportunity.location }}</span>
-                                {% else %}
-                                <span
-                                    class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-transparent text-transparent select-none">loc</span>
-                                {% endif %}
-                            </div>
-                            {% if opportunity.description %}
-                            <p class="text-[11px] text-gray-400 mt-2 line-clamp-2">{{ opportunity.description }}</p>
-                            {% else %}
-                            <span class="mt-2 text-[11px] text-transparent select-none">placeholder</span>
-                            {% endif %}
-                        </a>
-                    </div>
-                    <div class="flex flex-row items-center justify-between mt-4">
-                        <a href="{{ url_for('opportunity_details', id=oid) }}"
-                            class="text-blue-600 hover:text-blue-800 text-xs">View</a>
-                        <button title="Remove" onclick="unsaveOpportunity('{{ oid }}', 'saved-opp-{{ oid }}')"
-                            class="text-red-500 hover:text-red-700 text-xs"><i class="fas fa-times"></i></button>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-            {% if saved_opportunities|length > 2 %}
-            <button id="saved-opps-view-all-btn" onclick="openModal('savedOpportunitiesModal')"
-                class="mt-4 w-full bg-blue-50 text-blue-600 px-4 py-2 rounded-md hover:bg-blue-100 transition duration-200">
-                View All Saved Opportunities
-            </button>
-            {% endif %}
-            {% else %}
-            <p class="text-gray-500 text-center py-8">No saved opportunities yet</p>
-            {% endif %}
-        </div>
-    </div>
 
-    {% if user_type == 'student' %}
-    <!-- Student View: Suggested Opportunities (replaces Available Opportunities) -->
-    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <div class="flex items-center justify-between mb-6">
-            <h3 class="text-xl font-semibold text-gray-900 flex items-center">
-                <i class="fas fa-lightbulb text-blue-600 mr-2"></i>
-                Suggested Opportunities
-            </h3>
-            {% if opportunities|length > 0 %}
-            <span class="bg-gray-100 text-gray-800 text-sm px-2 py-1 rounded-full">{{ opportunities|length }}</span>
-            {% endif %}
-        </div>
-        {% if opportunities|length > 0 %}
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-            {% for opportunity in opportunities[:2] %}
-            <div class="border border-gray-200 rounded-lg p-6 hover:shadow-md transition duration-200">
-                <div class="flex items-start justify-between">
-                    <div class="flex-1">
-                        <h4 class="text-lg font-medium text-gray-900 mb-2">{{ opportunity.title or 'Untitled
-                            Opportunity' }}</h4>
-                        <p class="text-gray-600 text-sm mb-3 line-clamp-3">{{ opportunity.description or 'No description
-                            available' }}</p>
-                        <div class="flex items-center space-x-4 mb-3">
-                            {% if opportunity.type %}
-                            <span
-                                class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">{{
-                                opportunity.type }}</span>
-                            {% endif %}
-                            {% if opportunity.location %}
-                            <span class="text-xs text-gray-500 flex items-center"><i
-                                    class="fas fa-map-marker-alt mr-1"></i>{{ opportunity.location }}</span>
-                            {% endif %}
-                        </div>
-                    </div>
+            <!-- Saved Opportunities -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-semibold text-gray-900 flex items-center">
+                        <i class="fas fa-star text-blue-600 mr-2"></i>
+                        Saved Opportunities
+                    </h3>
+                    {% if saved_opportunities|length > 0 %}
+                        <span id="saved-opps-count"
+                              class="bg-gray-100 text-gray-800 text-sm px-2 py-1 rounded-full">{{ saved_opportunities|length }}</span>
+                    {% endif %}
                 </div>
-                <div class="flex items-center justify-between mt-4">
+                {% if saved_opportunities|length > 0 %}
+                    <div id="saved-opportunities-list" class="grid grid-cols-1 gap-3 items-stretch">
+                        {% for saved_opportunity in saved_opportunities[:2] %}
+                            {% set opportunity = saved_opportunity.opportunities if saved_opportunity.opportunities else
+                saved_opportunity %}
+                            {% set oid = opportunity.id or saved_opportunity.opportunity_id %}
+                            <div id="saved-opp-{{ oid }}"
+                                 class="group border border-gray-200 rounded-lg p-6 hover:bg-gray-50 transition duration-200 flex flex-col justify-between min-h-[180px] h-full">
+                                <div class="flex-1 flex flex-col">
+                                    <a href="{{ url_for('opportunity_details', id=oid) }}"
+                                       class="flex-1 min-w-0 flex flex-col">
+                                        <h4 class="text-sm font-medium text-gray-900 truncate">{{ opportunity.title or 'Untitled
+                                Opportunity' }}</h4>
+                                        <p class="text-xs text-gray-500 truncate">
+                                            {% if opportunity.profiles and opportunity.profiles.organization_name %}
+                                                {{ opportunity.profiles.organization_name }}
+                                            {% elif opportunity.profiles and opportunity.profiles.name %}
+                                                {{ opportunity.profiles.name }}
+                                            {% else %}
+                                                Company
+                                            {% endif %}
+                                        </p>
+                                        <div class="flex items-center mt-2 space-x-2">
+                                <span
+                                        class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">{{ opportunity.type or 'Opportunity' }}</span>
+                                            {% if opportunity.location %}
+                                                <span
+                                                        class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600"><i
+                                                        class="fas fa-map-marker-alt mr-1"></i>{{ opportunity.location }}</span>
+                                            {% else %}
+                                                <span
+                                                        class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-transparent text-transparent select-none">loc</span>
+                                            {% endif %}
+                                        </div>
+                                        {% if opportunity.description %}
+                                            <p class="text-[11px] text-gray-400 mt-2 line-clamp-2">{{ opportunity.description }}</p>
+                                        {% else %}
+                                            <span class="mt-2 text-[11px] text-transparent select-none">placeholder</span>
+                                        {% endif %}
+                                    </a>
+                                </div>
+                                <div class="flex flex-row items-center justify-between mt-4">
+                                    <a href="{{ url_for('opportunity_details', id=oid) }}"
+                                       class="text-blue-600 hover:text-blue-800 text-xs">View</a>
+                                    <button title="Remove"
+                                            onclick="unsaveOpportunity('{{ oid }}', 'saved-opp-{{ oid }}')"
+                                            class="text-red-500 hover:text-red-700 text-xs"><i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                    {% if saved_opportunities|length > 2 %}
+                        <button id="saved-opps-view-all-btn" onclick="openModal('savedOpportunitiesModal')"
+                                class="mt-4 w-full bg-blue-50 text-blue-600 px-4 py-2 rounded-md hover:bg-blue-100 transition duration-200">
+                            View All Saved Opportunities
+                        </button>
+                    {% endif %}
+                {% else %}
+                    <p class="text-gray-500 text-center py-8">No saved opportunities yet</p>
+                {% endif %}
+            </div>
+        </div>
+
+        {% if user_type == 'student' %}
+            <!-- Student View: Suggested Opportunities (replaces Available Opportunities) -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-xl font-semibold text-gray-900 flex items-center">
+                        <i class="fas fa-lightbulb text-blue-600 mr-2"></i>
+                        Suggested Opportunities
+                    </h3>
+                    {% if opportunities|length > 0 %}
+                        <span class="bg-gray-100 text-gray-800 text-sm px-2 py-1 rounded-full">{{ opportunities|length }}</span>
+                    {% endif %}
+                </div>
+                {% if opportunities|length > 0 %}
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                        {% for opportunity in opportunities[:2] %}
+                            <div class="border border-gray-200 rounded-lg p-6 hover:shadow-md transition duration-200">
+                                <div class="flex items-start justify-between">
+                                    <div class="flex-1">
+                                        <h4 class="text-lg font-medium text-gray-900 mb-2">{{ opportunity.title or 'Untitled
+                            Opportunity' }}</h4>
+                                        <p class="text-gray-600 text-sm mb-3 line-clamp-3">{{ opportunity.description or 'No description
+                            available' }}</p>
+                                        <div class="flex items-center space-x-4 mb-3">
+                                            {% if opportunity.type %}
+                                                <span
+                                                        class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">{{ opportunity.type }}</span>
+                                            {% endif %}
+                                            {% if opportunity.location %}
+                                                <span class="text-xs text-gray-500 flex items-center"><i
+                                                        class="fas fa-map-marker-alt mr-1"></i>{{ opportunity.location }}</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="flex items-center justify-between mt-4">
                     <span class="text-xs text-gray-500">{% if opportunity.application_deadline %}
                         Deadline: {{ opportunity.application_deadline }}{% endif %}</span>
-                    <a href="{{ url_for('opportunity_details', id=opportunity.id) }}"
-                        class="bg-blue-600 text-white px-4 py-2 text-sm rounded-md hover:bg-blue-700 transition duration-200">View
-                        Details</a>
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-        <div class="text-center">
-            <a href="{{ url_for('opportunities') }}"
-                class="inline-block bg-blue-50 text-blue-600 px-6 py-3 rounded-md hover:bg-blue-100 transition duration-200">View
-                All Opportunities</a>
-        </div>
-        {% else %}
-        <div class="text-center py-12">
-            <i class="fas fa-briefcase text-gray-300 text-4xl mb-4"></i>
-            <p class="text-gray-500 mb-4">No suggestions yet</p>
-            <a href="{{ url_for('opportunities') }}"
-                class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition duration-200">Browse
-                Opportunities</a>
-        </div>
-        {% endif %}
-    </div>
-    {% else %}
-    <!-- Organization View: Your Opportunities -->
-    <div class="space-y-8">
-        <!-- Published Opportunities -->
-        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <div class="flex items-center justify-between mb-6">
-                <h3 class="text-xl font-semibold text-gray-900 flex items-center">
-                    <i class="fas fa-briefcase text-green-600 mr-2"></i>
-                    Your Published Opportunities
-                </h3>
-                <div class="flex items-center space-x-4">
-                    {% set published_opportunities = opportunities|selectattr('status', 'equalto', 'active')|list %}
-                    {% if published_opportunities|length > 0 %}
-                    <span class="bg-gray-100 text-gray-800 text-sm px-2 py-1 rounded-full">{{
-                        published_opportunities|length }}</span>
-                    {% endif %}
-                    <a href="{{ url_for('create_opportunity') }}"
-                        class="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition duration-200">
-                        <i class="fas fa-plus mr-1"></i>
-                        Create New
-                    </a>
-                </div>
-            </div>
-
-            {% if published_opportunities|length > 0 %}
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                {% for opportunity in published_opportunities[:2] %}
-                <div id="opp-card-{{ opportunity.id }}" class="border border-gray-200 rounded-lg p-6">
-                    <div class="flex items-start justify-between mb-4">
-                        <div class="flex-1">
-                            <h4 class="text-lg font-medium text-gray-900 mb-2">{{ opportunity.title or 'Untitled
-                                Opportunity' }}</h4>
-                            <p class="text-gray-600 text-sm mb-3 line-clamp-3">{{ opportunity.description or 'No
-                                description available' }}</p>
-                            <div class="flex items-center flex-wrap gap-2 mb-3">
-                                {% if opportunity.type %}
-                                <span
-                                    class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">{{
-                                    opportunity.type }}</span>
-                                {% endif %}
-                                <span
-                                    class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">Active</span>
+                                    <a href="{{ url_for('opportunity_details', id=opportunity.id) }}"
+                                       class="bg-blue-600 text-white px-4 py-2 text-sm rounded-md hover:bg-blue-700 transition duration-200">View
+                                        Details</a>
+                                </div>
                             </div>
-                        </div>
+                        {% endfor %}
                     </div>
-                    <div class="flex items-center justify-between gap-2 flex-wrap">
-                        <span class="text-xs text-gray-500">
-                            {% if opportunity.application_deadline %}Deadline:
-                            {{ opportunity.application_deadline }}{% endif %}
-                        </span>
-                        <div class="flex items-center gap-2 ml-auto">
-                            <a href="{{ url_for('opportunity_details', id=opportunity.id) }}"
-                                class="px-3 py-2 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200">View</a>
-                            <a href="{{ url_for('create_opportunity', opportunity_id=opportunity.id) }}"
-                                class="px-3 py-2 text-xs bg-yellow-100 text-yellow-700 rounded hover:bg-yellow-200">Edit</a>
-                            <button onclick="deleteOpportunity({{ opportunity.id }}, 'opp-card-{{ opportunity.id }}')"
-                                class="px-3 py-2 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200">
-                                Delete
-                            </button>
-                        </div>
+                    <div class="text-center">
+                        <a href="{{ url_for('opportunities') }}"
+                           class="inline-block bg-blue-50 text-blue-600 px-6 py-3 rounded-md hover:bg-blue-100 transition duration-200">View
+                            All Opportunities</a>
                     </div>
-                </div>
-                {% endfor %}
-            </div>
-            {% if published_opportunities|length > 2 %}
-            <div class="text-center">
-                <button onclick="openModal('yourOpportunitiesModal')"
-                    class="bg-green-50 text-green-600 px-6 py-3 rounded-md hover:bg-green-100 transition duration-200">
-                    View All {{ published_opportunities|length }} Published Opportunities
-                </button>
-            </div>
-            {% endif %}
-            {% else %}
-            <div class="text-center py-8">
-                <p class="text-gray-500 mb-4">No published opportunities yet</p>
-            </div>
-            {% endif %}
-        </div>
-
-        <!-- Draft Opportunities -->
-        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <div class="flex items-center justify-between mb-6">
-                <h3 class="text-xl font-semibold text-gray-900 flex items-center">
-                    <i class="fas fa-edit text-yellow-600 mr-2"></i>
-                    Draft Opportunities
-                </h3>
-                {% set draft_opportunities = opportunities|selectattr('status', 'equalto', 'draft')|list %}
-                {% if draft_opportunities|length > 0 %}
-                <span class="bg-gray-100 text-gray-800 text-sm px-2 py-1 rounded-full">{{ draft_opportunities|length
-                    }}</span>
+                {% else %}
+                    <div class="text-center py-12">
+                        <i class="fas fa-briefcase text-gray-300 text-4xl mb-4"></i>
+                        <p class="text-gray-500 mb-4">No suggestions yet</p>
+                        <a href="{{ url_for('opportunities') }}"
+                           class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition duration-200">Browse
+                            Opportunities</a>
+                    </div>
                 {% endif %}
             </div>
-
-            {% if draft_opportunities|length > 0 %}
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                {% for opportunity in draft_opportunities[:2] %}
-                <div id="opp-card-{{ opportunity.id }}" class="border border-gray-200 rounded-lg p-6 bg-yellow-50">
-                    <div class="flex items-start justify-between mb-4">
-                        <div class="flex-1">
-                            <h4 class="text-lg font-medium text-gray-900 mb-2">{{ opportunity.title or 'Untitled
-                                Opportunity' }}</h4>
-                            <p class="text-gray-600 text-sm mb-3 line-clamp-3">{{ opportunity.description or 'No
-                                description available' }}</p>
-                            <div class="flex items-center flex-wrap gap-2 mb-3">
-                                {% if opportunity.type %}
-                                <span
-                                    class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">{{
-                                    opportunity.type }}</span>
-                                {% endif %}
-                                <span
-                                    class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-200 text-yellow-800">Draft</span>
-                            </div>
+        {% else %}
+            <!-- Organization View: Your Opportunities -->
+            <div class="space-y-8">
+                <!-- Published Opportunities -->
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <div class="flex items-center justify-between mb-6">
+                        <h3 class="text-xl font-semibold text-gray-900 flex items-center">
+                            <i class="fas fa-briefcase text-green-600 mr-2"></i>
+                            Your Published Opportunities
+                        </h3>
+                        <div class="flex items-center space-x-4">
+                            {% set published_opportunities = opportunities|selectattr('status', 'equalto', 'active')|list %}
+                            {% if published_opportunities|length > 0 %}
+                                <span class="bg-gray-100 text-gray-800 text-sm px-2 py-1 rounded-full">{{ published_opportunities|length }}</span>
+                            {% endif %}
+                            <a href="{{ url_for('create_opportunity') }}"
+                               class="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition duration-200">
+                                <i class="fas fa-plus mr-1"></i>
+                                Create New
+                            </a>
                         </div>
                     </div>
-                    <div class="flex items-center justify-between gap-2 flex-wrap">
+
+                    {% if published_opportunities|length > 0 %}
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                            {% for opportunity in published_opportunities[:2] %}
+                                <div id="opp-card-{{ opportunity.id }}" class="border border-gray-200 rounded-lg p-6">
+                                    <div class="flex items-start justify-between mb-4">
+                                        <div class="flex-1">
+                                            <h4 class="text-lg font-medium text-gray-900 mb-2">{{ opportunity.title or 'Untitled
+                                Opportunity' }}</h4>
+                                            <p class="text-gray-600 text-sm mb-3 line-clamp-3">{{ opportunity.description or 'No
+                                description available' }}</p>
+                                            <div class="flex items-center flex-wrap gap-2 mb-3">
+                                                {% if opportunity.type %}
+                                                    <span
+                                                            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">{{ opportunity.type }}</span>
+                                                {% endif %}
+                                                <span
+                                                        class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">Active</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center justify-between gap-2 flex-wrap">
+                        <span class="text-xs text-gray-500">
+                            {% if opportunity.application_deadline %}Deadline:
+                                {{ opportunity.application_deadline }}{% endif %}
+                        </span>
+                                        <div class="flex items-center gap-2 ml-auto">
+                                            <a href="{{ url_for('opportunity_details', id=opportunity.id) }}"
+                                               class="px-3 py-2 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200">View</a>
+                                            <a href="{{ url_for('create_opportunity', opportunity_id=opportunity.id) }}"
+                                               class="px-3 py-2 text-xs bg-yellow-100 text-yellow-700 rounded hover:bg-yellow-200">Edit</a>
+                                            <button onclick="deleteOpportunity({{ opportunity.id }}, 'opp-card-{{ opportunity.id }}')"
+                                                    class="px-3 py-2 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200">
+                                                Delete
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                        {% if published_opportunities|length > 2 %}
+                            <div class="text-center">
+                                <button onclick="openModal('yourOpportunitiesModal')"
+                                        class="bg-green-50 text-green-600 px-6 py-3 rounded-md hover:bg-green-100 transition duration-200">
+                                    View All {{ published_opportunities|length }} Published Opportunities
+                                </button>
+                            </div>
+                        {% endif %}
+                    {% else %}
+                        <div class="text-center py-8">
+                            <p class="text-gray-500 mb-4">No published opportunities yet</p>
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- Draft Opportunities -->
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <div class="flex items-center justify-between mb-6">
+                        <h3 class="text-xl font-semibold text-gray-900 flex items-center">
+                            <i class="fas fa-edit text-yellow-600 mr-2"></i>
+                            Draft Opportunities
+                        </h3>
+                        {% set draft_opportunities = opportunities|selectattr('status', 'equalto', 'draft')|list %}
+                        {% if draft_opportunities|length > 0 %}
+                            <span class="bg-gray-100 text-gray-800 text-sm px-2 py-1 rounded-full">{{ draft_opportunities|length }}</span>
+                        {% endif %}
+                    </div>
+
+                    {% if draft_opportunities|length > 0 %}
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                            {% for opportunity in draft_opportunities[:2] %}
+                                <div id="opp-card-{{ opportunity.id }}"
+                                     class="border border-gray-200 rounded-lg p-6 bg-yellow-50">
+                                    <div class="flex items-start justify-between mb-4">
+                                        <div class="flex-1">
+                                            <h4 class="text-lg font-medium text-gray-900 mb-2">{{ opportunity.title or 'Untitled
+                                Opportunity' }}</h4>
+                                            <p class="text-gray-600 text-sm mb-3 line-clamp-3">{{ opportunity.description or 'No
+                                description available' }}</p>
+                                            <div class="flex items-center flex-wrap gap-2 mb-3">
+                                                {% if opportunity.type %}
+                                                    <span
+                                                            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">{{ opportunity.type }}</span>
+                                                {% endif %}
+                                                <span
+                                                        class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-200 text-yellow-800">Draft</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center justify-between gap-2 flex-wrap">
                         <span class="text-xs text-gray-500">{% if opportunity.application_deadline %}
                             Deadline: {{ opportunity.application_deadline }}{% endif %}</span>
-                        <div class="flex items-center gap-2 ml-auto">
-                            <a href="{{ url_for('create_opportunity', opportunity_id=opportunity.id) }}"
-                                class="px-3 py-2 text-xs bg-yellow-100 text-yellow-700 rounded hover:bg-yellow-200">Edit</a>
-                            <button onclick="deleteOpportunity({{ opportunity.id }}, 'opp-card-{{ opportunity.id }}')"
-                                class="px-3 py-2 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200">
-                                Delete
-                            </button>
+                                        <div class="flex items-center gap-2 ml-auto">
+                                            <a href="{{ url_for('create_opportunity', opportunity_id=opportunity.id) }}"
+                                               class="px-3 py-2 text-xs bg-yellow-100 text-yellow-700 rounded hover:bg-yellow-200">Edit</a>
+                                            <button onclick="deleteOpportunity({{ opportunity.id }}, 'opp-card-{{ opportunity.id }}')"
+                                                    class="px-3 py-2 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200">
+                                                Delete
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
                         </div>
-                    </div>
+                        {% if draft_opportunities|length > 2 %}
+                            <div class="text-center">
+                                <button onclick="openModal('draftOpportunitiesModal')"
+                                        class="bg-yellow-50 text-yellow-600 px-6 py-3 rounded-md hover:bg-yellow-100 transition duration-200">
+                                    View All {{ draft_opportunities|length }} Draft Opportunities
+                                </button>
+                            </div>
+                        {% endif %}
+                    {% else %}
+                        <div class="text-center py-8">
+                            <p class="text-gray-500 mb-4">No draft opportunities</p>
+                        </div>
+                    {% endif %}
                 </div>
-                {% endfor %}
             </div>
-            {% if draft_opportunities|length > 2 %}
-            <div class="text-center">
-                <button onclick="openModal('draftOpportunitiesModal')"
-                    class="bg-yellow-50 text-yellow-600 px-6 py-3 rounded-md hover:bg-yellow-100 transition duration-200">
-                    View All {{ draft_opportunities|length }} Draft Opportunities
+        {% endif %}
+    </div>
+
+    <!-- Modals -->
+    <!-- Saved Profiles Modal -->
+    <div id="savedProfilesModal"
+         class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-hidden">
+            <div class="flex items-center justify-between p-6 border-b">
+                <h3 class="text-xl font-semibold text-gray-900">All Saved Profiles</h3>
+                <button onclick="closeModal('savedProfilesModal')" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times text-xl"></i>
                 </button>
             </div>
-            {% endif %}
-            {% else %}
-            <div class="text-center py-8">
-                <p class="text-gray-500 mb-4">No draft opportunities</p>
-            </div>
-            {% endif %}
-        </div>
-    </div>
-    {% endif %}
-</div>
-
-<!-- Modals -->
-<!-- Saved Profiles Modal -->
-<div id="savedProfilesModal"
-    class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
-    <div class="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-hidden">
-        <div class="flex items-center justify-between p-6 border-b">
-            <h3 class="text-xl font-semibold text-gray-900">All Saved Profiles</h3>
-            <button onclick="closeModal('savedProfilesModal')" class="text-gray-400 hover:text-gray-600">
-                <i class="fas fa-times text-xl"></i>
-            </button>
-        </div>
-        <div class="p-6 overflow-y-auto max-h-[70vh]">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-stretch">
-                {% for saved_profile in saved_profiles %}
-                {% set profile = saved_profile.profiles if saved_profile.profiles else saved_profile %}
-                <div id="modal-saved-profile-{{ profile.id or saved_profile.profile_id }}"
-                    class="border border-gray-200 rounded-lg p-6 hover:bg-gray-50 transition duration-200 relative group flex flex-col justify-between min-h-[180px] h-full">
-                    <div class="flex-1 flex flex-col">
-                        <h4 class="text-sm font-medium text-gray-900 truncate">{{ profile.name or
+            <div class="p-6 overflow-y-auto max-h-[70vh]">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-stretch">
+                    {% for saved_profile in saved_profiles %}
+                        {% set profile = saved_profile.profiles if saved_profile.profiles else saved_profile %}
+                        <div id="modal-saved-profile-{{ profile.id or saved_profile.profile_id }}"
+                             class="border border-gray-200 rounded-lg p-6 hover:bg-gray-50 transition duration-200 relative group flex flex-col justify-between min-h-[180px] h-full">
+                            <div class="flex-1 flex flex-col">
+                                <h4 class="text-sm font-medium text-gray-900 truncate">{{ profile.name or
                             profile.organization_name or 'Anonymous' }}</h4>
                         <p class="text-xs text-gray-500 truncate">{{ profile.email or 'No email' }}</p>
                         <div class="flex items-center mt-2 space-x-2">
@@ -431,8 +431,32 @@
                             {% endif %}
                         </div>
                         {% if profile.skills %}
-                        <p class="text-[11px] text-gray-400 mt-2 line-clamp-2">{{ profile.skills }}</p>
-                        {% elif profile.bio %}
+                        <div class="flex flex-wrap gap-1 mt-2">
+                            {% if profile.skills is iterable and profile.skills is not string %}
+                                {% for skill in profile.skills[:3] %}
+                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">{{ skill }}</span>
+                                {% endfor %}
+                                {% if profile.skills|length > 3 %}
+                                <span class="text-xs text-gray-500">+{{ profile.skills|length - 3 }} more</span>
+                                {% endif %}
+                            {% else %}
+                                {% set skills_str = profile.skills | replace('[','') | replace(']','') | replace('"','') | replace("'",'') %}
+                                {% set skills_list = [] %}
+                                {% for skill in skills_str.split(',') %}
+                                    {% if skill.strip() %}
+                                        {% set _ = skills_list.append(skill.strip()) %}
+                                    {% endif %}
+                                {% endfor %}
+                                {% for skill in skills_list[:3] %}
+                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">{{ skill }}</span>
+                                {% endfor %}
+                                {% if skills_list|length > 3 %}
+                                <span class="text-xs text-gray-500">+{{ skills_list|length - 3 }} more</span>
+                                {% endif %}
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                        {% if profile.bio %}
                         <p class="text-[11px] text-gray-400 mt-2 line-clamp-2">{{ profile.bio }}</p>
                         {% else %}
                         <span class="mt-2 text-[11px] text-transparent select-none">placeholder</span>
@@ -453,184 +477,181 @@
     </div>
 </div>
 
-<!-- Saved Opportunities Modal -->
-<div id="savedOpportunitiesModal"
-    class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
-    <div class="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-hidden">
-        <div class="flex items-center justify-between p-6 border-b">
-            <h3 class="text-xl font-semibold text-gray-900">All Saved Opportunities</h3>
-            <button onclick="closeModal('savedOpportunitiesModal')" class="text-gray-400 hover:text-gray-600">
-                <i class="fas fa-times text-xl"></i>
-            </button>
-        </div>
-        <div class="p-6 overflow-y-auto max-h-[70vh]">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-stretch">
-                {% for saved_opportunity in saved_opportunities %}
-                {% set opportunity = saved_opportunity.opportunities if saved_opportunity.opportunities else
+    <!-- Saved Opportunities Modal -->
+    <div id="savedOpportunitiesModal"
+         class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-hidden">
+            <div class="flex items-center justify-between p-6 border-b">
+                <h3 class="text-xl font-semibold text-gray-900">All Saved Opportunities</h3>
+                <button onclick="closeModal('savedOpportunitiesModal')" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <div class="p-6 overflow-y-auto max-h-[70vh]">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-stretch">
+                    {% for saved_opportunity in saved_opportunities %}
+                        {% set opportunity = saved_opportunity.opportunities if saved_opportunity.opportunities else
                 saved_opportunity %}
-                <div id="modal-saved-opp-{{ opportunity.id or saved_opportunity.opportunity_id }}"
-                    class="border border-gray-200 rounded-lg p-6 hover:bg-gray-50 transition duration-200 relative group flex flex-col justify-between min-h-[180px] h-full">
-                    <div class="flex-1 flex flex-col">
-                        <h4 class="text-sm font-medium text-gray-900 truncate">{{ opportunity.title or 'Untitled
+                        <div id="modal-saved-opp-{{ opportunity.id or saved_opportunity.opportunity_id }}"
+                             class="border border-gray-200 rounded-lg p-6 hover:bg-gray-50 transition duration-200 relative group flex flex-col justify-between min-h-[180px] h-full">
+                            <div class="flex-1 flex flex-col">
+                                <h4 class="text-sm font-medium text-gray-900 truncate">{{ opportunity.title or 'Untitled
                             Opportunity' }}</h4>
-                        <p class="text-xs text-gray-500 truncate">
-                            {% if opportunity.profiles and opportunity.profiles.organization_name %}
-                            {{ opportunity.profiles.organization_name }}
-                            {% elif opportunity.profiles and opportunity.profiles.name %}
-                            {{ opportunity.profiles.name }}
-                            {% else %}
-                            Company
-                            {% endif %}
-                        </p>
-                        <div class="flex items-center mt-2 space-x-2">
+                                <p class="text-xs text-gray-500 truncate">
+                                    {% if opportunity.profiles and opportunity.profiles.organization_name %}
+                                        {{ opportunity.profiles.organization_name }}
+                                    {% elif opportunity.profiles and opportunity.profiles.name %}
+                                        {{ opportunity.profiles.name }}
+                                    {% else %}
+                                        Company
+                                    {% endif %}
+                                </p>
+                                <div class="flex items-center mt-2 space-x-2">
                             <span
-                                class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">{{
-                                opportunity.type or 'Opportunity' }}</span>
-                            {% if opportunity.location %}
-                            <span
-                                class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600"><i
-                                    class="fas fa-map-marker-alt mr-1"></i>{{ opportunity.location }}</span>
-                            {% else %}
-                            <span
-                                class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-transparent text-transparent select-none">loc</span>
-                            {% endif %}
-                        </div>
-                        {% if opportunity.description %}
-                        <p class="text-[11px] text-gray-400 mt-2 line-clamp-2">{{ opportunity.description }}</p>
-                        {% else %}
-                        <span class="mt-2 text-[11px] text-transparent select-none">placeholder</span>
-                        {% endif %}
-                    </div>
-                    <div class="flex flex-row items-center justify-between mt-4">
-                        <a href="{{ url_for('opportunity_details', id=opportunity.id or saved_opportunity.opportunity_id) }}"
-                            class="text-blue-600 hover:text-blue-800 text-xs">View</a>
-                        <button title="Remove"
-                            onclick="unsaveOpportunity('{{ opportunity.id or saved_opportunity.opportunity_id }}', 'modal-saved-opp-{{ opportunity.id or saved_opportunity.opportunity_id }}')"
-                            class="text-red-500 hover:text-red-700 text-xs"><i class="fas fa-times"></i>
-                        </button>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-        </div>
-    </div>
-</div>
-
-{% if user_type == 'organization' %}
-<!-- Your Opportunities Modal -->
-<div id="yourOpportunitiesModal"
-    class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
-    <div class="bg-white rounded-lg max-w-6xl w-full max-h-[90vh] overflow-hidden">
-        <div class="flex items-center justify-between p-6 border-b">
-            <h3 class="text-xl font-semibold text-gray-900">All Your Published Opportunities</h3>
-            <button onclick="closeModal('yourOpportunitiesModal')" class="text-gray-400 hover:text-gray-600">
-                <i class="fas fa-times text-xl"></i>
-            </button>
-        </div>
-        <div class="p-6 overflow-y-auto max-h-[70vh]">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {% for opportunity in opportunities %}
-                {% if opportunity.status == 'active' %}
-                <div id="modal-opp-card-{{ opportunity.id }}"
-                    class="border border-gray-200 rounded-lg p-6 relative group">
-                    <div class="flex items-start justify-between mb-4">
-                        <div class="flex-1">
-                            <h4 class="text-lg font-medium text-gray-900 mb-2">{{ opportunity.title or 'Untitled
-                                Opportunity' }}</h4>
-                            <p class="text-gray-600 text-sm mb-3 line-clamp-3">{{ opportunity.description or 'No
-                                description available' }}</p>
-                            <div class="flex items-center flex-wrap gap-2 mb-3">
-                                {% if opportunity.type %}
-                                <span
-                                    class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">{{
-                                    opportunity.type }}</span>{% endif %}
-                                <span
-                                    class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">Active</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="flex items-center justify-between gap-2 flex-wrap">
-                        <span class="text-xs text-gray-500">{% if opportunity.application_deadline %}
-                            Deadline: {{ opportunity.application_deadline }}{% endif %}</span>
-                        <div class="flex items-center gap-2 ml-auto">
-                            <a href="{{ url_for('opportunity_details', id=opportunity.id) }}"
-                                class="px-3 py-2 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200">View</a>
-                            <a href="{{ url_for('create_opportunity', opportunity_id=opportunity.id) }}"
-                                class="px-3 py-2 text-xs bg-yellow-100 text-yellow-700 rounded hover:bg-yellow-200">Edit</a>
-                            <button
-                                onclick="deleteOpportunity({{ opportunity.id }}, 'modal-opp-card-{{ opportunity.id }}')"
-                                class="px-3 py-2 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200">
-                                Delete
-                            </button>
-                        </div>
-                    </div>
-                </div>
-                {% endif %}
-                {% endfor %}
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Draft Opportunities Modal -->
-<div id="draftOpportunitiesModal"
-    class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
-    <div class="bg-white rounded-lg max-w-6xl w-full max-h-[90vh] overflow-hidden">
-        <div class="flex items-center justify-between p-6 border-b">
-            <h3 class="text-xl font-semibold text-gray-900">All Your Draft Opportunities</h3>
-            <button onclick="closeModal('draftOpportunitiesModal')" class="text-gray-400 hover:text-gray-600">
-                <i class="fas fa-times text-xl"></i>
-            </button>
-        </div>
-        <div class="p-6 overflow-y-auto max-h-[70vh]">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {% for opportunity in opportunities %}
-                {% if opportunity.status == 'draft' %}
-                <div id="modal-draft-opp-card-{{ opportunity.id }}"
-                    class="border border-gray-200 rounded-lg p-6 bg-yellow-50">
-                    <div class="flex items-start justify-between mb-4">
-                        <div class="flex-1">
-                            <h4 class="text-lg font-medium text-gray-900 mb-2">{{ opportunity.title or 'Untitled
-                                Opportunity' }}</h4>
-                            <p class="text-gray-600 text-sm mb-3 line-clamp-3">{{ opportunity.description or 'No
-                                description available' }}</p>
-                            <div class="flex items-center flex-wrap gap-2 mb-3">
-                                {% if opportunity.type %}
-                                <span
-                                    class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">{{
-                                    opportunity.type }}</span>
+                                    class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">{{ opportunity.type or 'Opportunity' }}</span>
+                                    {% if opportunity.location %}
+                                        <span
+                                                class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600"><i
+                                                class="fas fa-map-marker-alt mr-1"></i>{{ opportunity.location }}</span>
+                                    {% else %}
+                                        <span
+                                                class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-transparent text-transparent select-none">loc</span>
+                                    {% endif %}
+                                </div>
+                                {% if opportunity.description %}
+                                    <p class="text-[11px] text-gray-400 mt-2 line-clamp-2">{{ opportunity.description }}</p>
+                                {% else %}
+                                    <span class="mt-2 text-[11px] text-transparent select-none">placeholder</span>
                                 {% endif %}
-                                <span
-                                    class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-200 text-yellow-800">Draft</span>
+                            </div>
+                            <div class="flex flex-row items-center justify-between mt-4">
+                                <a href="{{ url_for('opportunity_details', id=opportunity.id or saved_opportunity.opportunity_id) }}"
+                                   class="text-blue-600 hover:text-blue-800 text-xs">View</a>
+                                <button title="Remove"
+                                        onclick="unsaveOpportunity('{{ opportunity.id or saved_opportunity.opportunity_id }}', 'modal-saved-opp-{{ opportunity.id or saved_opportunity.opportunity_id }}')"
+                                        class="text-red-500 hover:text-red-700 text-xs"><i class="fas fa-times"></i>
+                                </button>
                             </div>
                         </div>
-                    </div>
-                    <div class="flex items-center justify-between gap-2 flex-wrap">
-                        <span class="text-xs text-gray-500">{% if opportunity.application_deadline %}
-                            Deadline: {{ opportunity.application_deadline }}{% endif %}</span>
-                        <div class="flex items-center gap-2 ml-auto">
-                            <a href="{{ url_for('create_opportunity', opportunity_id=opportunity.id) }}"
-                                class="px-3 py-2 text-xs bg-yellow-100 text-yellow-700 rounded hover:bg-yellow-200">Edit</a>
-                            <button
-                                onclick="deleteOpportunity({{ opportunity.id }}, 'modal-draft-opp-card-{{ opportunity.id }}')"
-                                class="px-3 py-2 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200">
-                                Delete
-                            </button>
-                        </div>
-                    </div>
+                    {% endfor %}
                 </div>
-                {% endif %}
-                {% endfor %}
             </div>
         </div>
     </div>
-</div>
-{% endif %}
 
-<script>
-    // Provide data to external dashboard script
-    window.SAVED_PROFILES = {{ saved_profiles | tojson | safe }};
-    window.SAVED_OPPORTUNITIES = {{ saved_opportunities | tojson | safe }};
-</script>
-<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+    {% if user_type == 'organization' %}
+        <!-- Your Opportunities Modal -->
+        <div id="yourOpportunitiesModal"
+             class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+            <div class="bg-white rounded-lg max-w-6xl w-full max-h-[90vh] overflow-hidden">
+                <div class="flex items-center justify-between p-6 border-b">
+                    <h3 class="text-xl font-semibold text-gray-900">All Your Published Opportunities</h3>
+                    <button onclick="closeModal('yourOpportunitiesModal')" class="text-gray-400 hover:text-gray-600">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+                <div class="p-6 overflow-y-auto max-h-[70vh]">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {% for opportunity in opportunities %}
+                            {% if opportunity.status == 'active' %}
+                                <div id="modal-opp-card-{{ opportunity.id }}"
+                                     class="border border-gray-200 rounded-lg p-6 relative group">
+                                    <div class="flex items-start justify-between mb-4">
+                                        <div class="flex-1">
+                                            <h4 class="text-lg font-medium text-gray-900 mb-2">{{ opportunity.title or 'Untitled
+                                Opportunity' }}</h4>
+                                            <p class="text-gray-600 text-sm mb-3 line-clamp-3">{{ opportunity.description or 'No
+                                description available' }}</p>
+                                            <div class="flex items-center flex-wrap gap-2 mb-3">
+                                                {% if opportunity.type %}
+                                                    <span
+                                                            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">{{ opportunity.type }}</span>{% endif %}
+                                                <span
+                                                        class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">Active</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center justify-between gap-2 flex-wrap">
+                        <span class="text-xs text-gray-500">{% if opportunity.application_deadline %}
+                            Deadline: {{ opportunity.application_deadline }}{% endif %}</span>
+                                        <div class="flex items-center gap-2 ml-auto">
+                                            <a href="{{ url_for('opportunity_details', id=opportunity.id) }}"
+                                               class="px-3 py-2 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200">View</a>
+                                            <a href="{{ url_for('create_opportunity', opportunity_id=opportunity.id) }}"
+                                               class="px-3 py-2 text-xs bg-yellow-100 text-yellow-700 rounded hover:bg-yellow-200">Edit</a>
+                                            <button
+                                                    onclick="deleteOpportunity({{ opportunity.id }}, 'modal-opp-card-{{ opportunity.id }}')"
+                                                    class="px-3 py-2 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200">
+                                                Delete
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Draft Opportunities Modal -->
+        <div id="draftOpportunitiesModal"
+             class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+            <div class="bg-white rounded-lg max-w-6xl w-full max-h-[90vh] overflow-hidden">
+                <div class="flex items-center justify-between p-6 border-b">
+                    <h3 class="text-xl font-semibold text-gray-900">All Your Draft Opportunities</h3>
+                    <button onclick="closeModal('draftOpportunitiesModal')" class="text-gray-400 hover:text-gray-600">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+                <div class="p-6 overflow-y-auto max-h-[70vh]">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {% for opportunity in opportunities %}
+                            {% if opportunity.status == 'draft' %}
+                                <div id="modal-draft-opp-card-{{ opportunity.id }}"
+                                     class="border border-gray-200 rounded-lg p-6 bg-yellow-50">
+                                    <div class="flex items-start justify-between mb-4">
+                                        <div class="flex-1">
+                                            <h4 class="text-lg font-medium text-gray-900 mb-2">{{ opportunity.title or 'Untitled
+                                Opportunity' }}</h4>
+                                            <p class="text-gray-600 text-sm mb-3 line-clamp-3">{{ opportunity.description or 'No
+                                description available' }}</p>
+                                            <div class="flex items-center flex-wrap gap-2 mb-3">
+                                                {% if opportunity.type %}
+                                                    <span
+                                                            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">{{ opportunity.type }}</span>
+                                                {% endif %}
+                                                <span
+                                                        class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-200 text-yellow-800">Draft</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center justify-between gap-2 flex-wrap">
+                        <span class="text-xs text-gray-500">{% if opportunity.application_deadline %}
+                            Deadline: {{ opportunity.application_deadline }}{% endif %}</span>
+                                        <div class="flex items-center gap-2 ml-auto">
+                                            <a href="{{ url_for('create_opportunity', opportunity_id=opportunity.id) }}"
+                                               class="px-3 py-2 text-xs bg-yellow-100 text-yellow-700 rounded hover:bg-yellow-200">Edit</a>
+                                            <button
+                                                    onclick="deleteOpportunity({{ opportunity.id }}, 'modal-draft-opp-card-{{ opportunity.id }}')"
+                                                    class="px-3 py-2 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200">
+                                                Delete
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+
+    <script>
+        // Provide data to external dashboard script
+        window.SAVED_PROFILES = {{ saved_profiles | tojson | safe }};
+        window.SAVED_OPPORTUNITIES = {{ saved_opportunities | tojson | safe }};
+    </script>
+    <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
 {% endblock %}

@@ -1,6 +1,7 @@
 # InterSpark - Flask Migration
 
-A Flask-based web application connecting students with meaningful internship and volunteer opportunities. This project has been migrated from React/TypeScript to Python Flask with Jinja2 templating.
+A Flask-based web application connecting students with meaningful internship and volunteer opportunities. This project
+has been migrated from React/TypeScript to Python Flask with Jinja2 templating.
 
 ## 🌟 Features
 
@@ -41,10 +42,12 @@ A Flask-based web application connecting students with meaningful internship and
 ## 🔐 Demo Accounts
 
 ### Students
+
 - **Email**: alex@example.com, **Password**: password123
 - **Email**: taylor@example.com, **Password**: password123
 
 ### Organizations
+
 - **Email**: contact@techstart.org, **Password**: orgpassword123
 - **Email**: info@greenearthinitiative.org, **Password**: orgpassword123
 
@@ -76,12 +79,14 @@ InterSpark/
 The application uses SQLite with the following main models:
 
 ### User Model
+
 - Handles both students and organizations
 - Fields: id, name, email, password_hash, phone, location, user_type
 - Student-specific: school, grade, bio, interests, availability
 - Organization-specific: description, website, logo
 
 ### Opportunity Model
+
 - Stores internship and volunteer opportunities
 - Fields: id, title, organization_id, location, type, category, date, hours, deadline
 - Additional: description, responsibilities, requirements, benefits
@@ -98,6 +103,7 @@ The application uses SQLite with the following main models:
 ## 🔄 Migration Details
 
 This project was successfully migrated from:
+
 - **From**: React/TypeScript with Vite, React Router, TailwindCSS
 - **To**: Python Flask with Jinja2, SQLAlchemy, TailwindCSS
 
@@ -112,22 +118,26 @@ This project was successfully migrated from:
 ## 📄 API Endpoints
 
 ### Authentication
+
 - `GET/POST /login` - User login
 - `GET/POST /signup` - User registration
 - `GET /logout` - User logout
 
 ### Main Pages
+
 - `GET /` - Home page
 - `GET /dashboard` - User dashboard
 - `GET /profile` - User profile management
 - `POST /profile` - Update profile
 
 ### Opportunities
+
 - `GET /opportunities` - List all opportunities
 - `GET /opportunity/<id>` - Opportunity details
 - `GET/POST /create_opportunity` - Create new opportunity (organizations only)
 
 ### Talent Search
+
 - `GET /talent` - Search for students (organizations)
 
 ## 🚀 Deployment
