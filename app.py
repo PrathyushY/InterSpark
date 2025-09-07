@@ -817,10 +817,7 @@ def create_opportunity(opportunity_id=None):
             flash("You can only edit your own opportunities", "error")
             return redirect(url_for("dashboard"))
 
-        # Debug: Log the skills_needed data
-        print(f"DEBUG - Loading draft opportunity {opportunity_id}:")
-        print(f"  Skills needed from DB: {opportunity.get('skills_needed')}")
-        print(f"  Type of skills_needed: {type(opportunity.get('skills_needed'))}")
+        # Load the skills list for autocomplete
 
     if request.method == "POST":
         # Get form data and map to database fields
@@ -836,11 +833,6 @@ def create_opportunity(opportunity_id=None):
                 request.form.get("skills_needed")
             )
 
-        # Debug: Log the skills processing
-        print(f"DEBUG - Saving opportunity with status: {status}")
-        print(f"  Raw skills_needed from form: {request.form.get('skills_needed')}")
-        print(f"  Processed skills_needed: {skills_needed_json}")
-        print(f"  Type: {type(skills_needed_json)}")
         opportunity_data = {
             "title": request.form.get("title") or None,
             "description": request.form.get("description") or None,

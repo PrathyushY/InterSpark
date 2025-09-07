@@ -152,7 +152,7 @@
                                 autocomplete="off" placeholder="Type a skill and press Enter..."
                                 class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">
                             <input type="hidden" name="skills_needed" id="skills-needed-hidden-input"
-                                value="{{ opportunity.skills_needed|tojson|safe if opportunity and opportunity.skills_needed else '[]' }}">
+                                value="{% if opportunity and opportunity.skills_needed %}{{ opportunity.skills_needed|tojson }}{% else %}[]{% endif %}">
                             <div id="skills-needed-autocomplete-list"
                                 class="absolute z-10 bg-white border border-gray-300 rounded-md mt-1 w-full"
                                 style="display:none;"></div>
@@ -269,13 +269,39 @@
 </div>
 <script>
     const allowedSkills = JSON.parse('{{ skills_master|tojson|safe }}');
+    const initialSkillsFromServer = {{ opportunity.skills_needed| tojson | safe if opportunity and opportunity.skills_needed else '[]' | safe }};
     function renderSkillBubbles(skills, container) {
+        if (!container) {
+            return;
+        }
+
+        if (!Array.isArray(skills)) {
+            return;
+        }
+
+        // Make sure allowedSkills is available
+        if (typeof allowedSkills === 'undefined') {
+            return;
+        }
+
         container.innerHTML = '';
-        skills.forEach(skill => {
-            if (!allowedSkills.includes(skill)) return;
+        skills.forEach((skill) => {
+            // Don't filter out skills for drafts - allow all skills to be displayed
             const bubble = document.createElement('span');
-            bubble.className = 'skill-bubble inline-flex items-center px-3 py-1 rounded-full bg-blue-100 text-blue-800 text-sm font-medium mr-2 mb-2';
+            // Add different styling for skills not in database vs existing skills
+            const isInDatabase = allowedSkills.includes(skill);
+            bubble.className = isInDatabase
+                ? 'skill-bubble inline-flex items-center px-3 py-1 rounded-full bg-blue-100 text-blue-800 text-sm font-medium mr-2 mb-2'
+                : 'skill-bubble inline-flex items-center px-3 py-1 rounded-full bg-orange-100 text-orange-800 text-sm font-medium mr-2 mb-2';
             bubble.textContent = skill;
+            // Add a small indicator for new skills
+            if (!isInDatabase) {
+                const newIndicator = document.createElement('span');
+                newIndicator.className = 'ml-1 text-xs';
+                newIndicator.textContent = '(new)';
+                newIndicator.title = 'This is a new skill that will be added to the database when you publish';
+                bubble.appendChild(newIndicator);
+            }
             const removeBtn = document.createElement('button');
             removeBtn.type = 'button';
             removeBtn.className = 'ml-2 text-blue-500 hover:text-red-600 focus:outline-none';
@@ -288,6 +314,9 @@
             container.appendChild(bubble);
         });
     }
+
+    // Make renderSkillBubbles globally available
+    window.renderSkillBubbles = renderSkillBubbles;
     function setupAutocomplete(input, container) {
         input.addEventListener('input', function () {
             const val = input.value.trim().toLowerCase();
@@ -361,8 +390,20 @@
     function addSkillBubble(skill, container) {
         if (getCurrentSkills(container).includes(skill)) return;
         const bubble = document.createElement('span');
-        bubble.className = 'skill-bubble inline-flex items-center px-3 py-1 rounded-full bg-blue-100 text-blue-800 text-sm font-medium mr-2 mb-2';
+        // Add different styling for skills not in database vs existing skills
+        const isInDatabase = allowedSkills.includes(skill);
+        bubble.className = isInDatabase
+            ? 'skill-bubble inline-flex items-center px-3 py-1 rounded-full bg-blue-100 text-blue-800 text-sm font-medium mr-2 mb-2'
+            : 'skill-bubble inline-flex items-center px-3 py-1 rounded-full bg-orange-100 text-orange-800 text-sm font-medium mr-2 mb-2';
         bubble.textContent = skill;
+        // Add a small indicator for new skills
+        if (!isInDatabase) {
+            const newIndicator = document.createElement('span');
+            newIndicator.className = 'ml-1 text-xs';
+            newIndicator.textContent = '(new)';
+            newIndicator.title = 'This is a new skill that will be added to the database when you publish';
+            bubble.appendChild(newIndicator);
+        }
         const removeBtn = document.createElement('button');
         removeBtn.type = 'button';
         removeBtn.className = 'ml-2 text-blue-500 hover:text-red-600 focus:outline-none';
@@ -376,11 +417,32 @@
         updateHiddenInput(container);
     }
     function getCurrentSkills(container) {
-        return Array.from(container.children).map(b => b.textContent.replace(/\s*\u00d7\s*$/, ''));
+        return Array.from(container.children).map(bubble => {
+            // Get the skill name from the bubble, excluding the "(new)" indicator and remove button
+            const skillNodes = Array.from(bubble.childNodes);
+            let skillText = '';
+
+            // Get text from text nodes and skip the "(new)" indicator and remove button
+            for (let node of skillNodes) {
+                if (node.nodeType === Node.TEXT_NODE) {
+                    skillText += node.textContent;
+                } else if (node.nodeType === Node.ELEMENT_NODE &&
+                    node.tagName === 'SPAN' &&
+                    node.textContent !== '(new)') {
+                    skillText += node.textContent;
+                }
+            }
+
+            return skillText.trim().replace(/\s*\u00d7\s*$/, ''); // Remove any trailing × character
+        });
     }
     function updateHiddenInput(container) {
         const skills = getCurrentSkills(container);
         document.getElementById('skills-needed-hidden-input').value = JSON.stringify(skills);
+        // Trigger auto-save when skills are updated
+        if (window.CO && window.CO.saveFormLocally) {
+            window.CO.saveFormLocally();
+        }
     }
 
     async function addNewSkillToDatabase(skillName, container, input, autocompleteList) {
@@ -455,13 +517,25 @@
     document.addEventListener('DOMContentLoaded', function () {
         const skillsContainer = document.getElementById('skills-needed-bubble-container');
         const skillsInput = document.getElementById('skills-needed-bubble-input');
+        const hiddenInput = document.getElementById('skills-needed-hidden-input');
+
+        // Use the skills passed directly from the server instead of parsing the hidden input
         let initialSkills = [];
-        try {
-            initialSkills = JSON.parse(document.getElementById('skills-needed-hidden-input').value);
-        } catch (e) { }
-        renderSkillBubbles(initialSkills, skillsContainer);
-        setupAutocomplete(skillsInput, skillsContainer);
-        updateHiddenInput(skillsContainer);
+        if (typeof initialSkillsFromServer !== 'undefined' && Array.isArray(initialSkillsFromServer)) {
+            initialSkills = initialSkillsFromServer;
+        }
+
+        if (skillsContainer) {
+            renderSkillBubbles(initialSkills, skillsContainer);
+        }
+
+        if (skillsInput && skillsContainer) {
+            setupAutocomplete(skillsInput, skillsContainer);
+        }
+
+        if (skillsContainer) {
+            updateHiddenInput(skillsContainer);
+        }
     });
 </script>
 <script>
