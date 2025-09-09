@@ -569,6 +569,190 @@ class SupabaseService:
             logger.error(f"Error searching students: {str(e)}")
             return []
 
+    def search_students_enhanced(
+        self,
+        search_query: str = "",
+        skills: str = "",
+        school: str = "",
+        grade: str = "",
+        location: str = "",
+    ) -> List[Dict[str, Any]]:
+        """
+        Enhanced search for student profiles with improved skills matching.
+        Uses ANY skills match instead of ALL skills match for better results.
+        """
+        import json
+
+        try:
+            query = self.client.table("profiles").select("*").eq("user_type", "student")
+
+            # Apply text search if provided
+            if search_query:
+                query = query.or_(
+                    f"name.ilike.%{search_query}%,bio.ilike.%{search_query}%"
+                )
+
+            # Apply school filter
+            if school:
+                query = query.ilike("school", f"%{school}%")
+
+            # Apply grade filter
+            if grade:
+                query = query.ilike("grade", f"%{grade}%")
+
+            # Apply location filter
+            if location:
+                query = query.ilike("location", f"%{location}%")
+
+            # Order by creation date, newest first
+            query = query.order("created_at", desc=True)
+
+            response = query.execute()
+            students = response.data if response.data else []
+
+            # Enhanced skills filtering - use ANY match instead of ALL match
+            def parse_skills(val):
+                if not val:
+                    return []
+                if isinstance(val, list):
+                    return val
+                try:
+                    loaded = json.loads(val)
+                    if isinstance(loaded, list):
+                        return loaded
+                except Exception:
+                    pass
+                if "," in val:
+                    return [s.strip() for s in val.split(",") if s.strip()]
+                return [val.strip()] if val.strip() else []
+
+            selected_skills = set(parse_skills(skills))
+            if selected_skills:
+                # Use Supabase array contains operator for better performance
+                try:
+                    # Try to use Supabase's array contains operator first
+                    skill_list = list(selected_skills)
+                    query_with_skills = self.client.table("profiles").select("*").eq("user_type", "student")
+                    
+                    # Apply other filters first
+                    if search_query:
+                        query_with_skills = query_with_skills.or_(
+                            f"name.ilike.%{search_query}%,bio.ilike.%{search_query}%"
+                        )
+                    if school:
+                        query_with_skills = query_with_skills.ilike("school", f"%{school}%")
+                    if grade:
+                        query_with_skills = query_with_skills.ilike("grade", f"%{grade}%")
+                    if location:
+                        query_with_skills = query_with_skills.ilike("location", f"%{location}%")
+                    
+                    # Use array contains for skills - this is more efficient
+                    query_with_skills = query_with_skills.order("created_at", desc=True)
+                    
+                    # For now, fall back to client-side filtering since Supabase array contains might not work as expected
+                    response = query_with_skills.execute()
+                    students = response.data if response.data else []
+                    
+                    # Client-side filtering for skills (more reliable)
+                    def student_has_any_skills(student):
+                        profile_skills = student.get("skills", [])
+                        # Robustly parse profile_skills
+                        if isinstance(profile_skills, str):
+                            try:
+                                loaded = json.loads(profile_skills)
+                                if isinstance(loaded, list):
+                                    profile_skills = loaded
+                            except Exception:
+                                if "," in profile_skills:
+                                    profile_skills = [
+                                        s.strip()
+                                        for s in profile_skills.split(",")
+                                        if s.strip()
+                                    ]
+                                else:
+                                    profile_skills = (
+                                        [profile_skills.strip()]
+                                        if profile_skills.strip()
+                                        else []
+                                    )
+                        if not isinstance(profile_skills, list):
+                            return False
+                        # Check if any selected skill matches any profile skill (case-insensitive)
+                        profile_skills_lower = [s.lower() for s in profile_skills]
+                        return any(skill.lower() in profile_skills_lower for skill in selected_skills)
+
+                    students = [s for s in students if student_has_any_skills(s)]
+                    
+                except Exception as e:
+                    logger.warning(f"Error with array contains query, falling back to client-side filtering: {e}")
+                    # Fall back to original client-side filtering
+                    def student_has_any_skills(student):
+                        profile_skills = student.get("skills", [])
+                        # Robustly parse profile_skills
+                        if isinstance(profile_skills, str):
+                            try:
+                                loaded = json.loads(profile_skills)
+                                if isinstance(loaded, list):
+                                    profile_skills = loaded
+                            except Exception:
+                                if "," in profile_skills:
+                                    profile_skills = [
+                                        s.strip()
+                                        for s in profile_skills.split(",")
+                                        if s.strip()
+                                    ]
+                                else:
+                                    profile_skills = (
+                                        [profile_skills.strip()]
+                                        if profile_skills.strip()
+                                        else []
+                                    )
+                        if not isinstance(profile_skills, list):
+                            return False
+                        # Check if any selected skill matches any profile skill (case-insensitive)
+                        profile_skills_lower = [s.lower() for s in profile_skills]
+                        return any(skill.lower() in profile_skills_lower for skill in selected_skills)
+
+                    students = [s for s in students if student_has_any_skills(s)]
+
+            # If no skills filter but we have a search query, also search within skills
+            if not selected_skills and search_query:
+                def student_skills_match_query(student):
+                    profile_skills = student.get("skills", [])
+                    if isinstance(profile_skills, str):
+                        try:
+                            loaded = json.loads(profile_skills)
+                            if isinstance(loaded, list):
+                                profile_skills = loaded
+                        except Exception:
+                            if "," in profile_skills:
+                                profile_skills = [
+                                    s.strip()
+                                    for s in profile_skills.split(",")
+                                    if s.strip()
+                                ]
+                            else:
+                                profile_skills = (
+                                    [profile_skills.strip()]
+                                    if profile_skills.strip()
+                                    else []
+                                )
+                    if not isinstance(profile_skills, list):
+                        return False
+                    # Check if any skill contains the search query (case-insensitive)
+                    return any(search_query.lower() in skill.lower() for skill in profile_skills)
+
+                # Add students whose skills match the search query
+                skill_matches = [s for s in students if student_skills_match_query(s)]
+                # Prioritize skill matches by putting them first
+                students = skill_matches + [s for s in students if s not in skill_matches]
+
+            return students
+
+        except Exception as e:
+            logger.error(f"Error in enhanced student search: {str(e)}")
+            return []
+
     # Opportunities Management Methods
     def get_opportunities(
             self, filters: Optional[Dict[str, Any]] = None, limit: Optional[int] = None

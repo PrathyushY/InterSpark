@@ -3,8 +3,7 @@ import logging
 from datetime import datetime
 from typing import Dict, List, Any, Optional
 
-from google import genai
-from google.genai import types
+import google.generativeai as genai
 
 logger = logging.getLogger(__name__)
 
@@ -20,41 +19,61 @@ class AIService:
             raise ValueError(
                 "GEMINI_API_KEY environment variable is required for AI functionality"
             )
-        self.client = genai.Client(api_key=api_key)
+        genai.configure(api_key=api_key)
+        self.model = genai.GenerativeModel('gemini-1.5-flash')
 
     def search_database_for_context(
         self, query: str, supabase_service
     ) -> Dict[str, Any]:
         """
         Search database for relevant profiles and opportunities based on user query.
+        Uses AI to extract skills and enhance search parameters.
         Returns structured results that can be used in AI prompt.
         """
         try:
             results = {"profiles": [], "opportunities": [], "total_matches": 0}
+            
+            logger.info(f"Searching database for query: '{query}'")
 
-            # Search in profiles table
-            profile_results = supabase_service.search_students(
+            # Use AI to enhance the search query
+            enhanced_query = self.enhance_search_query(query)
+            logger.info(f"Enhanced query: {enhanced_query}")
+            
+            # Extract skills for more targeted search
+            extracted_skills = enhanced_query.get("skills", [])
+            skills_param = ",".join(extracted_skills) if extracted_skills else ""
+            logger.info(f"Extracted skills: {extracted_skills}")
+            
+            # Extract locations for search
+            locations = enhanced_query.get("locations", [])
+            location_param = locations[0] if locations else ""
+            
+            # Search in profiles table with enhanced parameters
+            profile_results = supabase_service.search_students_enhanced(
                 search_query=query,
-                skills="",  # Could be enhanced to extract skills from query
+                skills=skills_param,
                 school="",
                 grade="",
-                location="",
+                location=location_param,
             )
+            logger.info(f"Found {len(profile_results)} profiles")
 
-            # Search in opportunities table
+            # Search in opportunities table with enhanced parameters
             opportunity_results = supabase_service.search_opportunities(
                 search_query=query,
                 opportunity_type="",
                 category="",
-                location="",
-                skills_needed="",
+                location=location_param,
+                skills_needed=skills_param,
             )
+            logger.info(f"Found {len(opportunity_results)} opportunities")
 
             # Limit results to top matches
             results["profiles"] = profile_results[:5]  # Top 5 profiles
             results["opportunities"] = opportunity_results[:5]  # Top 5 opportunities
             results["total_matches"] = len(profile_results) + len(opportunity_results)
 
+            logger.info(f"Total matches: {results['total_matches']}")
             return results
 
         except Exception as e:
@@ -63,28 +82,49 @@ class AIService:
 
     def _build_database_context(self, db_results: Dict[str, Any]) -> List[str]:
         """
-        Build context strings from database results.
+        Build context strings from database results with enhanced profile information.
         """
         context_parts = []
 
         if db_results["profiles"]:
             context_parts.append("RELEVANT STUDENT PROFILES:")
             for profile in db_results["profiles"]:
-                context_parts.append(
-                    f"- {profile.get('name', 'Unknown')} from {profile.get('school', 'Unknown school')}"
-                )
+                # Basic info
+                name = profile.get('name', 'Unknown')
+                school = profile.get('school', 'Unknown school')
+                grade = profile.get('grade', '')
+                location = profile.get('location', '')
+                
+                context_parts.append(f"- {name} from {school}")
+                
+                # Add grade and location if available
+                if grade:
+                    context_parts.append(f"  Grade: {grade}")
+                if location:
+                    context_parts.append(f"  Location: {location}")
+                
+                # Enhanced skills display
                 if profile.get("skills"):
                     skills = profile.get("skills", [])
                     if isinstance(skills, str):
                         try:
                             skills = json.loads(skills)
                         except:
-                            skills = [skills]
-                    context_parts.append(f"  Skills: {', '.join(skills[:5])}")
+                            skills = [skills] if skills else []
+                    if skills:
+                        context_parts.append(f"  Skills: {', '.join(skills[:8])}")  # Show more skills
+                
+                # Add bio snippet if available
+                bio = profile.get('bio', '')
+                if bio and len(bio) > 10:
+                    bio_snippet = bio[:150] + "..." if len(bio) > 150 else bio
+                    context_parts.append(f"  Bio: {bio_snippet}")
+                
                 context_parts.append(f"  View profile: /profile/{profile['id']}")
+                context_parts.append("")  # Add spacing between profiles
 
         if db_results["opportunities"]:
-            context_parts.append("\nRELEVANT OPPORTUNITIES:")
+            context_parts.append("RELEVANT OPPORTUNITIES:")
             for opp in db_results["opportunities"]:
                 org_name = "Unknown organization"
                 if opp.get("profiles"):
@@ -96,7 +136,15 @@ class AIService:
                 context_parts.append(
                     f"  Type: {opp.get('type', 'Unknown')} | Location: {opp.get('location', 'Unknown')}"
                 )
+                
+                # Add description snippet
+                description = opp.get('description', '')
+                if description and len(description) > 10:
+                    desc_snippet = description[:150] + "..." if len(description) > 150 else description
+                    context_parts.append(f"  Description: {desc_snippet}")
+                
                 context_parts.append(f"  View opportunity: /opportunity/{opp['id']}")
+                context_parts.append("")  # Add spacing between opportunities
 
         return context_parts
 
@@ -118,7 +166,7 @@ class AIService:
         self, context_parts: List[str], conversation_context: str
     ) -> str:
         """
-        Build the system prompt for the AI assistant.
+        Build the system prompt for the AI assistant with enhanced capabilities.
         """
         return f"""You are Spark AI, a helpful AI assistant for InterSpark - a platform connecting students with internship and volunteer opportunities.
 
@@ -129,13 +177,18 @@ Your role is to:
 4. Keep responses concise but informative
 5. Always format links as clickable URLs (e.g., /profile/123 or /opportunity/456)
 6. Maintain conversation flow and context from previous messages
+7. **NEW CAPABILITIES:**
+   - Summarize profiles when asked (extract key skills, projects, and background from bio)
+   - Answer general questions about the platform, internships, career advice, etc.
+   - Help users understand what they're looking at in profiles or opportunities
+   - Provide career guidance and suggestions based on user interests
 
 Current database context:
 {chr(10).join(context_parts) if context_parts else "No specific matches found in database."}
 
 {conversation_context}
 
-Remember: You're helping users navigate InterSpark and find meaningful connections. Be friendly, professional, and always try to be helpful!"""
+Remember: You're helping users navigate InterSpark and find meaningful connections. Be friendly, professional, and always try to be helpful! You can now handle both specific searches AND general conversation about profiles, careers, and the platform."""
 
     def generate_response_with_context(
         self,
@@ -162,11 +215,10 @@ Remember: You're helping users navigate InterSpark and find meaningful connectio
 Please provide a helpful response. If there are relevant database matches above, incorporate them naturally into your response with clickable links. If no matches are found, reply naturally: I didn't find any matching profiles or opportunities. Want to try rephrasing your request?"""
 
             # Generate response using Google Gemini
-            response = self.client.models.generate_content(
-                model="gemini-2.5-flash",
-                config=types.GenerateContentConfig(system_instruction=system_prompt),
-                contents=user_prompt,
-            )
+            response = self.model.generate_content([
+                system_prompt,
+                user_prompt
+            ])
 
             return response.text
 
@@ -198,11 +250,10 @@ Examples:
 - "Need help with machine learning" -> ["Machine Learning"]
 - "What opportunities are available?" -> []"""
 
-            response = self.client.models.generate_content(
-                model="gemini-2.5-flash",
-                config=types.GenerateContentConfig(system_instruction=system_prompt),
-                contents=f"Extract skills from this query: {query}",
-            )
+            response = self.model.generate_content([
+                system_prompt,
+                f"Extract skills from this query: {query}"
+            ])
 
             # Try to parse the JSON response
             try:
@@ -244,11 +295,10 @@ Examples:
 
 Return only valid JSON, no explanatory text."""
 
-            response = self.client.models.generate_content(
-                model="gemini-2.5-flash",
-                config=types.GenerateContentConfig(system_instruction=system_prompt),
-                contents=f"Analyze this search query: {query}",
-            )
+            response = self.model.generate_content([
+                system_prompt,
+                f"Analyze this search query: {query}"
+            ])
 
             try:
                 enhanced_query = json.loads(response.text.strip())

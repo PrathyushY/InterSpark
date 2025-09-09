@@ -115,6 +115,114 @@ except ValueError as e:
     ai_service = None
 
 
+def fallback_search(query: str, supabase_service) -> Dict[str, Any]:
+    """
+    Fallback search function when AI service is not available.
+    Performs basic keyword-based search.
+    """
+    try:
+        results = {"profiles": [], "opportunities": [], "total_matches": 0}
+        
+        # Simple keyword extraction
+        query_lower = query.lower()
+        skills_to_search = []
+        
+        # Common skill keywords
+        skill_keywords = {
+            'python': ['python', 'py'],
+            'javascript': ['javascript', 'js', 'node'],
+            'react': ['react', 'reactjs'],
+            'java': ['java'],
+            'html': ['html'],
+            'css': ['css'],
+            'sql': ['sql', 'database'],
+            'machine learning': ['machine learning', 'ml', 'ai', 'artificial intelligence'],
+            'data science': ['data science', 'data analysis'],
+            'web development': ['web development', 'web dev', 'frontend', 'backend']
+        }
+        
+        # Extract skills from query
+        for skill, keywords in skill_keywords.items():
+            if any(keyword in query_lower for keyword in keywords):
+                skills_to_search.append(skill)
+        
+        # Search profiles
+        profile_results = supabase_service.search_students_enhanced(
+            search_query=query,
+            skills=",".join(skills_to_search) if skills_to_search else "",
+            school="",
+            grade="",
+            location="",
+        )
+        
+        # Search opportunities
+        opportunity_results = supabase_service.search_opportunities(
+            search_query=query,
+            opportunity_type="",
+            category="",
+            location="",
+            skills_needed=",".join(skills_to_search) if skills_to_search else "",
+        )
+        
+        results["profiles"] = profile_results[:5]
+        results["opportunities"] = opportunity_results[:5]
+        results["total_matches"] = len(profile_results) + len(opportunity_results)
+        
+        return results
+        
+    except Exception as e:
+        logger.error(f"Error in fallback search: {str(e)}")
+        return {"profiles": [], "opportunities": [], "total_matches": 0}
+
+
+def generate_fallback_response(user_message: str, db_results: Dict[str, Any]) -> str:
+    """
+    Generate a fallback response when AI service is not available.
+    """
+    try:
+        response_parts = []
+        
+        if db_results["total_matches"] > 0:
+            response_parts.append("I found some relevant results for you:")
+            
+            if db_results["profiles"]:
+                response_parts.append("\n**Student Profiles:**")
+                for profile in db_results["profiles"]:
+                    name = profile.get('name', 'Unknown')
+                    school = profile.get('school', 'Unknown school')
+                    skills = profile.get('skills', [])
+                    if isinstance(skills, str):
+                        try:
+                            skills = json.loads(skills)
+                        except:
+                            skills = [skills] if skills else []
+                    
+                    response_parts.append(f"- **{name}** from {school}")
+                    if skills:
+                        response_parts.append(f"  Skills: {', '.join(skills[:5])}")
+                    response_parts.append(f"  [View Profile](/profile/{profile['id']})")
+            
+            if db_results["opportunities"]:
+                response_parts.append("\n**Opportunities:**")
+                for opp in db_results["opportunities"]:
+                    title = opp.get('title', 'Unknown title')
+                    org_name = "Unknown organization"
+                    if opp.get("profiles"):
+                        org_name = opp["profiles"].get("name", org_name)
+                    
+                    response_parts.append(f"- **{title}** at {org_name}")
+                    response_parts.append(f"  [View Opportunity](/opportunity/{opp['id']})")
+        else:
+            response_parts.append("I didn't find any matching profiles or opportunities for your query.")
+            response_parts.append("Try rephrasing your request or being more specific about the skills or type of opportunity you're looking for.")
+        
+        return "\n".join(response_parts)
+        
+    except Exception as e:
+        logger.error(f"Error generating fallback response: {str(e)}")
+        return "I apologize, but I'm having trouble processing your request right now. Please try again later."
+
+
 def check_profile_completion():
     """
     Check if the current user's profile is complete.
@@ -1298,14 +1406,23 @@ def chat_send():
         )
 
         # Search database for relevant results
-        db_results = ai_service.search_database_for_context(
-            user_message, supabase_service
-        )
+        if ai_service:
+            db_results = ai_service.search_database_for_context(
+                user_message, supabase_service
+            )
+        else:
+            # Fallback search without AI service
+            logger.warning("AI service not available, using fallback search")
+            db_results = fallback_search(user_message, supabase_service)
 
         # Generate AI response with conversation context
-        ai_response = ai_service.generate_response_with_context(
-            user_message, db_results, session["chat_history"]
-        )
+        if ai_service:
+            ai_response = ai_service.generate_response_with_context(
+                user_message, db_results, session["chat_history"]
+            )
+        else:
+            # Fallback response without AI
+            ai_response = generate_fallback_response(user_message, db_results)
 
         # Add AI response to history
         session["chat_history"].append(
