@@ -13,14 +13,14 @@ load_dotenv()
 
 def test_python_search():
     """Test specifically for Python skills search."""
-    print("🐍 Testing Python Skills Search")
+    print("Testing Python Skills Search")
     print("=" * 40)
     
     try:
         # Test Supabase connection
         from supabase_config import SupabaseService
         supabase_service = SupabaseService()
-        print("✅ Supabase connection successful")
+        print("Supabase connection successful")
         
         # Test 1: Get all students first
         print("\n1. Getting all students...")
@@ -49,7 +49,7 @@ def test_python_search():
         # Test 2: Search for Python specifically
         print("\n2. Searching for Python skills...")
         python_students = supabase_service.search_students_enhanced(
-            search_query="python",
+            search_query="",
             skills="python",
             school="",
             grade="",
@@ -69,7 +69,7 @@ def test_python_search():
                         skills = [skills] if skills else []
                 print(f"   {i+1}. {name}: {skills}")
         else:
-            print("   ❌ No students found with Python skills")
+            print("   No students found with Python skills")
             
             # Let's check if any students have skills at all
             print("\n   Checking if any students have skills...")
@@ -131,7 +131,7 @@ def test_python_search():
         print(f"   Partial match search found {len(partial_match)} students with 'py' skills")
         
     except Exception as e:
-        print(f"❌ Error: {e}")
+        print(f"Error: {e}")
         import traceback
         traceback.print_exc()
 

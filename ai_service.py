@@ -39,18 +39,34 @@ class AIService:
             enhanced_query = self.enhance_search_query(query)
             logger.info(f"Enhanced query: {enhanced_query}")
             
-            # Extract skills for more targeted search
+            # Extract skills and names for more targeted search
             extracted_skills = enhanced_query.get("skills", [])
+            extracted_names = enhanced_query.get("names", [])
+            
+            # Fallback: Use keyword matching if AI extraction fails
+            if not extracted_skills and not extracted_names:
+                extracted_skills = self._extract_skills_fallback(query)
+                logger.info(f"Using fallback skill extraction: {extracted_skills}")
+            
             skills_param = ",".join(extracted_skills) if extracted_skills else ""
-            logger.info(f"Extracted skills: {extracted_skills}")
+            logger.info(f"Final extracted skills: {extracted_skills}")
+            logger.info(f"Final extracted names: {extracted_names}")
             
             # Extract locations for search
             locations = enhanced_query.get("locations", [])
             location_param = locations[0] if locations else ""
             
             # Search in profiles table with enhanced parameters
+            # If we have extracted skills or names, use targeted search
+            if extracted_skills:
+                search_text = ""
+            elif extracted_names:
+                search_text = " ".join(extracted_names)
+            else:
+                search_text = query
+                
             profile_results = supabase_service.search_students_enhanced(
-                search_query=query,
+                search_query=search_text,
                 skills=skills_param,
                 school="",
                 grade="",
@@ -60,7 +76,7 @@ class AIService:
 
             # Search in opportunities table with enhanced parameters
             opportunity_results = supabase_service.search_opportunities(
-                search_query=query,
+                search_query=search_text,
                 opportunity_type="",
                 category="",
                 location=location_param,
@@ -94,8 +110,11 @@ class AIService:
                 school = profile.get('school', 'Unknown school')
                 grade = profile.get('grade', '')
                 location = profile.get('location', '')
+                profile_id = profile.get('id', '')
+                profile_image = profile.get('profile_image', '')
                 
                 context_parts.append(f"- {name} from {school}")
+                context_parts.append(f"  ID: {profile_id}")
                 
                 # Add grade and location if available
                 if grade:
@@ -119,6 +138,10 @@ class AIService:
                 if bio and len(bio) > 10:
                     bio_snippet = bio[:150] + "..." if len(bio) > 150 else bio
                     context_parts.append(f"  Bio: {bio_snippet}")
+                
+                # Add profile image if available
+                if profile_image:
+                    context_parts.append(f"  Profile Image: {profile_image}")
                 
                 context_parts.append(f"  View profile: /profile/{profile['id']}")
                 context_parts.append("")  # Add spacing between profiles
@@ -172,23 +195,40 @@ class AIService:
 
 Your role is to:
 1. Provide helpful, conversational responses to user queries
-2. When relevant, mention and link to matching profiles or opportunities from our database
+2. When relevant, create interactive profile cards for matching students using HTML
 3. Be encouraging and supportive, especially for students looking for opportunities
 4. Keep responses concise but informative
-5. Always format links as clickable URLs (e.g., /profile/123 or /opportunity/456)
+5. **IMPORTANT: When showing student profiles, create HTML profile cards instead of just text links**
 6. Maintain conversation flow and context from previous messages
-7. **NEW CAPABILITIES:**
-   - Summarize profiles when asked (extract key skills, projects, and background from bio)
-   - Answer general questions about the platform, internships, career advice, etc.
-   - Help users understand what they're looking at in profiles or opportunities
-   - Provide career guidance and suggestions based on user interests
+7. **PROFILE CARD FORMAT:**
+   When showing student profiles, create interactive HTML cards directly in your response (no code blocks).
+   Use this exact HTML structure for each profile:
+   
+   <div class="bg-white border border-gray-200 rounded-lg p-4 mb-3 hover:shadow-md transition-shadow cursor-pointer" onclick="window.open('/profile/[PROFILE_ID]', '_blank')">
+     <div class="flex items-center space-x-3">
+       <img src="[PROFILE_IMAGE_URL]" alt="[NAME]" class="w-12 h-12 rounded-full object-cover" onerror="this.src='https://via.placeholder.com/48x48/3B82F6/FFFFFF?text=[FIRST_INITIAL]'">
+       <div class="flex-1">
+         <h4 class="font-semibold text-gray-900">[NAME]</h4>
+         <p class="text-sm text-gray-600">[GRADE] at [SCHOOL]</p>
+         <p class="text-xs text-gray-500">[LOCATION]</p>
+         <div class="flex flex-wrap gap-1 mt-2">
+           [SKILLS_AS_BADGES]
+         </div>
+       </div>
+       <i class="fas fa-external-link-alt text-gray-400"></i>
+     </div>
+   </div>
+   
+   For skills badges, use: <span class="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">[SKILL]</span>
+   
+   **IMPORTANT: Generate the HTML directly in your response, NOT inside code blocks or backticks.**
 
 Current database context:
 {chr(10).join(context_parts) if context_parts else "No specific matches found in database."}
 
 {conversation_context}
 
-Remember: You're helping users navigate InterSpark and find meaningful connections. Be friendly, professional, and always try to be helpful! You can now handle both specific searches AND general conversation about profiles, careers, and the platform."""
+Remember: Always create interactive HTML profile cards when showing student profiles. Make them clickable and visually appealing!"""
 
     def generate_response_with_context(
         self,
@@ -257,7 +297,15 @@ Examples:
 
             # Try to parse the JSON response
             try:
-                skills = json.loads(response.text.strip())
+                # Clean the response text by removing code block markers
+                clean_text = response.text.strip()
+                if clean_text.startswith('```json'):
+                    clean_text = clean_text[7:]  # Remove ```json
+                if clean_text.endswith('```'):
+                    clean_text = clean_text[:-3]  # Remove ```
+                clean_text = clean_text.strip()
+                
+                skills = json.loads(clean_text)
                 return skills if isinstance(skills, list) else []
             except json.JSONDecodeError:
                 return []
@@ -283,6 +331,7 @@ Return a JSON object with these fields:
 - "job_types": array of job types (internship, part-time, full-time, volunteer, etc.)
 - "categories": array of categories (technology, marketing, design, etc.)
 - "general_terms": array of other important search terms
+- "names": array of person names mentioned
 
 Examples:
 "Python developer internship in San Francisco" -> {
@@ -290,7 +339,17 @@ Examples:
     "locations": ["San Francisco"],  
     "job_types": ["internship"],
     "categories": ["technology"],
-    "general_terms": ["developer"]
+    "general_terms": ["developer"],
+    "names": []
+}
+
+"Tell me about Hridhay's profile" -> {
+    "skills": [],
+    "locations": [],
+    "job_types": [],
+    "categories": [],
+    "general_terms": ["profile"],
+    "names": ["Hridhay"]
 }
 
 Return only valid JSON, no explanatory text."""
@@ -300,12 +359,70 @@ Return only valid JSON, no explanatory text."""
                 f"Analyze this search query: {query}"
             ])
 
+            logger.info(f"Gemini API response: {response.text}")
+            
             try:
-                enhanced_query = json.loads(response.text.strip())
+                # Clean the response text by removing code block markers
+                clean_text = response.text.strip()
+                if clean_text.startswith('```json'):
+                    clean_text = clean_text[7:]  # Remove ```json
+                if clean_text.endswith('```'):
+                    clean_text = clean_text[:-3]  # Remove ```
+                clean_text = clean_text.strip()
+                
+                enhanced_query = json.loads(clean_text)
+                logger.info(f"Parsed enhanced query: {enhanced_query}")
                 return enhanced_query if isinstance(enhanced_query, dict) else {}
-            except json.JSONDecodeError:
+            except json.JSONDecodeError as e:
+                logger.error(f"JSON decode error: {e}, response: {response.text}")
                 return {}
 
         except Exception as e:
             logger.error(f"Error enhancing search query: {str(e)}")
             return {}
+    
+    def _extract_skills_fallback(self, query: str) -> List[str]:
+        """
+        Fallback skill extraction using keyword matching.
+        Used when AI extraction fails or returns empty results.
+        """
+        query_lower = query.lower()
+        
+        # Common programming skills and technologies
+        skill_keywords = {
+            'python': ['python', 'py'],
+            'javascript': ['javascript', 'js', 'node.js', 'nodejs'],
+            'react': ['react', 'reactjs', 'react.js'],
+            'java': ['java'],
+            'html': ['html', 'html5'],
+            'css': ['css', 'css3'],
+            'sql': ['sql', 'mysql', 'postgresql', 'database'],
+            'machine learning': ['machine learning', 'ml', 'ai', 'artificial intelligence'],
+            'data science': ['data science', 'data analysis', 'analytics'],
+            'web development': ['web development', 'web dev', 'frontend', 'backend', 'full stack'],
+            'c++': ['c++', 'cpp'],
+            'c#': ['c#', 'csharp'],
+            'php': ['php'],
+            'ruby': ['ruby'],
+            'swift': ['swift'],
+            'kotlin': ['kotlin'],
+            'go': ['golang', 'go programming'],
+            'rust': ['rust'],
+            'typescript': ['typescript', 'ts'],
+            'vue': ['vue', 'vue.js', 'vuejs'],
+            'angular': ['angular', 'angularjs'],
+            'django': ['django'],
+            'flask': ['flask'],
+            'spring': ['spring', 'spring boot'],
+            'docker': ['docker'],
+            'kubernetes': ['kubernetes', 'k8s'],
+            'aws': ['aws', 'amazon web services'],
+            'git': ['git', 'github', 'version control']
+        }
+        
+        found_skills = []
+        for skill, keywords in skill_keywords.items():
+            if any(keyword in query_lower for keyword in keywords):
+                found_skills.append(skill)
+        
+        return found_skills

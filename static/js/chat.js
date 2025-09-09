@@ -24,7 +24,7 @@ function addMessage(content, role, timestamp = null) {
     const messageContent = document.createElement('div');
     messageContent.className = role === 'user' 
         ? 'max-w-xs lg:max-w-md bg-blue-600 text-white rounded-2xl rounded-br-md px-4 py-3 shadow-sm'
-        : 'max-w-xs lg:max-w-md bg-gray-100 text-gray-800 rounded-2xl rounded-bl-md px-4 py-3 shadow-sm';
+        : 'max-w-sm lg:max-w-2xl bg-gray-100 text-gray-800 rounded-2xl rounded-bl-md px-4 py-3 shadow-sm';
     
     if (role === 'user') {
         messageContent.innerHTML = `
