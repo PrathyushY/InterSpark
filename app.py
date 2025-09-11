@@ -123,30 +123,35 @@ def fallback_search(query: str, supabase_service) -> Dict[str, Any]:
     """
     try:
         results = {"profiles": [], "opportunities": [], "total_matches": 0}
-        
+
         # Simple keyword extraction
         query_lower = query.lower()
         skills_to_search = []
-        
+
         # Common skill keywords
         skill_keywords = {
-            'python': ['python', 'py'],
-            'javascript': ['javascript', 'js', 'node'],
-            'react': ['react', 'reactjs'],
-            'java': ['java'],
-            'html': ['html'],
-            'css': ['css'],
-            'sql': ['sql', 'database'],
-            'machine learning': ['machine learning', 'ml', 'ai', 'artificial intelligence'],
-            'data science': ['data science', 'data analysis'],
-            'web development': ['web development', 'web dev', 'frontend', 'backend']
+            "python": ["python", "py"],
+            "javascript": ["javascript", "js", "node"],
+            "react": ["react", "reactjs"],
+            "java": ["java"],
+            "html": ["html"],
+            "css": ["css"],
+            "sql": ["sql", "database"],
+            "machine learning": [
+                "machine learning",
+                "ml",
+                "ai",
+                "artificial intelligence",
+            ],
+            "data science": ["data science", "data analysis"],
+            "web development": ["web development", "web dev", "frontend", "backend"],
         }
-        
+
         # Extract skills from query
         for skill, keywords in skill_keywords.items():
             if any(keyword in query_lower for keyword in keywords):
                 skills_to_search.append(skill)
-        
+
         # Search profiles
         profile_results = supabase_service.search_students_enhanced(
             search_query=query,
@@ -155,7 +160,7 @@ def fallback_search(query: str, supabase_service) -> Dict[str, Any]:
             grade="",
             location="",
         )
-        
+
         # Search opportunities
         opportunity_results = supabase_service.search_opportunities(
             search_query=query,
@@ -164,13 +169,13 @@ def fallback_search(query: str, supabase_service) -> Dict[str, Any]:
             location="",
             skills_needed=",".join(skills_to_search) if skills_to_search else "",
         )
-        
+
         results["profiles"] = profile_results[:5]
         results["opportunities"] = opportunity_results[:5]
         results["total_matches"] = len(profile_results) + len(opportunity_results)
-        
+
         return results
-        
+
     except Exception as e:
         logger.error(f"Error in fallback search: {str(e)}")
         return {"profiles": [], "opportunities": [], "total_matches": 0}
@@ -182,43 +187,49 @@ def generate_fallback_response(user_message: str, db_results: Dict[str, Any]) ->
     """
     try:
         response_parts = []
-        
+
         if db_results["total_matches"] > 0:
             response_parts.append("I found some relevant results for you:")
-            
+
             if db_results["profiles"]:
                 response_parts.append("\n**Student Profiles:**")
                 for profile in db_results["profiles"]:
-                    name = profile.get('name', 'Unknown')
-                    school = profile.get('school', 'Unknown school')
-                    skills = profile.get('skills', [])
+                    name = profile.get("name", "Unknown")
+                    school = profile.get("school", "Unknown school")
+                    skills = profile.get("skills", [])
                     if isinstance(skills, str):
                         try:
                             skills = json.loads(skills)
                         except:
                             skills = [skills] if skills else []
-                    
+
                     response_parts.append(f"- **{name}** from {school}")
                     if skills:
                         response_parts.append(f"  Skills: {', '.join(skills[:5])}")
                     response_parts.append(f"  [View Profile](/profile/{profile['id']})")
-            
+
             if db_results["opportunities"]:
                 response_parts.append("\n**Opportunities:**")
                 for opp in db_results["opportunities"]:
-                    title = opp.get('title', 'Unknown title')
+                    title = opp.get("title", "Unknown title")
                     org_name = "Unknown organization"
                     if opp.get("profiles"):
                         org_name = opp["profiles"].get("name", org_name)
-                    
+
                     response_parts.append(f"- **{title}** at {org_name}")
-                    response_parts.append(f"  [View Opportunity](/opportunity/{opp['id']})")
+                    response_parts.append(
+                        f"  [View Opportunity](/opportunity/{opp['id']})"
+                    )
         else:
-            response_parts.append("I didn't find any matching profiles or opportunities for your query.")
-            response_parts.append("Try rephrasing your request or being more specific about the skills or type of opportunity you're looking for.")
-        
+            response_parts.append(
+                "I didn't find any matching profiles or opportunities for your query."
+            )
+            response_parts.append(
+                "Try rephrasing your request or being more specific about the skills or type of opportunity you're looking for."
+            )
+
         return "\n".join(response_parts)
-        
+
     except Exception as e:
         logger.error(f"Error generating fallback response: {str(e)}")
         return "I apologize, but I'm having trouble processing your request right now. Please try again later."

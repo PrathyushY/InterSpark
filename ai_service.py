@@ -45,7 +45,7 @@ class AIService:
             raise ValueError(
                 "GEMINI_API_KEY environment variable is required for AI functionality"
             )
-        
+
         # Use the global client instance which is already initialized
         self.client = client
 
@@ -294,12 +294,12 @@ Please provide a helpful response. If there are relevant database matches above,
                 config=types.GenerateContentConfig(
                     system_instruction=system_prompt,
                     # Disable thinking for faster responses (can be enabled if quality is preferred over speed)
-                    thinking_config=types.ThinkingConfig(thinking_budget=0)
-                )
+                    thinking_config=types.ThinkingConfig(thinking_budget=0),
+                ),
             )
 
             return response.text
-        
+
         except Exception as e:
             logger.error(f"Error generating AI response: {str(e)}")
             return "I apologize, but I'm having trouble processing your request right now. Please try again later or contact support if the issue persists."
@@ -335,8 +335,8 @@ Examples:
                     system_instruction=system_prompt,
                     thinking_config=types.ThinkingConfig(thinking_budget=0),
                     response_mime_type="application/json",
-                    response_schema=SkillsExtraction
-                )
+                    response_schema=SkillsExtraction,
+                ),
             )
 
             # Parse the structured JSON response
@@ -377,8 +377,8 @@ Examples:
                     system_instruction=system_prompt,
                     thinking_config=types.ThinkingConfig(thinking_budget=0),
                     response_mime_type="application/json",
-                    response_schema=SearchAnalysis
-                )
+                    response_schema=SearchAnalysis,
+                ),
             )
 
             logger.info(f"Gemini API response: {response.text}")
