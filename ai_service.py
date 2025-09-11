@@ -1,26 +1,53 @@
 import json
 import logging
-from datetime import datetime
-from typing import Dict, List, Any, Optional
+import os
+from typing import Dict, List, Any
 
-import google.generativeai as genai
+from dotenv import load_dotenv
+from google import genai
+from google.genai import types
+from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
+
+load_dotenv()
+
+# Initialize the client - it will automatically pick up GEMINI_API_KEY environment variable
+client = genai.Client()
+MODEL = "gemini-2.5-flash"
+
+
+# Pydantic models for structured output
+class SkillsExtraction(BaseModel):
+    skills: List[str]
+
+
+class SearchAnalysis(BaseModel):
+    skills: List[str]
+    locations: List[str]
+    job_types: List[str]
+    categories: List[str]
+    general_terms: List[str]
+    names: List[str]
 
 
 class AIService:
     """
     Service class to handle all AI-related functionality for InterSpark.
+    Uses the modern Google GenAI SDK with Gemini 2.5 models.
     """
 
-    def __init__(self, api_key: str):
+    def __init__(self, api_key: str = None):
         """Initialize the AI service with Google Gemini client."""
-        if not api_key:
+        # The modern SDK automatically picks up GEMINI_API_KEY from environment
+        # api_key parameter is kept for backward compatibility but not needed
+        if not os.getenv("GEMINI_API_KEY") and not api_key:
             raise ValueError(
                 "GEMINI_API_KEY environment variable is required for AI functionality"
             )
-        genai.configure(api_key=api_key)
-        self.model = genai.GenerativeModel('gemini-1.5-flash')
+        
+        # Use the global client instance which is already initialized
+        self.client = client
 
     def search_database_for_context(
         self, query: str, supabase_service
@@ -32,30 +59,30 @@ class AIService:
         """
         try:
             results = {"profiles": [], "opportunities": [], "total_matches": 0}
-            
+
             logger.info(f"Searching database for query: '{query}'")
 
             # Use AI to enhance the search query
             enhanced_query = self.enhance_search_query(query)
             logger.info(f"Enhanced query: {enhanced_query}")
-            
+
             # Extract skills and names for more targeted search
             extracted_skills = enhanced_query.get("skills", [])
             extracted_names = enhanced_query.get("names", [])
-            
+
             # Fallback: Use keyword matching if AI extraction fails
             if not extracted_skills and not extracted_names:
                 extracted_skills = self._extract_skills_fallback(query)
                 logger.info(f"Using fallback skill extraction: {extracted_skills}")
-            
+
             skills_param = ",".join(extracted_skills) if extracted_skills else ""
             logger.info(f"Final extracted skills: {extracted_skills}")
             logger.info(f"Final extracted names: {extracted_names}")
-            
+
             # Extract locations for search
             locations = enhanced_query.get("locations", [])
             location_param = locations[0] if locations else ""
-            
+
             # Search in profiles table with enhanced parameters
             # If we have extracted skills or names, use targeted search
             if extracted_skills:
@@ -64,7 +91,7 @@ class AIService:
                 search_text = " ".join(extracted_names)
             else:
                 search_text = query
-                
+
             profile_results = supabase_service.search_students_enhanced(
                 search_query=search_text,
                 skills=skills_param,
@@ -106,22 +133,22 @@ class AIService:
             context_parts.append("RELEVANT STUDENT PROFILES:")
             for profile in db_results["profiles"]:
                 # Basic info
-                name = profile.get('name', 'Unknown')
-                school = profile.get('school', 'Unknown school')
-                grade = profile.get('grade', '')
-                location = profile.get('location', '')
-                profile_id = profile.get('id', '')
-                profile_image = profile.get('profile_image', '')
-                
+                name = profile.get("name", "Unknown")
+                school = profile.get("school", "Unknown school")
+                grade = profile.get("grade", "")
+                location = profile.get("location", "")
+                profile_id = profile.get("id", "")
+                profile_image = profile.get("profile_image", "")
+
                 context_parts.append(f"- {name} from {school}")
                 context_parts.append(f"  ID: {profile_id}")
-                
+
                 # Add grade and location if available
                 if grade:
                     context_parts.append(f"  Grade: {grade}")
                 if location:
                     context_parts.append(f"  Location: {location}")
-                
+
                 # Enhanced skills display
                 if profile.get("skills"):
                     skills = profile.get("skills", [])
@@ -131,18 +158,20 @@ class AIService:
                         except:
                             skills = [skills] if skills else []
                     if skills:
-                        context_parts.append(f"  Skills: {', '.join(skills[:8])}")  # Show more skills
-                
+                        context_parts.append(
+                            f"  Skills: {', '.join(skills[:8])}"
+                        )  # Show more skills
+
                 # Add bio snippet if available
-                bio = profile.get('bio', '')
+                bio = profile.get("bio", "")
                 if bio and len(bio) > 10:
                     bio_snippet = bio[:150] + "..." if len(bio) > 150 else bio
                     context_parts.append(f"  Bio: {bio_snippet}")
-                
+
                 # Add profile image if available
                 if profile_image:
                     context_parts.append(f"  Profile Image: {profile_image}")
-                
+
                 context_parts.append(f"  View profile: /profile/{profile['id']}")
                 context_parts.append("")  # Add spacing between profiles
 
@@ -159,13 +188,17 @@ class AIService:
                 context_parts.append(
                     f"  Type: {opp.get('type', 'Unknown')} | Location: {opp.get('location', 'Unknown')}"
                 )
-                
+
                 # Add description snippet
-                description = opp.get('description', '')
+                description = opp.get("description", "")
                 if description and len(description) > 10:
-                    desc_snippet = description[:150] + "..." if len(description) > 150 else description
+                    desc_snippet = (
+                        description[:150] + "..."
+                        if len(description) > 150
+                        else description
+                    )
                     context_parts.append(f"  Description: {desc_snippet}")
-                
+
                 context_parts.append(f"  View opportunity: /opportunity/{opp['id']}")
                 context_parts.append("")  # Add spacing between opportunities
 
@@ -254,14 +287,19 @@ Remember: Always create interactive HTML profile cards when showing student prof
 
 Please provide a helpful response. If there are relevant database matches above, incorporate them naturally into your response with clickable links. If no matches are found, reply naturally: I didn't find any matching profiles or opportunities. Want to try rephrasing your request?"""
 
-            # Generate response using Google Gemini
-            response = self.model.generate_content([
-                system_prompt,
-                user_prompt
-            ])
+            # Generate response using Google Gemini with modern SDK
+            response = self.client.models.generate_content(
+                model=MODEL,
+                contents=user_prompt,
+                config=types.GenerateContentConfig(
+                    system_instruction=system_prompt,
+                    # Disable thinking for faster responses (can be enabled if quality is preferred over speed)
+                    thinking_config=types.ThinkingConfig(thinking_budget=0)
+                )
+            )
 
             return response.text
-
+        
         except Exception as e:
             logger.error(f"Error generating AI response: {str(e)}")
             return "I apologize, but I'm having trouble processing your request right now. Please try again later or contact support if the issue persists."
@@ -276,38 +314,37 @@ Please provide a helpful response. If there are relevant database matches above,
 
     def extract_skills_from_query(self, query: str) -> List[str]:
         """
-        Use AI to extract potential skills from a user query.
+        Use AI to extract potential skills from a user query using structured output.
         This can be used to enhance database searches.
         """
         try:
             system_prompt = """You are a skill extraction assistant. Your job is to identify technical skills, programming languages, frameworks, tools, or other professional skills mentioned in user queries.
 
-Return only a JSON array of skills found, or an empty array if none are found. Do not include explanatory text.
+Return a structured response with the skills found.
 
 Examples:
-- "I know Python and React" -> ["Python", "React"]
-- "Looking for Java developers" -> ["Java"]
-- "Need help with machine learning" -> ["Machine Learning"]
-- "What opportunities are available?" -> []"""
+- "I know Python and React" -> skills: ["Python", "React"]
+- "Looking for Java developers" -> skills: ["Java"]
+- "Need help with machine learning" -> skills: ["Machine Learning"]
+- "What opportunities are available?" -> skills: []"""
 
-            response = self.model.generate_content([
-                system_prompt,
-                f"Extract skills from this query: {query}"
-            ])
+            response = self.client.models.generate_content(
+                model=MODEL,
+                contents=f"Extract skills from this query: {query}",
+                config=types.GenerateContentConfig(
+                    system_instruction=system_prompt,
+                    thinking_config=types.ThinkingConfig(thinking_budget=0),
+                    response_mime_type="application/json",
+                    response_schema=SkillsExtraction
+                )
+            )
 
-            # Try to parse the JSON response
+            # Parse the structured JSON response
             try:
-                # Clean the response text by removing code block markers
-                clean_text = response.text.strip()
-                if clean_text.startswith('```json'):
-                    clean_text = clean_text[7:]  # Remove ```json
-                if clean_text.endswith('```'):
-                    clean_text = clean_text[:-3]  # Remove ```
-                clean_text = clean_text.strip()
-                
-                skills = json.loads(clean_text)
-                return skills if isinstance(skills, list) else []
+                result = json.loads(response.text)
+                return result.get("skills", [])
             except json.JSONDecodeError:
+                logger.error(f"Failed to parse structured response: {response.text}")
                 return []
 
         except Exception as e:
@@ -316,61 +353,38 @@ Examples:
 
     def enhance_search_query(self, query: str) -> Dict[str, Any]:
         """
-        Use AI to analyze and enhance search queries by extracting:
-        - Skills mentioned
-        - Location references
-        - Job types or categories
-        - Other search filters
+        Use AI to analyze and enhance search queries using structured output for reliability.
         """
         try:
-            system_prompt = """You are a search query analyzer. Analyze user queries for InterSpark (a student internship platform) and extract structured information.
+            system_prompt = """You are a search query analyzer for InterSpark (a student internship platform). Analyze user queries and extract structured information.
 
-Return a JSON object with these fields:
-- "skills": array of technical skills mentioned
-- "locations": array of locations/cities mentioned
-- "job_types": array of job types (internship, part-time, full-time, volunteer, etc.)
-- "categories": array of categories (technology, marketing, design, etc.)
-- "general_terms": array of other important search terms
-- "names": array of person names mentioned
+Return structured data with these fields:
+- skills: array of technical skills mentioned
+- locations: array of locations/cities mentioned  
+- job_types: array of job types (internship, part-time, full-time, volunteer, etc.)
+- categories: array of categories (technology, marketing, design, etc.)
+- general_terms: array of other important search terms
+- names: array of person names mentioned
 
 Examples:
-"Python developer internship in San Francisco" -> {
-    "skills": ["Python"],
-    "locations": ["San Francisco"],  
-    "job_types": ["internship"],
-    "categories": ["technology"],
-    "general_terms": ["developer"],
-    "names": []
-}
+- "Python developer internship in San Francisco" -> skills: ["Python"], locations: ["San Francisco"], job_types: ["internship"], categories: ["technology"], general_terms: ["developer"], names: []
+- "Tell me about Hridhay's profile" -> skills: [], locations: [], job_types: [], categories: [], general_terms: ["profile"], names: ["Hridhay"]"""
 
-"Tell me about Hridhay's profile" -> {
-    "skills": [],
-    "locations": [],
-    "job_types": [],
-    "categories": [],
-    "general_terms": ["profile"],
-    "names": ["Hridhay"]
-}
-
-Return only valid JSON, no explanatory text."""
-
-            response = self.model.generate_content([
-                system_prompt,
-                f"Analyze this search query: {query}"
-            ])
+            response = self.client.models.generate_content(
+                model=MODEL,
+                contents=f"Analyze this search query: {query}",
+                config=types.GenerateContentConfig(
+                    system_instruction=system_prompt,
+                    thinking_config=types.ThinkingConfig(thinking_budget=0),
+                    response_mime_type="application/json",
+                    response_schema=SearchAnalysis
+                )
+            )
 
             logger.info(f"Gemini API response: {response.text}")
-            
+
             try:
-                # Clean the response text by removing code block markers
-                clean_text = response.text.strip()
-                if clean_text.startswith('```json'):
-                    clean_text = clean_text[7:]  # Remove ```json
-                if clean_text.endswith('```'):
-                    clean_text = clean_text[:-3]  # Remove ```
-                clean_text = clean_text.strip()
-                
-                enhanced_query = json.loads(clean_text)
+                enhanced_query = json.loads(response.text)
                 logger.info(f"Parsed enhanced query: {enhanced_query}")
                 return enhanced_query if isinstance(enhanced_query, dict) else {}
             except json.JSONDecodeError as e:
@@ -380,49 +394,60 @@ Return only valid JSON, no explanatory text."""
         except Exception as e:
             logger.error(f"Error enhancing search query: {str(e)}")
             return {}
-    
+
     def _extract_skills_fallback(self, query: str) -> List[str]:
         """
         Fallback skill extraction using keyword matching.
         Used when AI extraction fails or returns empty results.
         """
         query_lower = query.lower()
-        
+
         # Common programming skills and technologies
         skill_keywords = {
-            'python': ['python', 'py'],
-            'javascript': ['javascript', 'js', 'node.js', 'nodejs'],
-            'react': ['react', 'reactjs', 'react.js'],
-            'java': ['java'],
-            'html': ['html', 'html5'],
-            'css': ['css', 'css3'],
-            'sql': ['sql', 'mysql', 'postgresql', 'database'],
-            'machine learning': ['machine learning', 'ml', 'ai', 'artificial intelligence'],
-            'data science': ['data science', 'data analysis', 'analytics'],
-            'web development': ['web development', 'web dev', 'frontend', 'backend', 'full stack'],
-            'c++': ['c++', 'cpp'],
-            'c#': ['c#', 'csharp'],
-            'php': ['php'],
-            'ruby': ['ruby'],
-            'swift': ['swift'],
-            'kotlin': ['kotlin'],
-            'go': ['golang', 'go programming'],
-            'rust': ['rust'],
-            'typescript': ['typescript', 'ts'],
-            'vue': ['vue', 'vue.js', 'vuejs'],
-            'angular': ['angular', 'angularjs'],
-            'django': ['django'],
-            'flask': ['flask'],
-            'spring': ['spring', 'spring boot'],
-            'docker': ['docker'],
-            'kubernetes': ['kubernetes', 'k8s'],
-            'aws': ['aws', 'amazon web services'],
-            'git': ['git', 'github', 'version control']
+            "python": ["python", "py"],
+            "javascript": ["javascript", "js", "node.js", "nodejs"],
+            "react": ["react", "reactjs", "react.js"],
+            "java": ["java"],
+            "html": ["html", "html5"],
+            "css": ["css", "css3"],
+            "sql": ["sql", "mysql", "postgresql", "database"],
+            "machine learning": [
+                "machine learning",
+                "ml",
+                "ai",
+                "artificial intelligence",
+            ],
+            "data science": ["data science", "data analysis", "analytics"],
+            "web development": [
+                "web development",
+                "web dev",
+                "frontend",
+                "backend",
+                "full stack",
+            ],
+            "c++": ["c++", "cpp"],
+            "c#": ["c#", "csharp"],
+            "php": ["php"],
+            "ruby": ["ruby"],
+            "swift": ["swift"],
+            "kotlin": ["kotlin"],
+            "go": ["golang", "go programming"],
+            "rust": ["rust"],
+            "typescript": ["typescript", "ts"],
+            "vue": ["vue", "vue.js", "vuejs"],
+            "angular": ["angular", "angularjs"],
+            "django": ["django"],
+            "flask": ["flask"],
+            "spring": ["spring", "spring boot"],
+            "docker": ["docker"],
+            "kubernetes": ["kubernetes", "k8s"],
+            "aws": ["aws", "amazon web services"],
+            "git": ["git", "github", "version control"],
         }
-        
+
         found_skills = []
         for skill, keywords in skill_keywords.items():
             if any(keyword in query_lower for keyword in keywords):
                 found_skills.append(skill)
-        
+
         return found_skills

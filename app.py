@@ -110,7 +110,7 @@ supabase_service = SupabaseService()
 
 # Initialize AI service with error handling
 try:
-    ai_service = AIService(api_key=os.getenv("GEMINI_API_KEY"))
+    ai_service = AIService()  # Modern SDK automatically picks up GEMINI_API_KEY
 except ValueError as e:
     logger.warning(f"AI service not available: {e}")
     ai_service = None
