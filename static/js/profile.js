@@ -9,7 +9,7 @@
         const textSpan = document.getElementById('save-profile-text');
         btn.disabled = true;
         const url = state.isSaved ? `/unsave_profile/${state.profileId}` : `/save_profile/${state.profileId}`;
-        fetch(url, {method: 'POST'}).then(r => r.json()).then(data => {
+        fetch(url, { method: 'POST' }).then(r => r.json()).then(data => {
             if (data.success) {
                 state.isSaved = !state.isSaved;
                 if (state.isSaved) {
@@ -153,7 +153,7 @@
     }
 
     function updateProfileImageDisplay(imageUrl) {
-        const profileImage = document.getElementById('profile-image');
+        const profileImage = document.getElementById('avatar-preview');
         const placeholder = document.getElementById('profile-image-placeholder');
         const deleteBtn = document.getElementById('delete-profile-picture-btn');
 
@@ -165,7 +165,7 @@
             } else {
                 // Create new image element
                 const newImg = document.createElement('img');
-                newImg.id = 'profile-image';
+                newImg.id = 'avatar-preview';
                 newImg.src = imageUrl;
                 newImg.alt = 'Profile Picture';
                 newImg.className = 'h-20 w-20 rounded-full object-cover border-2 border-gray-200';
