@@ -814,8 +814,8 @@ class SupabaseService:
 
             selected_skills_needed = set(parse_skills(skills_needed))
             if selected_skills_needed:
-                # Only keep opportunities that require ALL selected skills
-                def opp_has_all_skills(opp):
+                # Use ANY match with case-insensitive comparison
+                def opp_has_any_skills(opp):
                     opp_skills = opp.get("skills_needed", [])
                     # Robustly parse opp_skills
                     if isinstance(opp_skills, str):
@@ -836,9 +836,12 @@ class SupabaseService:
                                 )
                     if not isinstance(opp_skills, list):
                         return False
-                    return selected_skills_needed.issubset(set(opp_skills))
+                    # Case-insensitive matching
+                    opp_skills_lower = [s.lower() for s in opp_skills]
+                    selected_skills_lower = [s.lower() for s in selected_skills_needed]
+                    return any(skill in opp_skills_lower for skill in selected_skills_lower)
 
-                opportunities = [o for o in opportunities if opp_has_all_skills(o)]
+                opportunities = [o for o in opportunities if opp_has_any_skills(o)]
 
             return opportunities
 

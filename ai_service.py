@@ -70,8 +70,8 @@ class AIService:
             extracted_skills = enhanced_query.get("skills", [])
             extracted_names = enhanced_query.get("names", [])
 
-            # Fallback: Use keyword matching if AI extraction fails
-            if not extracted_skills and not extracted_names:
+            # Fallback: Use keyword matching if AI extraction fails, but only for clear technical terms
+            if not extracted_skills and not extracted_names and any(term in query.lower() for term in ['python', 'javascript', 'java', 'react', 'flask', 'django']):
                 extracted_skills = self._extract_skills_fallback(query)
                 logger.info(f"Using fallback skill extraction: {extracted_skills}")
 
@@ -85,11 +85,12 @@ class AIService:
 
             # Search in profiles table with enhanced parameters
             # If we have extracted skills or names, use targeted search
-            if extracted_skills:
-                search_text = ""
+            if extracted_skills and any(skill in ['python', 'javascript', 'java', 'html', 'css', 'flask', 'django', 'react', 'vue', 'angular'] for skill in extracted_skills):
+                search_text = ""  # Focus on technical skills
             elif extracted_names:
                 search_text = " ".join(extracted_names)
             else:
+                # Use full query for name/general searches
                 search_text = query
 
             profile_results = supabase_service.search_students_enhanced(
@@ -102,12 +103,38 @@ class AIService:
             logger.info(f"Found {len(profile_results)} profiles")
 
             # Search in opportunities table with enhanced parameters
+            # Always use technical skills for skills_needed, filtering out job types and general terms
+            technical_skills = [s for s in extracted_skills if s not in ['internship', 'volunteer', 'part-time', 'full-time', 'remote', 'marketing', 'design', 'research', 'web development']]
+            opp_skills_param = ",".join(technical_skills) if technical_skills else ""
+            
+            # Determine search strategy for opportunities
+            opp_search_text = query  # Default to full query
+            opp_type = ""
+            
+            # Check if this is an opportunity type-focused query
+            job_types = enhanced_query.get("job_types", [])
+            if job_types or any(term in extracted_skills for term in ['internship', 'volunteer', 'part-time', 'full-time']):
+                opp_search_text = ""  # Focus on type filtering
+                # Map extracted terms to opportunity types
+                if 'internship' in job_types or 'internship' in extracted_skills:
+                    opp_type = "Internship"
+                elif 'volunteer' in job_types or 'volunteer' in extracted_skills:
+                    opp_type = "Volunteer"
+                elif 'part-time' in job_types or 'part-time' in extracted_skills:
+                    opp_type = "Part-time"
+                elif 'full-time' in job_types or 'full-time' in extracted_skills:
+                    opp_type = "Full-time"
+            elif technical_skills:
+                opp_search_text = ""  # Focus on skills search only
+            
+            logger.info(f"Opportunity search parameters: search_query='{opp_search_text}', type='{opp_type}', location='{location_param}', skills='{opp_skills_param}'")
+            
             opportunity_results = supabase_service.search_opportunities(
-                search_query=search_text,
-                opportunity_type="",
+                search_query=opp_search_text,
+                opportunity_type=opp_type,
                 category="",
                 location=location_param,
-                skills_needed=skills_param,
+                skills_needed=opp_skills_param,
             )
             logger.info(f"Found {len(opportunity_results)} opportunities")
 
@@ -185,8 +212,12 @@ class AIService:
                 context_parts.append(
                     f"- {opp.get('title', 'Unknown title')} at {org_name}"
                 )
+                context_parts.append(f"  ID: {opp.get('id', '')}")
                 context_parts.append(
                     f"  Type: {opp.get('type', 'Unknown')} | Location: {opp.get('location', 'Unknown')}"
+                )
+                context_parts.append(
+                    f"  Duration: {opp.get('duration', 'Not specified')}"
                 )
 
                 # Add description snippet
@@ -199,6 +230,19 @@ class AIService:
                     )
                     context_parts.append(f"  Description: {desc_snippet}")
 
+                # Add skills needed
+                skills_needed = opp.get("skills_needed", [])
+                if skills_needed:
+                    if isinstance(skills_needed, str):
+                        try:
+                            skills_needed = json.loads(skills_needed)
+                        except:
+                            skills_needed = [skills_needed] if skills_needed else []
+                    if skills_needed:
+                        context_parts.append(
+                            f"  Skills Needed: {', '.join(skills_needed[:5])}"
+                        )
+
                 context_parts.append(f"  View opportunity: /opportunity/{opp['id']}")
                 context_parts.append("")  # Add spacing between opportunities
 
@@ -209,12 +253,21 @@ class AIService:
         Build conversation context from recent messages.
         """
         conversation_context = ""
-        if len(chat_history) > 2:  # More than just current user message
+        if len(chat_history) > 1:  # More than just current user message
             recent_messages = chat_history[-6:]  # Last 6 messages for context
-            conversation_context = "\n\nCONVERSATION CONTEXT:\n"
-            for msg in recent_messages:
+            conversation_context = "\n\nRECENT CONVERSATION HISTORY:\n"
+            
+            for i, msg in enumerate(recent_messages):
                 role = "User" if msg["role"] == "user" else "Assistant"
-                conversation_context += f"{role}: {msg['content']}\n"
+                content = msg['content']
+                
+                # Include recent messages for context, truncate very long ones
+                if len(content) > 500:
+                    content = content[:500] + "..."
+                
+                conversation_context += f"{role} Message {i+1}: {content}\n\n"
+            
+            logger.info(f"Built conversation context with {len(recent_messages)} messages")
 
         return conversation_context
 
@@ -228,11 +281,12 @@ class AIService:
 
 Your role is to:
 1. Provide helpful, conversational responses to user queries
-2. When relevant, create interactive profile cards for matching students using HTML
+2. When relevant, create interactive cards for matching students or opportunities using HTML
 3. Be encouraging and supportive, especially for students looking for opportunities
 4. Keep responses concise but informative
-5. **IMPORTANT: When showing student profiles, create HTML profile cards instead of just text links**
+5. **IMPORTANT: When showing results, create HTML cards instead of just text links**
 6. Maintain conversation flow and context from previous messages
+7. **CONVERSATIONAL REFERENCES: When users say "this opportunity", "the one you showed", "summarize this", etc., and you have relevant database results, use that information to provide helpful responses**
 7. **PROFILE CARD FORMAT:**
    When showing student profiles, create interactive HTML cards directly in your response (no code blocks).
    Use this exact HTML structure for each profile:
@@ -256,12 +310,43 @@ Your role is to:
    
    **IMPORTANT: Generate the HTML directly in your response, NOT inside code blocks or backticks.**
 
+8. **OPPORTUNITY CARD FORMAT:**
+   When showing opportunities, create interactive HTML cards directly in your response (no code blocks).
+   Use this exact HTML structure for each opportunity:
+   
+   <div class="bg-white border border-gray-200 rounded-lg p-4 mb-3 hover:shadow-md transition-shadow cursor-pointer" onclick="window.open('/opportunity/[OPPORTUNITY_ID]', '_blank')">
+     <div class="flex items-start space-x-3">
+       <div class="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center flex-shrink-0">
+         <i class="fas fa-briefcase text-white text-lg"></i>
+       </div>
+       <div class="flex-1">
+         <h4 class="font-semibold text-gray-900">[TITLE]</h4>
+         <p class="text-sm text-gray-600">[TYPE] at [ORGANIZATION]</p>
+         <p class="text-xs text-gray-500">[LOCATION] • [DURATION]</p>
+         <p class="text-sm text-gray-700 mt-2 line-clamp-2">[DESCRIPTION_SNIPPET]</p>
+         <div class="flex flex-wrap gap-1 mt-2">
+           [SKILLS_AS_BADGES]
+         </div>
+       </div>
+       <i class="fas fa-external-link-alt text-gray-400"></i>
+     </div>
+   </div>
+   
+   For skills badges, use: <span class="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">[SKILL]</span>
+
 Current database context:
 {chr(10).join(context_parts) if context_parts else "No specific matches found in database."}
 
 {conversation_context}
 
-Remember: Always create interactive HTML profile cards when showing student profiles. Make them clickable and visually appealing!"""
+**CRITICAL CONVERSATION HANDLING:**
+- When users say "summarize the opportunity", "this opportunity", "the one you showed", "in your last message", etc., ALWAYS check the RECENT CONVERSATION HISTORY section
+- Look for Assistant messages that contain opportunity or profile information
+- If you see opportunity cards, profile cards, or detailed information in recent Assistant messages, use that information to answer follow-up questions
+- Pay special attention to Assistant messages that mention specific opportunities like "Backend Developer", "Marketing Assistant", etc.
+- When users ask for summaries or details about "the opportunity" or "this opportunity", refer back to what you previously shared in the conversation
+
+Remember: Always create interactive HTML cards when showing results. Make them clickable and visually appealing!"""
 
     def generate_response_with_context(
         self,
@@ -285,7 +370,16 @@ Remember: Always create interactive HTML profile cards when showing student prof
             # Build user message with context
             user_prompt = f"""User message: {user_message}
 
-Please provide a helpful response. If there are relevant database matches above, incorporate them naturally into your response with clickable links. If no matches are found, reply naturally: I didn't find any matching profiles or opportunities. Want to try rephrasing your request?"""
+Please provide a helpful response. If there are relevant database matches above, incorporate them naturally into your response with clickable cards.
+
+**IMPORTANT: For conversational references like "summarize the opportunity", "this opportunity", "the one you showed":**
+1. FIRST check the RECENT CONVERSATION HISTORY section above
+2. Look for Assistant messages that mentioned specific opportunities or profiles
+3. If you find relevant information in the conversation history, use that to answer the user's question
+4. Provide summaries or details based on what you previously shared in the conversation
+5. If you previously showed an opportunity card for "Backend Developer" or any other opportunity, reference that specific information
+
+If no matches are found and no relevant conversation history, reply naturally: I didn't find any matching profiles or opportunities. Want to try rephrasing your request?"""
 
             # Generate response using Google Gemini with modern SDK
             response = self.client.models.generate_content(
@@ -444,10 +538,27 @@ Examples:
             "aws": ["aws", "amazon web services"],
             "git": ["git", "github", "version control"],
         }
+        
+        # Opportunity-specific terms
+        opportunity_keywords = {
+            "internship": ["internship", "intern"],
+            "volunteer": ["volunteer", "volunteering"],
+            "part-time": ["part-time", "part time"],
+            "full-time": ["full-time", "full time"],
+            "remote": ["remote", "work from home"],
+            "marketing": ["marketing", "social media"],
+            "design": ["design", "ui", "ux", "graphic design"],
+            "research": ["research", "data analysis"],
+        }
 
         found_skills = []
         for skill, keywords in skill_keywords.items():
             if any(keyword in query_lower for keyword in keywords):
                 found_skills.append(skill)
+        
+        # Also check for opportunity-related terms
+        for term, keywords in opportunity_keywords.items():
+            if any(keyword in query_lower for keyword in keywords):
+                found_skills.append(term)
 
         return found_skills
