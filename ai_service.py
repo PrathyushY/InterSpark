@@ -277,7 +277,7 @@ class AIService:
         """
         Build the system prompt for the AI assistant with enhanced capabilities.
         """
-        return f"""You are Spark AI, a helpful AI assistant for InterSpark - a platform connecting students with internship and volunteer opportunities.
+        return f"""You are Spark Agent, a helpful AI assistant for InterSpark - a platform connecting students with internship and volunteer opportunities.
 
 Your role is to:
 1. Provide helpful, conversational responses to user queries
