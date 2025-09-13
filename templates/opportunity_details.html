@@ -68,7 +68,10 @@ request.args.get('skills_needed') is not none %}
                         {% else %}bg-green-100 text-green-800{% endif %}">
                         {{ opportunity.type }}
                     </span>
-                    <span class="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">{{ opportunity.type }}</span>
+                    {% if opportunity.category %}
+                    <span class="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">{{ opportunity.category
+                        }}</span>
+                    {% endif %}
                 </div>
                 <div class="text-sm text-gray-500">
                     Posted {{ opportunity.created_at | format_date }}

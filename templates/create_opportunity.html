@@ -103,6 +103,10 @@
                                     %}selected{% endif %}>
                                     Science
                                 </option>
+                                <option value="Other" {% if opportunity and opportunity.category=='Other' %}selected{%
+                                    endif %}>
+                                    Other
+                                </option>
                             </select>
                         </div>
                     </div>
