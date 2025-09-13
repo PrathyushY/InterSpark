@@ -46,7 +46,7 @@
     {# Ensure all if blocks above are closed before starting new sections #}
     {% if is_own_profile %}
     <div class="bg-white shadow rounded-lg">
-        <form method="POST" class="divide-y divide-gray-200">
+        <form method="POST" action="{{ url_for('profile') }}" class="divide-y divide-gray-200">
             {% endif %}
             <!-- Profile Header -->
             <div class="px-4 py-5 sm:p-6">
@@ -187,17 +187,37 @@
                         </div>
                     </div>
                     <div class="sm:col-span-6">
+                        <label for="bio" class="block text-sm font-medium text-gray-700">Bio <span
+                                class="text-red-500">*</span></label>
+                        <div class="mt-1">
+                            {% if is_own_profile %}
+                            <textarea name="bio" id="bio" rows="3" required
+                                placeholder="Tell us about yourself, your interests, goals, and what makes you unique..."
+                                class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">{{ profile.bio or '' }}</textarea>
+                            {% else %}
+                            <span class="block w-full sm:text-sm text-gray-900">{{ profile.bio or 'Not specified'
+                                }}</span>
+                            {% endif %}
+                        </div>
+                        {% if is_own_profile %}
+                        <p class="mt-1 text-sm text-gray-500">Required - This helps organizations understand who you are
+                            and what you're passionate about</p>
+                        {% endif %}
+                    </div>
+                    <div class="sm:col-span-6">
                         <label for="skills-bubble-input" class="block text-sm font-medium text-gray-700">Skills</label>
                         <div class="mt-1">
                             {% if is_own_profile %}
                             <div id="skills-bubble-container" class="flex flex-wrap gap-2 mb-2"></div>
-                            <input type="text" id="skills-bubble-input" name="skills-bubble-input" autocomplete="off"
-                                placeholder="Type a skill and press Enter..."
-                                class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">
+                            <div class="relative">
+                                <input type="text" id="skills-bubble-input" name="skills-bubble-input"
+                                    autocomplete="off" placeholder="Type a skill and press Enter..."
+                                    class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">
+                                <div id="skills-autocomplete-list"
+                                    class="absolute z-10 bg-white border border-gray-300 rounded-md mt-1 w-full shadow-lg"
+                                    style="display:none;"></div>
+                            </div>
                             <input type="hidden" name="skills" id="skills-hidden-input">
-                            <div id="skills-autocomplete-list"
-                                class="absolute z-10 bg-white border border-gray-300 rounded-md mt-1 w-full"
-                                style="display:none;"></div>
                             {% else %}
                             {% if skills_json and skills_json|length > 0 %}
                             <div class="flex flex-wrap gap-2">
@@ -450,14 +470,21 @@
 <script>
     window.PROFILE_STATE = { profileId: {{ profile.id | tojson | safe }}, isSaved: { { is_saved | tojson | safe } } };
 </script>
+{% endif %}
+
 <script>
-    {% set skills_list = skills_json |default ([], true) %}
-    var initialSkills = JSON.parse('{{ skills_list|tojson|safe }}');
+    {% if is_own_profile %}
+    {% set skills_list = skills_json | default ([], true) %}
+    {% else %}
+    {% set skills_list = skills_json | default ([], true) %}
+    {% endif %}
+    var initialSkills = {{ skills_list | tojson | safe }};
+    var skillsMaster = {{ skills_master | default ([], true) | tojson | safe }};
 </script>
+
 <script>
     window.PROFILE_EDIT = { userType: '{{ user_type }}' };
 </script>
-{% endif %}
 
 <script src="{{ url_for('static', filename='js/profile.js') }}"></script>
 {% endblock %}
