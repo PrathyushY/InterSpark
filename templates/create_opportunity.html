@@ -13,8 +13,9 @@
     <div class="mb-8">
         <h1 class="text-2xl font-bold text-gray-900">{% if is_editing %}Edit Opportunity{% else %}Create New
             Opportunity{% endif %}</h1>
-        <p class="mt-1 text-gray-500">{% if is_editing %}Update your opportunity details{% else %}Post an internship
-            or volunteer opportunity to connect with talented students{% endif %}</p>
+        <p class="mt-1 text-gray-500">{% if is_editing %}Update your opportunity details{% else %}Post internships,
+            jobs, research opportunities, summer programs, camps, and other opportunities to connect with talented high
+            school students{% endif %}</p>
     </div>
 
     <div class="bg-white shadow rounded-lg">
@@ -48,6 +49,24 @@
                                     opportunity.type|trim=='Internship' %}selected{% endif %}>Internship</option>
                                 <option value="Volunteer" {% if opportunity and opportunity.type and
                                     opportunity.type|trim=='Volunteer' %}selected{% endif %}>Volunteer</option>
+                                <option value="Job" {% if opportunity and opportunity.type and
+                                    opportunity.type|trim=='Job' %}selected{% endif %}>Job</option>
+                                <option value="Summer Camp" {% if opportunity and opportunity.type and
+                                    opportunity.type|trim=='Summer Camp' %}selected{% endif %}>Summer Camp</option>
+                                <option value="Research Opportunity" {% if opportunity and opportunity.type and
+                                    opportunity.type|trim=='Research Opportunity' %}selected{% endif %}>Research
+                                    Opportunity</option>
+                                <option value="Summer Program" {% if opportunity and opportunity.type and
+                                    opportunity.type|trim=='Summer Program' %}selected{% endif %}>Summer Program
+                                </option>
+                                <option value="Scholarship" {% if opportunity and opportunity.type and
+                                    opportunity.type|trim=='Scholarship' %}selected{% endif %}>Scholarship</option>
+                                <option value="Competition" {% if opportunity and opportunity.type and
+                                    opportunity.type|trim=='Competition' %}selected{% endif %}>Competition</option>
+                                <option value="Workshop" {% if opportunity and opportunity.type and
+                                    opportunity.type|trim=='Workshop' %}selected{% endif %}>Workshop</option>
+                                <option value="Mentorship" {% if opportunity and opportunity.type and
+                                    opportunity.type|trim=='Mentorship' %}selected{% endif %}>Mentorship</option>
                                 <option value="Full-time" {% if opportunity and opportunity.type and
                                     opportunity.type|trim=='Full-time' %}selected{% endif %}>Full-time</option>
                                 <option value="Part-time" {% if opportunity and opportunity.type and
@@ -83,6 +102,10 @@
                                 <option value="Science" {% if opportunity and opportunity.category=='Science'
                                     %}selected{% endif %}>
                                     Science
+                                </option>
+                                <option value="Other" {% if opportunity and opportunity.category=='Other' %}selected{%
+                                    endif %}>
+                                    Other
                                 </option>
                             </select>
                         </div>
@@ -128,6 +151,7 @@
                                 %}class="required-highlight" {% endif %}
                                 class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">
                         </div>
+                        <p class="mt-1 text-sm text-gray-500">Must be a future date</p>
                     </div>
 
                     <div class="sm:col-span-6">
@@ -160,6 +184,128 @@
                         <p class="mt-2 text-sm text-gray-500">Add required skills as bubbles. Start typing for
                             suggestions, or add new skills by typing them and pressing Enter. This helps students find
                             relevant opportunities.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Type-Specific Fields -->
+            <div class="px-4 py-5 sm:p-6" id="type-specific-fields">
+                <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">Additional Details</h3>
+
+                <!-- Scholarship/Competition specific fields -->
+                <div class="space-y-6 type-fields" data-types="Scholarship,Competition" style="display:none;">
+                    <div class="sm:col-span-6">
+                        <label for="award_amount" class="block text-sm font-medium text-gray-700">Award Amount</label>
+                        <div class="mt-1">
+                            <input type="text" name="award_amount" id="award_amount"
+                                value="{% if opportunity and opportunity.award_amount %}{{ opportunity.award_amount|trim }}{% endif %}"
+                                placeholder="e.g., $5,000, Full tuition, Prize package worth $1,000"
+                                class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">
+                        </div>
+                    </div>
+                    <div class="sm:col-span-6">
+                        <label for="eligibility_criteria" class="block text-sm font-medium text-gray-700">Eligibility
+                            Criteria</label>
+                        <div class="mt-1">
+                            <textarea name="eligibility_criteria" id="eligibility_criteria" rows="3"
+                                placeholder="List specific eligibility requirements (GPA, grade level, etc.)"
+                                class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">{% if opportunity and opportunity.eligibility_criteria %}{{ opportunity.eligibility_criteria|trim }}{% endif %}</textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Summer Camp/Workshop specific fields -->
+                <div class="space-y-6 type-fields" data-types="Summer Camp,Workshop" style="display:none;">
+                    <div class="sm:col-span-3">
+                        <label for="age_range" class="block text-sm font-medium text-gray-700">Age Range</label>
+                        <div class="mt-1">
+                            <input type="text" name="age_range" id="age_range"
+                                value="{% if opportunity and opportunity.age_range %}{{ opportunity.age_range|trim }}{% endif %}"
+                                placeholder="e.g., 14-18 years, Grades 9-12"
+                                class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">
+                        </div>
+                    </div>
+                    <div class="sm:col-span-6">
+                        <label for="program_dates" class="block text-sm font-medium text-gray-700">Program Dates</label>
+                        <div class="mt-1">
+                            <input type="text" name="program_dates" id="program_dates"
+                                value="{% if opportunity and opportunity.program_dates %}{{ opportunity.program_dates|trim }}{% endif %}"
+                                placeholder="e.g., July 15-29, 2024 or Multiple sessions available"
+                                class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Research Opportunity specific fields -->
+                <div class="space-y-6 type-fields" data-types="Research Opportunity" style="display:none;">
+                    <div class="sm:col-span-3">
+                        <label for="research_field" class="block text-sm font-medium text-gray-700">Research
+                            Field</label>
+                        <div class="mt-1">
+                            <input type="text" name="research_field" id="research_field"
+                                value="{% if opportunity and opportunity.research_field %}{{ opportunity.research_field|trim }}{% endif %}"
+                                placeholder="e.g., Biology, Computer Science, Environmental Science"
+                                class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">
+                        </div>
+                    </div>
+                    <div class="sm:col-span-6">
+                        <label for="prerequisite_skills" class="block text-sm font-medium text-gray-700">Prerequisite
+                            Skills</label>
+                        <div class="mt-1">
+                            <textarea name="prerequisite_skills" id="prerequisite_skills" rows="3"
+                                placeholder="List any required background knowledge or skills"
+                                class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">{% if opportunity and opportunity.prerequisite_skills %}{{ opportunity.prerequisite_skills|trim }}{% endif %}</textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Mentorship specific fields -->
+                <div class="space-y-6 type-fields" data-types="Mentorship" style="display:none;">
+                    <div class="sm:col-span-6">
+                        <label for="mentor_info" class="block text-sm font-medium text-gray-700">Mentor
+                            Information</label>
+                        <div class="mt-1">
+                            <textarea name="mentor_info" id="mentor_info" rows="3"
+                                placeholder="Information about the mentor(s), their background, and what they'll provide"
+                                class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">{% if opportunity and opportunity.mentor_info %}{{ opportunity.mentor_info|trim }}{% endif %}</textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- General fields for work-based opportunities -->
+                <div class="space-y-6 type-fields" data-types="Internship,Job,Volunteer,Full-time,Part-time"
+                    style="display:none;">
+                    <div class="sm:col-span-3">
+                        <label for="commitment_level" class="block text-sm font-medium text-gray-700">Time
+                            Commitment</label>
+                        <div class="mt-1">
+                            <input type="text" name="commitment_level" id="commitment_level"
+                                value="{% if opportunity and opportunity.commitment_level %}{{ opportunity.commitment_level|trim }}{% endif %}"
+                                placeholder="e.g., 20 hours/week, Full-time (40 hrs/week)"
+                                class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Common fields for all types -->
+                <div class="space-y-6">
+                    <div class="sm:col-span-6">
+                        <label for="application_materials" class="block text-sm font-medium text-gray-700">Application
+                            Materials Required</label>
+                        <div class="mt-1">
+                            <textarea name="application_materials" id="application_materials" rows="3"
+                                placeholder="List what students need to submit (resume, cover letter, portfolio, etc.)"
+                                class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">{% if opportunity and opportunity.application_materials %}{{ opportunity.application_materials|trim }}{% endif %}</textarea>
+                        </div>
+                    </div>
+                    <div class="sm:col-span-6">
+                        <label for="selection_process" class="block text-sm font-medium text-gray-700">Selection
+                            Process</label>
+                        <div class="mt-1">
+                            <textarea name="selection_process" id="selection_process" rows="3"
+                                placeholder="Describe how candidates will be selected (interview, application review, etc.)"
+                                class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">{% if opportunity and opportunity.selection_process %}{{ opportunity.selection_process|trim }}{% endif %}</textarea>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -290,6 +436,126 @@
 </script>
 <script>
     window.OPP_EDITING = {{ 'true' if is_editing else 'false' }};
+
+    // Handle dynamic field visibility based on opportunity type
+    function handleTypeChange() {
+        const typeSelect = document.getElementById('type');
+        const selectedType = typeSelect.value;
+
+        // Hide all type-specific field groups
+        const typeFields = document.querySelectorAll('.type-fields');
+        typeFields.forEach(field => {
+            field.style.display = 'none';
+        });
+
+        // Show relevant field groups
+        if (selectedType) {
+            typeFields.forEach(field => {
+                const applicableTypes = field.getAttribute('data-types').split(',');
+                if (applicableTypes.includes(selectedType)) {
+                    field.style.display = 'block';
+                }
+            });
+        }
+
+        // Update placeholder text and labels based on type
+        updateFieldPlaceholders(selectedType);
+    }
+
+    function updateFieldPlaceholders(type) {
+        const compensationField = document.getElementById('compensation');
+        const compensationLabel = document.querySelector('label[for="compensation"]');
+        const durationField = document.getElementById('duration');
+        const durationLabel = document.querySelector('label[for="duration"]');
+
+        switch (type) {
+            case 'Scholarship':
+                compensationLabel.textContent = 'Award Amount';
+                compensationField.placeholder = 'e.g., $5,000, Full tuition coverage';
+                durationLabel.textContent = 'Award Period';
+                durationField.placeholder = 'e.g., One-time, 4 years, Per semester';
+                break;
+            case 'Competition':
+                compensationLabel.textContent = 'Prizes';
+                compensationField.placeholder = 'e.g., 1st: $1000, 2nd: $500, Recognition';
+                durationLabel.textContent = 'Competition Timeline';
+                durationField.placeholder = 'e.g., Submission by Dec 15, Winners announced Jan 30';
+                break;
+            case 'Summer Camp':
+            case 'Summer Program':
+                compensationLabel.textContent = 'Cost/Compensation';
+                compensationField.placeholder = 'e.g., Free, $500 fee, Scholarships available';
+                durationLabel.textContent = 'Program Duration';
+                durationField.placeholder = 'e.g., 2 weeks, June 15-29, 2024';
+                break;
+            case 'Workshop':
+                compensationLabel.textContent = 'Cost';
+                compensationField.placeholder = 'e.g., Free, $50 registration fee';
+                durationLabel.textContent = 'Workshop Length';
+                durationField.placeholder = 'e.g., 1 day, 3-hour session, Weekend workshop';
+                break;
+            case 'Mentorship':
+                compensationLabel.textContent = 'Compensation';
+                compensationField.placeholder = 'e.g., Unpaid volunteer mentorship';
+                durationLabel.textContent = 'Mentorship Period';
+                durationField.placeholder = 'e.g., 6 months, Academic year, Ongoing';
+                break;
+            default:
+                compensationLabel.textContent = 'Compensation';
+                compensationField.placeholder = 'e.g., Unpaid, $15/hour, Stipend provided, Academic credit';
+                durationLabel.textContent = 'Duration';
+                durationField.placeholder = 'e.g., Summer 2024, 3 months, Ongoing';
+        }
+    }
+
+    // Set minimum date to today for application deadline
+    document.addEventListener('DOMContentLoaded', function () {
+        // Initialize type-specific fields
+        const typeSelect = document.getElementById('type');
+        if (typeSelect) {
+            typeSelect.addEventListener('change', handleTypeChange);
+            // Trigger on page load if there's already a selected type
+            if (typeSelect.value) {
+                handleTypeChange();
+            }
+        }
+        const deadlineInput = document.getElementById('application_deadline');
+        if (deadlineInput) {
+            // Set minimum date to today
+            const today = new Date().toISOString().split('T')[0];
+            deadlineInput.setAttribute('min', today);
+
+            // Add validation for past dates
+            deadlineInput.addEventListener('change', function () {
+                const selectedDate = new Date(this.value);
+                const today = new Date();
+                today.setHours(0, 0, 0, 0); // Reset time to start of day for comparison
+
+                if (selectedDate < today) {
+                    alert('Application deadline cannot be in the past. Please select a future date.');
+                    this.value = '';
+                    this.focus();
+                }
+            });
+
+            // Also validate on form submission
+            document.getElementById('opportunity-form').addEventListener('submit', function (e) {
+                const deadlineValue = deadlineInput.value;
+                if (deadlineValue) {
+                    const selectedDate = new Date(deadlineValue);
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+
+                    if (selectedDate < today) {
+                        e.preventDefault();
+                        alert('Application deadline cannot be in the past. Please select a future date.');
+                        deadlineInput.focus();
+                        return false;
+                    }
+                }
+            });
+        }
+    });
 </script>
 <script src="{{ url_for('static', filename='js/create_opportunity.js') }}"></script>
 {% endblock %}

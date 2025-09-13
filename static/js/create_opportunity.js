@@ -8,7 +8,43 @@
   let initialSkillsFromServer = [];
 
   function getRequiredFields() {
-    return ["title", "type", "category", "location", "requirements", "compensation", "duration", "application_deadline", "description", "skills_needed"];
+    // Core fields required for all opportunity types
+    const coreFields = [
+      "title", "type", "category", "location", "requirements", "compensation",
+      "duration", "application_deadline", "description", "skills_needed"
+    ];
+
+    // Get the current opportunity type
+    const typeField = document.getElementById('type');
+    const opportunityType = typeField ? typeField.value : '';
+
+    // Add type-specific required fields based on opportunity type
+    const typeSpecificFields = [];
+
+    switch (opportunityType) {
+      case 'Scholarship':
+      case 'Competition':
+        typeSpecificFields.push('eligibility_criteria');
+        if (opportunityType === 'Scholarship') {
+          typeSpecificFields.push('award_amount');
+        }
+        break;
+      case 'Summer Camp':
+      case 'Workshop':
+        typeSpecificFields.push('age_range');
+        break;
+      case 'Research Opportunity':
+        typeSpecificFields.push('research_field');
+        break;
+      case 'Mentorship':
+        typeSpecificFields.push('mentor_info');
+        break;
+    }
+
+    // Always include these helpful fields but don't make them strictly required
+    // typeSpecificFields.push('application_materials', 'selection_process');
+
+    return [...coreFields, ...typeSpecificFields];
   }
 
   function saveFormLocally() {
@@ -94,22 +130,64 @@
   function confirmCancel() { if (confirm('Are you sure you want to cancel? Any unsaved changes will be lost.')) { clearFormLocally(); if (document.referrer && document.referrer !== window.location.href) window.location = document.referrer; else window.location = '/dashboard'; } }
 
   function previewOpportunity() {
-    const data = {};
-    getRequiredFields().forEach(f => {
-      let el;
-      if (f === "skills_needed") {
-        el = document.getElementById('skills-needed-hidden-input');
-      } else {
-        el = document.getElementById(f);
+    // Create a form with all the current data and submit to preview endpoint
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '/preview_opportunity';
+    form.target = '_blank';
+    form.style.display = 'none';
+
+    // Get all form fields from the current form
+    const currentForm = document.getElementById('opportunity-form');
+    const formData = new FormData(currentForm);
+
+    // Add all form data to the new form
+    for (let [key, value] of formData.entries()) {
+      const input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = key;
+      input.value = value;
+      form.appendChild(input);
+    }
+
+    // Add additional dynamic fields
+    const additionalFields = [
+      'award_amount', 'eligibility_criteria', 'age_range', 'program_dates',
+      'research_field', 'prerequisite_skills', 'mentor_info', 'commitment_level',
+      'application_materials', 'selection_process'
+    ];
+
+    additionalFields.forEach(fieldName => {
+      const field = document.getElementById(fieldName);
+      if (field && field.value) {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = fieldName;
+        input.value = field.value;
+        form.appendChild(input);
       }
-      data[f] = el ? el.value : '';
     });
-    showPreviewModal(data);
+
+    document.body.appendChild(form);
+    form.submit();
+    document.body.removeChild(form);
   }
 
   function showPreviewModal(data) {
     const gradient = 'from-orange-500 to-blue-600';
-    const badge = data.type === 'Internship' ? 'bg-orange-100 text-orange-800' : 'bg-blue-100 text-blue-800';
+    let badge = 'bg-blue-100 text-blue-800'; // default
+    if (data.type === 'Internship') badge = 'bg-blue-100 text-blue-800';
+    else if (data.type === 'Job') badge = 'bg-purple-100 text-purple-800';
+    else if (data.type === 'Summer Camp') badge = 'bg-yellow-100 text-yellow-800';
+    else if (data.type === 'Research Opportunity') badge = 'bg-indigo-100 text-indigo-800';
+    else if (data.type === 'Summer Program') badge = 'bg-orange-100 text-orange-800';
+    else if (data.type === 'Scholarship') badge = 'bg-pink-100 text-pink-800';
+    else if (data.type === 'Competition') badge = 'bg-red-100 text-red-800';
+    else if (data.type === 'Workshop') badge = 'bg-teal-100 text-teal-800';
+    else if (data.type === 'Mentorship') badge = 'bg-cyan-100 text-cyan-800';
+    else if (data.type === 'Volunteer') badge = 'bg-green-100 text-green-800';
+    else if (data.type === 'Full-time') badge = 'bg-gray-100 text-gray-800';
+    else if (data.type === 'Part-time') badge = 'bg-slate-100 text-slate-800';
     const modalHTML = `\n    <div id="preview-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">\n      <div class=\"relative top-20 mx-auto p-5 border w-11/12 max-w-4xl shadow-lg rounded-md bg-white\">\n        <div class=\"mt-3\">\n          <div class=\"flex justify-between items-center mb-4\">\n            <h3 class=\"text-lg font-medium text-gray-900\">Opportunity Preview</h3>\n            <button onclick=\"CO.closePreviewModal()\" class=\"text-gray-400 hover:text-gray-600\"><i class=\"fas fa-times text-xl\"></i></button>\n          </div>\n          <div class=\"bg-white rounded-lg shadow-md overflow-hidden\">\n            <div class=\"h-32 bg-gradient-to-br ${gradient} flex items-center justify-center\">\n              <i class=\"fas fa-briefcase text-white text-4xl\"></i>\n            </div>\n            <div class=\"p-6\">\n              <div class=\"flex items-center justify-between mb-4\">\n                <div class=\"flex items-center space-x-3\">\n                  <span class=\"inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${badge}\">${data.type || 'Type not specified'}</span>\n                  <span class=\"text-sm text-gray-600 bg-gray-100 px-3 py-1 rounded-full\">${data.category || 'Category not specified'}</span>\n                </div>\n              </div>\n              <h1 class=\"text-2xl font-bold text-gray-900 mb-4\">${data.title || 'Opportunity Title'}</h1>\n              <div class=\"grid grid-cols-1 md:grid-cols-2 gap-6 mb-6\">\n                <div class=\"space-y-3\">\n                  <div class=\"flex items-center\"><i class=\"fas fa-map-marker-alt text-gray-400 w-5 mr-3\"></i><span class=\"text-gray-700\">${data.location || 'Location not specified'}</span></div>\n                  <div class=\"flex items-center\"><i class=\"fas fa-clock text-gray-400 w-5 mr-3\"></i><span class=\"text-gray-700\">${data.duration || 'Duration not specified'}</span></div>\n                  <div class=\"flex items-center\"><i class=\"fas fa-dollar-sign text-gray-400 w-5 mr-3\"></i><span class=\"text-gray-700\">${data.compensation || 'Compensation not specified'}</span></div>\n                </div>\n                <div class=\"space-y-3\">\n                  <div class=\"flex items-center\"><i class=\"fas fa-calendar text-gray-400 w-5 mr-3\"></i><span class=\"text-gray-700\">Deadline: ${data.application_deadline ? new Date(data.application_deadline).toLocaleDateString() : 'No deadline specified'}</span></div>\n                </div>\n              </div>\n              ${data.description ? `<div class=\"mb-6\"><h3 class=\"text-lg font-semibold text-gray-900 mb-3\">About This Opportunity</h3><p class=\"text-gray-700 leading-relaxed\">${data.description.replace(/\n/g, '<br>')}</p></div>` : ''}\n              ${data.requirements ? `<div class=\"mb-6\"><h3 class=\"text-lg font-semibold text-gray-900 mb-3\">Requirements</h3><ul class=\"space-y-2 text-gray-700\">${data.requirements.split('\n').filter(r => r.trim()).map(r => `<li class=\\"flex items-start\\"><i class=\\"fas fa-circle text-gray-400 mr-3 mt-2 flex-shrink-0\\" style=\\"font-size:6px;\\"></i><span>${r.trim()}</span></li>`).join('')}</ul></div>` : ''}\n            </div>\n          </div>\n          <div class=\"flex justify-end mt-6 space-x-3\">\n            <button onclick=\"CO.closePreviewModal()\" class=\"bg-gray-300 hover:bg-gray-400 text-gray-800 font-medium py-2 px-4 rounded\">Close Preview</button>\n          </div>\n        </div>\n      </div>\n    </div>`;
     document.body.insertAdjacentHTML('beforeend', modalHTML);
   }

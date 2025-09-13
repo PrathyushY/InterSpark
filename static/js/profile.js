@@ -9,7 +9,7 @@
         const textSpan = document.getElementById('save-profile-text');
         btn.disabled = true;
         const url = state.isSaved ? `/unsave_profile/${state.profileId}` : `/save_profile/${state.profileId}`;
-        fetch(url, {method: 'POST'}).then(r => r.json()).then(data => {
+        fetch(url, { method: 'POST' }).then(r => r.json()).then(data => {
             if (data.success) {
                 state.isSaved = !state.isSaved;
                 if (state.isSaved) {
@@ -153,7 +153,7 @@
     }
 
     function updateProfileImageDisplay(imageUrl) {
-        const profileImage = document.getElementById('profile-image');
+        const profileImage = document.getElementById('avatar-preview');
         const placeholder = document.getElementById('profile-image-placeholder');
         const deleteBtn = document.getElementById('delete-profile-picture-btn');
 
@@ -165,7 +165,7 @@
             } else {
                 // Create new image element
                 const newImg = document.createElement('img');
-                newImg.id = 'profile-image';
+                newImg.id = 'avatar-preview';
                 newImg.src = imageUrl;
                 newImg.alt = 'Profile Picture';
                 newImg.className = 'h-20 w-20 rounded-full object-cover border-2 border-gray-200';
@@ -260,5 +260,227 @@
             saveBtn.addEventListener('click', validateProfileForm);
         }
     });
+
+    // Skills bubble functionality
+    let currentSkills = [];
+    let allowedSkills = [];
+
+    function initializeSkills() {
+        if (typeof initialSkills !== 'undefined') {
+            currentSkills = Array.isArray(initialSkills) ? [...initialSkills] : [];
+        }
+        if (typeof skillsMaster !== 'undefined') {
+            allowedSkills = Array.isArray(skillsMaster) ? [...skillsMaster] : [];
+        }
+
+        const container = document.getElementById('skills-bubble-container');
+        const input = document.getElementById('skills-bubble-input');
+        const hiddenInput = document.getElementById('skills-hidden-input');
+
+        if (!container || !input || !hiddenInput) return;
+
+        // Render initial skills
+        renderSkills();
+        updateHiddenInput();
+
+        // Setup input handlers
+        input.addEventListener('keydown', handleSkillInput);
+        input.addEventListener('input', handleAutocomplete);
+
+        // Hide autocomplete when clicking outside
+        document.addEventListener('click', function (e) {
+            if (!e.target.closest('#skills-autocomplete-list') && !e.target.closest('#skills-bubble-input')) {
+                hideAutocomplete();
+            }
+        });
+    }
+
+    function renderSkills() {
+        const container = document.getElementById('skills-bubble-container');
+        if (!container) return;
+
+        container.innerHTML = '';
+        currentSkills.forEach((skill, index) => {
+            const bubble = document.createElement('span');
+            bubble.className = 'inline-flex items-center px-3 py-1 rounded-full bg-blue-100 text-blue-800 text-sm font-medium';
+            bubble.innerHTML = `
+                ${skill}
+                <button type="button" class="ml-2 text-blue-600 hover:text-blue-800" onclick="removeSkill(${index})">
+                    <i class="fas fa-times text-xs"></i>
+                </button>
+            `;
+            container.appendChild(bubble);
+        });
+    }
+
+    function addSkill(skill) {
+        if (!skill || currentSkills.includes(skill)) return;
+        currentSkills.push(skill);
+        renderSkills();
+        updateHiddenInput();
+    }
+
+    async function addSkillWithCreation(skillName) {
+        if (!skillName || currentSkills.includes(skillName)) return;
+
+        // If skill is in allowed skills, just add it
+        if (allowedSkills.includes(skillName)) {
+            addSkill(skillName);
+            return;
+        }
+
+        // Try to create new skill
+        try {
+            const response = await fetch('/add_skill', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ skill: skillName })
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                // Add to local allowed skills list
+                const formattedSkill = result.skill.name;
+                if (!allowedSkills.includes(formattedSkill)) {
+                    allowedSkills.push(formattedSkill);
+                    allowedSkills.sort();
+                }
+
+                // Add the skill
+                addSkill(formattedSkill);
+
+                // Show success message
+                const input = document.getElementById('skills-bubble-input');
+                if (input) {
+                    input.placeholder = "Skill added successfully!";
+                    setTimeout(() => {
+                        input.placeholder = "Type a skill and press Enter...";
+                    }, 2000);
+                }
+
+            } else {
+                // Handle errors
+                if (result.error === "Skill already exists") {
+                    // If skill exists, use the existing one
+                    const existingSkill = result.existing_skill || skillName;
+                    if (!allowedSkills.includes(existingSkill)) {
+                        allowedSkills.push(existingSkill);
+                        allowedSkills.sort();
+                    }
+                    addSkill(existingSkill);
+
+                    const input = document.getElementById('skills-bubble-input');
+                    if (input) {
+                        input.placeholder = "Used existing skill";
+                        setTimeout(() => {
+                            input.placeholder = "Type a skill and press Enter...";
+                        }, 2000);
+                    }
+                } else {
+                    alert('Error adding skill: ' + result.error);
+                }
+            }
+        } catch (error) {
+            console.error('Error adding skill:', error);
+            alert('Error adding skill. Please try again.');
+        }
+    }
+
+    function removeSkill(index) {
+        currentSkills.splice(index, 1);
+        renderSkills();
+        updateHiddenInput();
+    }
+
+    function updateHiddenInput() {
+        const hiddenInput = document.getElementById('skills-hidden-input');
+        if (hiddenInput) {
+            hiddenInput.value = JSON.stringify(currentSkills);
+        }
+    }
+
+    function handleSkillInput(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            const skill = e.target.value.trim();
+            if (skill) {
+                addSkillWithCreation(skill);
+                e.target.value = '';
+                hideAutocomplete();
+            }
+        } else if (e.key === 'Escape') {
+            hideAutocomplete();
+        }
+    }
+
+    function handleAutocomplete(e) {
+        const query = e.target.value.trim();
+        const queryLower = query.toLowerCase();
+        const autocompleteList = document.getElementById('skills-autocomplete-list');
+
+        if (!query || !autocompleteList) {
+            hideAutocomplete();
+            return;
+        }
+
+        const matches = allowedSkills.filter(skill =>
+            skill.toLowerCase().includes(queryLower) && !currentSkills.includes(skill)
+        ).slice(0, 5);
+
+        autocompleteList.innerHTML = '';
+
+        // Add matching existing skills
+        matches.forEach(skill => {
+            const item = document.createElement('div');
+            item.className = 'px-4 py-2 cursor-pointer hover:bg-blue-50 text-sm';
+            item.textContent = skill;
+            item.addEventListener('click', () => {
+                addSkill(skill);
+                e.target.value = '';
+                hideAutocomplete();
+            });
+            autocompleteList.appendChild(item);
+        });
+
+        // Add "Create new skill" option if no exact match exists
+        const exactMatch = allowedSkills.some(skill => skill.toLowerCase() === queryLower);
+        if (!exactMatch && query.length > 0) {
+            const createItem = document.createElement('div');
+            createItem.className = 'px-4 py-2 cursor-pointer hover:bg-green-50 text-sm text-green-700 border-t border-gray-200 font-medium';
+            createItem.innerHTML = `<i class="fas fa-plus mr-2"></i>Create "${query}"`;
+            createItem.addEventListener('click', () => {
+                addSkillWithCreation(query);
+                e.target.value = '';
+                hideAutocomplete();
+            });
+            autocompleteList.appendChild(createItem);
+        }
+
+        if (autocompleteList.children.length > 0) {
+            autocompleteList.style.display = 'block';
+        } else {
+            hideAutocomplete();
+        }
+    }
+
+    function hideAutocomplete() {
+        const autocompleteList = document.getElementById('skills-autocomplete-list');
+        if (autocompleteList) {
+            autocompleteList.style.display = 'none';
+        }
+    }
+
+    // Make removeSkill globally accessible
+    window.removeSkill = removeSkill;
+
+    // Initialize skills when DOM is ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initializeSkills);
+    } else {
+        initializeSkills();
+    }
 })();
 

@@ -3,239 +3,241 @@
 {% block title %}InterSpark - Connecting Students with Opportunities{% endblock %}
 
 {% block content %}
-    <!-- Hero Section -->
-    <div class="bg-gradient-to-r from-blue-600 to-purple-700">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
-            <div class="text-center">
-                <h1 class="text-4xl md:text-6xl font-extrabold text-white mb-6">
-                    Spark Your Future with
-                    <span class="text-yellow-300">InterSpark</span>
-                </h1>
-                <p class="text-xl text-blue-100 max-w-3xl mx-auto mb-8">
-                    Connect with meaningful internships and volunteer opportunities.
-                    Bridge the gap between ambitious students and organizations making a difference.
-                </p>
-                <div class="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-4">
-                    {% if not session.user_id %}
-                        <a href="{{ url_for('signup') }}"
-                           class="inline-flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-md text-blue-700 bg-white hover:bg-gray-50 shadow-md">
-                            Get Started
-                        </a>
-                        <a href="{{ url_for('opportunities') }}"
-                           class="inline-flex items-center justify-center px-8 py-3 border border-white text-base font-medium rounded-md text-white bg-transparent hover:bg-blue-800">
-                            Browse Opportunities
-                        </a>
-                    {% else %}
-                        <a href="{{ url_for('dashboard') }}"
-                           class="inline-flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-md text-blue-700 bg-white hover:bg-gray-50 shadow-md">
-                            Go to Dashboard
-                        </a>
-                        <a href="{{ url_for('opportunities') }}"
-                           class="inline-flex items-center justify-center px-8 py-3 border border-white text-base font-medium rounded-md text-white bg-transparent hover:bg-blue-800">
-                            Browse Opportunities
-                        </a>
-                    {% endif %}
-                </div>
+<!-- Hero Section -->
+<div class="bg-gradient-to-r from-blue-600 to-purple-700">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
+        <div class="text-center">
+            <h1 class="text-4xl md:text-6xl font-extrabold text-white mb-6">
+                Spark Your Future with
+                <span class="text-yellow-300">InterSpark</span>
+            </h1>
+            <p class="text-xl text-blue-100 max-w-3xl mx-auto mb-8">
+                Connect with meaningful internships, jobs, research opportunities, summer programs, camps, and other
+                opportunities.
+                Bridge the gap between ambitious students and organizations making a difference.
+            </p>
+            <div class="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-4">
+                {% if not session.user_id %}
+                <a href="{{ url_for('signup') }}"
+                    class="inline-flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-md text-blue-700 bg-white hover:bg-gray-50 shadow-md">
+                    Get Started
+                </a>
+                <a href="{{ url_for('opportunities') }}"
+                    class="inline-flex items-center justify-center px-8 py-3 border border-white text-base font-medium rounded-md text-white bg-transparent hover:bg-blue-800">
+                    Browse Opportunities
+                </a>
+                {% else %}
+                <a href="{{ url_for('dashboard') }}"
+                    class="inline-flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-md text-blue-700 bg-white hover:bg-gray-50 shadow-md">
+                    Go to Dashboard
+                </a>
+                <a href="{{ url_for('opportunities') }}"
+                    class="inline-flex items-center justify-center px-8 py-3 border border-white text-base font-medium rounded-md text-white bg-transparent hover:bg-blue-800">
+                    Browse Opportunities
+                </a>
+                {% endif %}
             </div>
         </div>
     </div>
+</div>
 
-    <!-- Features Section -->
-    <div class="py-24 bg-white">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="text-center">
-                <h2 class="text-3xl font-extrabold text-gray-900 sm:text-4xl">
-                    Why Choose InterSpark?
-                </h2>
-                <p class="mt-4 text-lg text-gray-500 max-w-2xl mx-auto">
-                    We make it easy for students and organizations to connect and create meaningful experiences.
-                </p>
-            </div>
-            <div class="mt-20">
-                <div class="grid grid-cols-1 gap-12 sm:grid-cols-2 lg:grid-cols-3">
-                    <div class="text-center">
-                        <div class="flex justify-center">
-                            <div class="bg-blue-100 rounded-full p-3">
-                                <i class="fas fa-search text-blue-600 text-2xl"></i>
-                            </div>
-                        </div>
-                        <h3 class="mt-4 text-lg font-medium text-gray-900">Easy Discovery</h3>
-                        <p class="mt-2 text-gray-500">
-                            Find opportunities that match your interests, skills, and schedule with our smart filtering
-                            system.
-                        </p>
-                    </div>
-                    <div class="text-center">
-                        <div class="flex justify-center">
-                            <div class="bg-green-100 rounded-full p-3">
-                                <i class="fas fa-handshake text-green-600 text-2xl"></i>
-                            </div>
-                        </div>
-                        <h3 class="mt-4 text-lg font-medium text-gray-900">Verified Organizations</h3>
-                        <p class="mt-2 text-gray-500">
-                            All organizations are vetted to ensure safe, meaningful, and educational experiences for
-                            students.
-                        </p>
-                    </div>
-                    <div class="text-center">
-                        <div class="flex justify-center">
-                            <div class="bg-purple-100 rounded-full p-3">
-                                <i class="fas fa-certificate text-purple-600 text-2xl"></i>
-                            </div>
-                        </div>
-                        <h3 class="mt-4 text-lg font-medium text-gray-900">Skill Development</h3>
-                        <p class="mt-2 text-gray-500">
-                            Gain real-world experience and develop valuable skills that will benefit your future career.
-                        </p>
-                    </div>
-                </div>
-            </div>
+<!-- Features Section -->
+<div class="py-24 bg-white">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="text-center">
+            <h2 class="text-3xl font-extrabold text-gray-900 sm:text-4xl">
+                Why Choose InterSpark?
+            </h2>
+            <p class="mt-4 text-lg text-gray-500 max-w-2xl mx-auto">
+                We make it easy for students and organizations to connect and create meaningful experiences.
+            </p>
         </div>
-    </div>
-
-    <!-- How It Works Section -->
-    <div class="py-24 bg-gray-50">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="text-center">
-                <h2 class="text-3xl font-extrabold text-gray-900 sm:text-4xl">
-                    How It Works
-                </h2>
-                <p class="mt-4 text-lg text-gray-500 max-w-2xl mx-auto">
-                    Getting started is simple. Follow these three easy steps to begin your journey.
-                </p>
-            </div>
-            <div class="mt-20">
-                <div class="grid grid-cols-1 gap-12 lg:grid-cols-3">
-                    <div class="text-center lg:text-left">
-                        <div class="flex justify-center lg:justify-start">
-                            <div
-                                    class="bg-blue-600 rounded-full w-12 h-12 flex items-center justify-center text-white font-bold text-lg">
-                                1
-                            </div>
-                        </div>
-                        <h3 class="mt-4 text-xl font-semibold text-gray-900">Create Your Profile</h3>
-                        <p class="mt-2 text-gray-500">
-                            Sign up and tell us about your interests, skills, and availability. Organizations can create
-                            profiles to showcase their mission and opportunities.
-                        </p>
-                    </div>
-                    <div class="text-center lg:text-left">
-                        <div class="flex justify-center lg:justify-start">
-                            <div
-                                    class="bg-blue-600 rounded-full w-12 h-12 flex items-center justify-center text-white font-bold text-lg">
-                                2
-                            </div>
-                        </div>
-                        <h3 class="mt-4 text-xl font-semibold text-gray-900">Explore & Connect</h3>
-                        <p class="mt-2 text-gray-500">
-                            Browse opportunities that match your interests or search for talented students. Use our
-                            filters
-                            to find the perfect match.
-                        </p>
-                    </div>
-                    <div class="text-center lg:text-left">
-                        <div class="flex justify-center lg:justify-start">
-                            <div
-                                    class="bg-blue-600 rounded-full w-12 h-12 flex items-center justify-center text-white font-bold text-lg">
-                                3
-                            </div>
-                        </div>
-                        <h3 class="mt-4 text-xl font-semibold text-gray-900">Start Your Journey</h3>
-                        <p class="mt-2 text-gray-500">
-                            Apply for opportunities or contact students directly. Begin building valuable experiences
-                            and
-                            professional networks.
-                        </p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Featured Opportunities -->
-    {% if opportunities %}
-        <div class="py-24 bg-white">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="mt-20">
+            <div class="grid grid-cols-1 gap-12 sm:grid-cols-2 lg:grid-cols-3">
                 <div class="text-center">
-                    <h2 class="text-3xl font-extrabold text-gray-900 sm:text-4xl">
-                        Featured Opportunities
-                    </h2>
-                    <p class="mt-4 text-lg text-gray-500 max-w-2xl mx-auto">
-                        Discover some of the amazing opportunities available on our platform.
+                    <div class="flex justify-center">
+                        <div class="bg-blue-100 rounded-full p-3">
+                            <i class="fas fa-search text-blue-600 text-2xl"></i>
+                        </div>
+                    </div>
+                    <h3 class="mt-4 text-lg font-medium text-gray-900">Easy Discovery</h3>
+                    <p class="mt-2 text-gray-500">
+                        Find opportunities that match your interests, skills, and schedule with our smart filtering
+                        system.
                     </p>
                 </div>
-                <div class="mt-12 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
-                    {% for opportunity in opportunities %}
-                        <div class="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
-                            <div class="p-6">
-                                <div class="flex items-center justify-between mb-4">
+                <div class="text-center">
+                    <div class="flex justify-center">
+                        <div class="bg-green-100 rounded-full p-3">
+                            <i class="fas fa-handshake text-green-600 text-2xl"></i>
+                        </div>
+                    </div>
+                    <h3 class="mt-4 text-lg font-medium text-gray-900">Verified Organizations</h3>
+                    <p class="mt-2 text-gray-500">
+                        All organizations are vetted to ensure safe, meaningful, and educational experiences for
+                        students.
+                    </p>
+                </div>
+                <div class="text-center">
+                    <div class="flex justify-center">
+                        <div class="bg-purple-100 rounded-full p-3">
+                            <i class="fas fa-certificate text-purple-600 text-2xl"></i>
+                        </div>
+                    </div>
+                    <h3 class="mt-4 text-lg font-medium text-gray-900">Skill Development</h3>
+                    <p class="mt-2 text-gray-500">
+                        Gain real-world experience and develop valuable skills that will benefit your future career.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- How It Works Section -->
+<div class="py-24 bg-gray-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="text-center">
+            <h2 class="text-3xl font-extrabold text-gray-900 sm:text-4xl">
+                How It Works
+            </h2>
+            <p class="mt-4 text-lg text-gray-500 max-w-2xl mx-auto">
+                Getting started is simple. Follow these three easy steps to begin your journey.
+            </p>
+        </div>
+        <div class="mt-20">
+            <div class="grid grid-cols-1 gap-12 lg:grid-cols-3">
+                <div class="text-center lg:text-left">
+                    <div class="flex justify-center lg:justify-start">
+                        <div
+                            class="bg-blue-600 rounded-full w-12 h-12 flex items-center justify-center text-white font-bold text-lg">
+                            1
+                        </div>
+                    </div>
+                    <h3 class="mt-4 text-xl font-semibold text-gray-900">Create Your Profile</h3>
+                    <p class="mt-2 text-gray-500">
+                        Sign up and tell us about your interests, skills, and availability. Organizations can create
+                        profiles to showcase their mission and opportunities.
+                    </p>
+                </div>
+                <div class="text-center lg:text-left">
+                    <div class="flex justify-center lg:justify-start">
+                        <div
+                            class="bg-blue-600 rounded-full w-12 h-12 flex items-center justify-center text-white font-bold text-lg">
+                            2
+                        </div>
+                    </div>
+                    <h3 class="mt-4 text-xl font-semibold text-gray-900">Explore & Connect</h3>
+                    <p class="mt-2 text-gray-500">
+                        Browse opportunities that match your interests or search for talented students. Use our
+                        filters
+                        to find the perfect match.
+                    </p>
+                </div>
+                <div class="text-center lg:text-left">
+                    <div class="flex justify-center lg:justify-start">
+                        <div
+                            class="bg-blue-600 rounded-full w-12 h-12 flex items-center justify-center text-white font-bold text-lg">
+                            3
+                        </div>
+                    </div>
+                    <h3 class="mt-4 text-xl font-semibold text-gray-900">Start Your Journey</h3>
+                    <p class="mt-2 text-gray-500">
+                        Apply for opportunities or contact students directly. Begin building valuable experiences
+                        and
+                        professional networks.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Featured Opportunities -->
+{% if opportunities %}
+<div class="py-24 bg-white">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="text-center">
+            <h2 class="text-3xl font-extrabold text-gray-900 sm:text-4xl">
+                Featured Opportunities
+            </h2>
+            <p class="mt-4 text-lg text-gray-500 max-w-2xl mx-auto">
+                Discover some of the amazing opportunities available on our platform.
+            </p>
+        </div>
+        <div class="mt-12 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
+            {% for opportunity in opportunities %}
+            <div class="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
+                <div class="p-6">
+                    <div class="flex items-center justify-between mb-4">
                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
                             {% if opportunity.type == 'Internship' %}bg-blue-100 text-blue-800
                             {% else %}bg-green-100 text-green-800{% endif %}">
                             {{ opportunity.type }}
                         </span>
-                                    <span class="text-sm text-gray-500">{{ opportunity.type }}</span>
-                                </div>
-                                <h3 class="text-lg font-semibold text-gray-900 mb-2">{{ opportunity.title }}</h3>
-                                <p class="text-sm text-gray-600 mb-2">{{ opportunity.profiles.name or
+                        <span class="text-sm text-gray-500">{{ opportunity.type }}</span>
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-2">{{ opportunity.title }}</h3>
+                    <p class="text-sm text-gray-600 mb-2">{{ opportunity.profiles.name or
                         opportunity.profiles.organization_name or 'Organization' if opportunity.profiles else
                         'Organization' }}</p>
-                                <p class="text-sm text-gray-500 mb-4">
-                                    <i class="fas fa-map-marker-alt mr-1"></i>{{ opportunity.location }}
-                                </p>
-                                <p class="text-gray-700 text-sm mb-4">{{ opportunity.description[:150] }}{% if
+                    <p class="text-sm text-gray-500 mb-4">
+                        <i class="fas fa-map-marker-alt mr-1"></i>{{ opportunity.location }}
+                    </p>
+                    <p class="text-gray-700 text-sm mb-4">{{ opportunity.description[:150] }}{% if
                         opportunity.description|length > 150 %}...{% endif %}</p>
-                                <div class="flex justify-between items-center">
-                        <span class="text-sm text-gray-500">{{ opportunity.duration or 'Duration not specified' }}</span>
-                                    <a href="{{ url_for('opportunity_details', id=opportunity.id) }}"
-                                       class="text-blue-600 hover:text-blue-800 font-medium text-sm">
-                                        Learn More →
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
-                    {% endfor %}
-                </div>
-                <div class="text-center mt-12">
-                    <a href="{{ url_for('opportunities') }}"
-                       class="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
-                        View All Opportunities
-                    </a>
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm text-gray-500">{{ opportunity.duration or 'Duration not specified'
+                            }}</span>
+                        <a href="{{ url_for('opportunity_details', id=opportunity.id) }}"
+                            class="text-blue-600 hover:text-blue-800 font-medium text-sm">
+                            Learn More →
+                        </a>
+                    </div>
                 </div>
             </div>
+            {% endfor %}
         </div>
-    {% endif %}
-
-    <!-- Call to Action -->
-    <div class="bg-blue-50 py-16">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-            <h2 class="text-3xl font-extrabold text-gray-900 sm:text-4xl">
-                Ready to get started?
-            </h2>
-            <p class="mt-4 text-lg text-gray-500 max-w-2xl mx-auto">
-                Join InterSpark today and discover opportunities that will shape your future.
-            </p>
-            <div class="mt-8 flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-4">
-                {% if not session.user_id %}
-                    <a href="{{ url_for('signup') }}"
-                       class="inline-flex items-center justify-center px-5 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
-                        Create an account
-                    </a>
-                    <a href="{{ url_for('opportunities') }}"
-                       class="inline-flex items-center justify-center px-5 py-3 border border-transparent text-base font-medium rounded-md text-blue-600 bg-white hover:bg-gray-50">
-                        Browse opportunities
-                    </a>
-                {% else %}
-                    <a href="{{ url_for('dashboard') }}"
-                       class="inline-flex items-center justify-center px-5 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
-                        Go to Dashboard
-                    </a>
-                    <a href="{{ url_for('opportunities') }}"
-                       class="inline-flex items-center justify-center px-5 py-3 border border-transparent text-base font-medium rounded-md text-blue-600 bg-white hover:bg-gray-50">
-                        Browse opportunities
-                    </a>
-                {% endif %}
-            </div>
+        <div class="text-center mt-12">
+            <a href="{{ url_for('opportunities') }}"
+                class="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
+                View All Opportunities
+            </a>
         </div>
     </div>
+</div>
+{% endif %}
+
+<!-- Call to Action -->
+<div class="bg-blue-50 py-16">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+        <h2 class="text-3xl font-extrabold text-gray-900 sm:text-4xl">
+            Ready to get started?
+        </h2>
+        <p class="mt-4 text-lg text-gray-500 max-w-2xl mx-auto">
+            Join InterSpark today and discover opportunities that will shape your future.
+        </p>
+        <div class="mt-8 flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-4">
+            {% if not session.user_id %}
+            <a href="{{ url_for('signup') }}"
+                class="inline-flex items-center justify-center px-5 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
+                Create an account
+            </a>
+            <a href="{{ url_for('opportunities') }}"
+                class="inline-flex items-center justify-center px-5 py-3 border border-transparent text-base font-medium rounded-md text-blue-600 bg-white hover:bg-gray-50">
+                Browse opportunities
+            </a>
+            {% else %}
+            <a href="{{ url_for('dashboard') }}"
+                class="inline-flex items-center justify-center px-5 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
+                Go to Dashboard
+            </a>
+            <a href="{{ url_for('opportunities') }}"
+                class="inline-flex items-center justify-center px-5 py-3 border border-transparent text-base font-medium rounded-md text-blue-600 bg-white hover:bg-gray-50">
+                Browse opportunities
+            </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
 {% endblock %}

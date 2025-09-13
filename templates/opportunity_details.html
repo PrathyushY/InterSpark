@@ -1,14 +1,32 @@
-{% set back_to_opportunities_search = request.args.get('search') is not none or request.args.get('type') is not none or request.args.get('category') is not none or request.args.get('location') is not none or request.args.get('skills_needed') is not none %}
+{% set back_to_opportunities_search = request.args.get('search') is not none or request.args.get('type') is not none or
+request.args.get('category') is not none or request.args.get('location') is not none or
+request.args.get('skills_needed') is not none %}
 {% extends "base.html" %}
 
 {% block title %}{{ opportunity.title }} - InterSpark{% endblock %}
 
 {% block content %}
 <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Preview Mode Indicator -->
+    {% if is_preview %}
+    <div class="mb-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+        <div class="flex items-center">
+            <i class="fas fa-eye text-yellow-600 mr-3"></i>
+            <div>
+                <h4 class="text-yellow-800 font-medium">Preview Mode</h4>
+                <p class="text-yellow-700 text-sm">This is how your opportunity will appear to students. Close this tab
+                    to return to editing.</p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
     <!-- Back Button -->
+    {% if not is_preview %}
     <div class="mb-6">
         {% if back_to_opportunities_search %}
-        <a href="{{ url_for('opportunities', search=request.args.get('search',''), type=request.args.get('type',''), category=request.args.get('category',''), location=request.args.get('location',''), skills_needed=request.args.get('skills_needed','')) }}" class="inline-flex items-center text-blue-600 hover:text-blue-800">
+        <a href="{{ url_for('opportunities', search=request.args.get('search',''), type=request.args.get('type',''), category=request.args.get('category',''), location=request.args.get('location',''), skills_needed=request.args.get('skills_needed','')) }}"
+            class="inline-flex items-center text-blue-600 hover:text-blue-800">
             <i class="fas fa-arrow-left mr-2"></i>
             Back to Opportunities Search
         </a>
@@ -19,6 +37,7 @@
         </a>
         {% endif %}
     </div>
+    {% endif %}
 
     <!-- Header -->
     <div class="bg-white rounded-lg shadow-md overflow-hidden">
@@ -35,10 +54,24 @@
                 <div class="flex items-center space-x-3">
                     <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium 
                         {% if opportunity.type == 'Internship' %}bg-blue-100 text-blue-800
+                        {% elif opportunity.type == 'Job' %}bg-purple-100 text-purple-800
+                        {% elif opportunity.type == 'Summer Camp' %}bg-yellow-100 text-yellow-800
+                        {% elif opportunity.type == 'Research Opportunity' %}bg-indigo-100 text-indigo-800
+                        {% elif opportunity.type == 'Summer Program' %}bg-orange-100 text-orange-800
+                        {% elif opportunity.type == 'Scholarship' %}bg-pink-100 text-pink-800
+                        {% elif opportunity.type == 'Competition' %}bg-red-100 text-red-800
+                        {% elif opportunity.type == 'Workshop' %}bg-teal-100 text-teal-800
+                        {% elif opportunity.type == 'Mentorship' %}bg-cyan-100 text-cyan-800
+                        {% elif opportunity.type == 'Volunteer' %}bg-green-100 text-green-800
+                        {% elif opportunity.type == 'Full-time' %}bg-gray-100 text-gray-800
+                        {% elif opportunity.type == 'Part-time' %}bg-slate-100 text-slate-800
                         {% else %}bg-green-100 text-green-800{% endif %}">
                         {{ opportunity.type }}
                     </span>
-                    <span class="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">{{ opportunity.type }}</span>
+                    {% if opportunity.category %}
+                    <span class="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">{{ opportunity.category
+                        }}</span>
+                    {% endif %}
                 </div>
                 <div class="text-sm text-gray-500">
                     Posted {{ opportunity.created_at | format_date }}
@@ -120,7 +153,9 @@
                     <h4 class="text-sm font-medium text-gray-900 mb-2">Skills Required</h4>
                     <div class="flex flex-wrap gap-2">
                         {% for skill in opportunity.skills_needed %}
-                        <span class="inline-flex items-center px-3 py-1 rounded-full bg-blue-100 text-blue-800 text-sm font-medium">{{ skill }}</span>
+                        <span
+                            class="inline-flex items-center px-3 py-1 rounded-full bg-blue-100 text-blue-800 text-sm font-medium">{{
+                            skill }}</span>
                         {% endfor %}
                     </div>
                 </div>
@@ -158,6 +193,92 @@
                     {% endif %}
                     {% endfor %}
                 </ul>
+            </div>
+            {% endif %}
+
+            <!-- Type-specific fields -->
+            {% if opportunity.award_amount %}
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h3 class="text-xl font-semibold text-gray-900 mb-4">Award Information</h3>
+                <div class="flex items-center">
+                    <i class="fas fa-trophy text-yellow-500 mr-3"></i>
+                    <span class="text-gray-700">{{ opportunity.award_amount }}</span>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if opportunity.eligibility_criteria %}
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h3 class="text-xl font-semibold text-gray-900 mb-4">Eligibility Criteria</h3>
+                <div class="text-gray-700">{{ opportunity.eligibility_criteria | replace('\n', '<br>') | safe }}</div>
+            </div>
+            {% endif %}
+
+            {% if opportunity.age_range %}
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h3 class="text-xl font-semibold text-gray-900 mb-4">Age Requirements</h3>
+                <div class="flex items-center">
+                    <i class="fas fa-users text-blue-500 mr-3"></i>
+                    <span class="text-gray-700">{{ opportunity.age_range }}</span>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if opportunity.program_dates %}
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h3 class="text-xl font-semibold text-gray-900 mb-4">Program Dates</h3>
+                <div class="flex items-center">
+                    <i class="fas fa-calendar-alt text-green-500 mr-3"></i>
+                    <span class="text-gray-700">{{ opportunity.program_dates }}</span>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if opportunity.research_field %}
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h3 class="text-xl font-semibold text-gray-900 mb-4">Research Field</h3>
+                <div class="flex items-center">
+                    <i class="fas fa-flask text-purple-500 mr-3"></i>
+                    <span class="text-gray-700">{{ opportunity.research_field }}</span>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if opportunity.prerequisite_skills %}
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h3 class="text-xl font-semibold text-gray-900 mb-4">Prerequisite Skills</h3>
+                <div class="text-gray-700">{{ opportunity.prerequisite_skills | replace('\n', '<br>') | safe }}</div>
+            </div>
+            {% endif %}
+
+            {% if opportunity.mentor_info %}
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h3 class="text-xl font-semibold text-gray-900 mb-4">Mentor Information</h3>
+                <div class="text-gray-700">{{ opportunity.mentor_info | replace('\n', '<br>') | safe }}</div>
+            </div>
+            {% endif %}
+
+            {% if opportunity.commitment_level %}
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h3 class="text-xl font-semibold text-gray-900 mb-4">Time Commitment</h3>
+                <div class="flex items-center">
+                    <i class="fas fa-hourglass-half text-orange-500 mr-3"></i>
+                    <span class="text-gray-700">{{ opportunity.commitment_level }}</span>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if opportunity.application_materials %}
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h3 class="text-xl font-semibold text-gray-900 mb-4">Application Materials Required</h3>
+                <div class="text-gray-700">{{ opportunity.application_materials | replace('\n', '<br>') | safe }}</div>
+            </div>
+            {% endif %}
+
+            {% if opportunity.selection_process %}
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h3 class="text-xl font-semibold text-gray-900 mb-4">Selection Process</h3>
+                <div class="text-gray-700">{{ opportunity.selection_process | replace('\n', '<br>') | safe }}</div>
             </div>
             {% endif %}
 
