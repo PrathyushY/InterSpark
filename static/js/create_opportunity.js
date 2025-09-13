@@ -8,13 +8,43 @@
   let initialSkillsFromServer = [];
 
   function getRequiredFields() {
-    return [
+    // Core fields required for all opportunity types
+    const coreFields = [
       "title", "type", "category", "location", "requirements", "compensation",
-      "duration", "application_deadline", "description", "skills_needed",
-      "eligibility_criteria", "age_range", "prerequisite_skills", "award_amount",
-      "program_dates", "mentor_info", "research_field", "commitment_level",
-      "application_materials", "selection_process"
+      "duration", "application_deadline", "description", "skills_needed"
     ];
+
+    // Get the current opportunity type
+    const typeField = document.getElementById('type');
+    const opportunityType = typeField ? typeField.value : '';
+
+    // Add type-specific required fields based on opportunity type
+    const typeSpecificFields = [];
+
+    switch (opportunityType) {
+      case 'Scholarship':
+      case 'Competition':
+        typeSpecificFields.push('eligibility_criteria');
+        if (opportunityType === 'Scholarship') {
+          typeSpecificFields.push('award_amount');
+        }
+        break;
+      case 'Summer Camp':
+      case 'Workshop':
+        typeSpecificFields.push('age_range');
+        break;
+      case 'Research Opportunity':
+        typeSpecificFields.push('research_field');
+        break;
+      case 'Mentorship':
+        typeSpecificFields.push('mentor_info');
+        break;
+    }
+
+    // Always include these helpful fields but don't make them strictly required
+    // typeSpecificFields.push('application_materials', 'selection_process');
+
+    return [...coreFields, ...typeSpecificFields];
   }
 
   function saveFormLocally() {

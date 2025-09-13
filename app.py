@@ -911,7 +911,8 @@ def create_opportunity(opportunity_id=None):
             "selection_process": request.form.get("selection_process") or None,
         }
 
-        # For drafts, ensure all keys exist, but allow None values
+        # For drafts, ensure core keys exist, but allow None values
+        # Type-specific fields are already handled above and can remain None
         if status == "draft":
             for key in [
                 "title",
@@ -923,16 +924,6 @@ def create_opportunity(opportunity_id=None):
                 "compensation",
                 "duration",
                 "application_deadline",
-                "eligibility_criteria",
-                "age_range",
-                "prerequisite_skills",
-                "award_amount",
-                "program_dates",
-                "mentor_info",
-                "research_field",
-                "commitment_level",
-                "application_materials",
-                "selection_process",
             ]:
                 if opportunity_data.get(key) is None:
                     opportunity_data[key] = None
@@ -944,6 +935,22 @@ def create_opportunity(opportunity_id=None):
         try:
             # Get referrer URL from form data
             referrer_url = request.form.get("referrer", url_for("dashboard"))
+
+            # Helper function to get type-specific required fields
+            def get_type_specific_required_fields(opportunity_type):
+                """Get required fields based on opportunity type"""
+                type_specific = []
+                if opportunity_type in ["Scholarship", "Competition"]:
+                    type_specific.append("eligibility_criteria")
+                    if opportunity_type == "Scholarship":
+                        type_specific.append("award_amount")
+                elif opportunity_type in ["Summer Camp", "Workshop"]:
+                    type_specific.append("age_range")
+                elif opportunity_type == "Research Opportunity":
+                    type_specific.append("research_field")
+                elif opportunity_type == "Mentorship":
+                    type_specific.append("mentor_info")
+                return type_specific
 
             # If editing and publishing, require all fields
             is_publish = request.form.get("publish") == "1"
@@ -958,6 +965,13 @@ def create_opportunity(opportunity_id=None):
                 "duration",
                 "application_deadline",
             ]
+
+            # Add type-specific required fields if publishing
+            if is_publish and opportunity_data.get("type"):
+                type_specific_fields = get_type_specific_required_fields(
+                    opportunity_data["type"]
+                )
+                required_fields.extend(type_specific_fields)
             if is_editing and is_publish:
                 # Publishing: require all fields
                 missing = [f for f in required_fields if not opportunity_data.get(f)]
