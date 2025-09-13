@@ -3,12 +3,24 @@
 {% block title %}Opportunities - InterSpark{% endblock %}
 
 {% block content %}
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <!-- Header -->
-        <div class="mb-8">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Header -->
+    <div class="mb-8 flex justify-between items-start">
+        <div>
             <h1 class="text-3xl font-bold text-gray-900">Opportunities</h1>
-            <p class="mt-2 text-gray-600">Discover internships and volunteer opportunities that match your interests</p>
+            <p class="mt-2 text-gray-600">Discover internships, jobs, research opportunities, summer programs, camps,
+                and other opportunities that match your interests</p>
         </div>
+        {% if session.user_type == 'organization' %}
+        <div class="flex-shrink-0 ml-6">
+            <a href="{{ url_for('create_opportunity') }}"
+                class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 shadow-sm">
+                <i class="fas fa-plus mr-2"></i>
+                Create Opportunity
+            </a>
+        </div>
+        {% endif %}
+    </div>
 
     <!-- Unified Search Bar -->
     <div class="bg-white p-4 rounded-lg shadow-sm mb-8 border border-blue-200">
@@ -41,7 +53,27 @@
                         </option>
                         <option value="Volunteer" {% if selected_type=='Volunteer' %}selected{% endif %}>Volunteer
                         </option>
-                        <option value="Full Time" {% if selected_type=='Full Time' %}selected{% endif %}>Full Time
+                        <option value="Job" {% if selected_type=='Job' %}selected{% endif %}>Job
+                        </option>
+                        <option value="Summer Camp" {% if selected_type=='Summer Camp' %}selected{% endif %}>Summer Camp
+                        </option>
+                        <option value="Research Opportunity" {% if selected_type=='Research Opportunity' %}selected{%
+                            endif %}>Research Opportunity
+                        </option>
+                        <option value="Summer Program" {% if selected_type=='Summer Program' %}selected{% endif %}>
+                            Summer Program
+                        </option>
+                        <option value="Scholarship" {% if selected_type=='Scholarship' %}selected{% endif %}>Scholarship
+                        </option>
+                        <option value="Competition" {% if selected_type=='Competition' %}selected{% endif %}>Competition
+                        </option>
+                        <option value="Workshop" {% if selected_type=='Workshop' %}selected{% endif %}>Workshop
+                        </option>
+                        <option value="Mentorship" {% if selected_type=='Mentorship' %}selected{% endif %}>Mentorship
+                        </option>
+                        <option value="Full-time" {% if selected_type=='Full-time' %}selected{% endif %}>Full-time
+                        </option>
+                        <option value="Part-time" {% if selected_type=='Part-time' %}selected{% endif %}>Part-time
                         </option>
                     </select>
                 </div>
@@ -97,7 +129,7 @@
         </form>
     </div>
 
-        <!-- Opportunities Grid -->
+    <!-- Opportunities Grid -->
 
     {% if opportunities %}
     <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -119,7 +151,17 @@
                     <div class="flex items-center justify-between mb-3">
                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
                             {% if opportunity.type == 'Internship' %}bg-blue-100 text-blue-800
-                            {% elif opportunity.type == 'Full Time' %}bg-purple-100 text-purple-800
+                            {% elif opportunity.type == 'Job' %}bg-purple-100 text-purple-800
+                            {% elif opportunity.type == 'Summer Camp' %}bg-yellow-100 text-yellow-800
+                            {% elif opportunity.type == 'Research Opportunity' %}bg-indigo-100 text-indigo-800
+                            {% elif opportunity.type == 'Summer Program' %}bg-orange-100 text-orange-800
+                            {% elif opportunity.type == 'Scholarship' %}bg-pink-100 text-pink-800
+                            {% elif opportunity.type == 'Competition' %}bg-red-100 text-red-800
+                            {% elif opportunity.type == 'Workshop' %}bg-teal-100 text-teal-800
+                            {% elif opportunity.type == 'Mentorship' %}bg-cyan-100 text-cyan-800
+                            {% elif opportunity.type == 'Volunteer' %}bg-green-100 text-green-800
+                            {% elif opportunity.type == 'Full-time' %}bg-gray-100 text-gray-800
+                            {% elif opportunity.type == 'Part-time' %}bg-slate-100 text-slate-800
                             {% else %}bg-green-100 text-green-800{% endif %}">
                             {{ opportunity.type if opportunity.type else 'Draft' }}
                         </span>
@@ -217,32 +259,20 @@
     </div>
     {% endif %}
 
-        <!-- Call to Action for Organizations -->
-        {% if session.user_type == 'organization' %}
-            <div class="mt-12 bg-blue-50 rounded-lg p-8 text-center">
-                <h3 class="text-lg font-medium text-gray-900 mb-2">Looking to post an opportunity?</h3>
-                <p class="text-gray-600 mb-4">Connect with talented students by creating your own internship or
-                    volunteer
-                    opportunity.</p>
-                <a href="{{ url_for('create_opportunity') }}"
-                   class="inline-flex items-center px-4 py-2 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
-                    <i class="fas fa-plus mr-2"></i>
-                    Create Opportunity
-                </a>
-            </div>
-        {% elif not session.user_id %}
-            <div class="mt-12 bg-gray-50 rounded-lg p-8 text-center">
-                <h3 class="text-lg font-medium text-gray-900 mb-2">Ready to apply?</h3>
-                <p class="text-gray-600 mb-4">Create your profile to start applying for opportunities and connecting
-                    with
-                    organizations.</p>
-                <a href="{{ url_for('signup') }}"
-                   class="inline-flex items-center px-4 py-2 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
-                    Create Your Profile
-                </a>
-            </div>
-        {% endif %}
+    <!-- Call to Action for Non-logged in users -->
+    {% if not session.user_id %}
+    <div class="mt-12 bg-gray-50 rounded-lg p-8 text-center">
+        <h3 class="text-lg font-medium text-gray-900 mb-2">Ready to apply?</h3>
+        <p class="text-gray-600 mb-4">Create your profile to start applying for opportunities and connecting
+            with
+            organizations.</p>
+        <a href="{{ url_for('signup') }}"
+            class="inline-flex items-center px-4 py-2 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
+            Create Your Profile
+        </a>
     </div>
+    {% endif %}
+</div>
 
 <style>
     .line-clamp-3 {

@@ -782,6 +782,69 @@ def talent_search():
         return render_template("talent_search.html", students=[])
 
 
+@app.route("/preview_opportunity", methods=["POST"])
+def preview_opportunity():
+    """Preview opportunity using form data without saving"""
+    if "user_id" not in session or session.get("user_type") != "organization":
+        return {"success": False, "error": "Not authorized"}, 401
+
+    try:
+        # Create a mock opportunity object from form data
+        mock_opportunity = {
+            "id": 0,  # Preview ID
+            "title": request.form.get("title", ""),
+            "description": request.form.get("description", ""),
+            "type": request.form.get("type", ""),
+            "category": request.form.get("category", ""),
+            "location": request.form.get("location", ""),
+            "requirements": request.form.get("requirements", ""),
+            "compensation": request.form.get("compensation", ""),
+            "duration": request.form.get("duration", ""),
+            "application_deadline": request.form.get("application_deadline", ""),
+            "skills_needed": request.form.get("skills_needed", "[]"),
+            "eligibility_criteria": request.form.get("eligibility_criteria", ""),
+            "age_range": request.form.get("age_range", ""),
+            "prerequisite_skills": request.form.get("prerequisite_skills", ""),
+            "award_amount": request.form.get("award_amount", ""),
+            "program_dates": request.form.get("program_dates", ""),
+            "mentor_info": request.form.get("mentor_info", ""),
+            "research_field": request.form.get("research_field", ""),
+            "commitment_level": request.form.get("commitment_level", ""),
+            "application_materials": request.form.get("application_materials", ""),
+            "selection_process": request.form.get("selection_process", ""),
+            "created_at": "2024-01-01",  # Mock date
+            "status": "active",
+            "company_id": session.get("user_id"),
+            "profiles": {
+                "name": "Preview Organization",
+                "organization_name": "Preview Organization",
+                "location": "Preview Location",
+                "profile_image": None,
+                "website": None,
+                "phone": None,
+            },
+        }
+
+        # Parse skills_needed if it's a JSON string
+        try:
+            import json
+
+            if isinstance(mock_opportunity["skills_needed"], str):
+                mock_opportunity["skills_needed"] = json.loads(
+                    mock_opportunity["skills_needed"]
+                )
+        except:
+            mock_opportunity["skills_needed"] = []
+
+        # Render the opportunity details template with preview flag
+        return render_template(
+            "opportunity_details.html", opportunity=mock_opportunity, is_preview=True
+        )
+
+    except Exception as e:
+        return {"success": False, "error": str(e)}, 500
+
+
 @app.route("/create_opportunity", methods=["GET", "POST"])
 @app.route("/create_opportunity/<int:opportunity_id>", methods=["GET", "POST"])
 def create_opportunity(opportunity_id=None):
@@ -835,6 +898,17 @@ def create_opportunity(opportunity_id=None):
             "application_deadline": request.form.get("application_deadline") or None,
             "skills_needed": skills_needed_json,
             "status": status,
+            # New type-specific fields
+            "eligibility_criteria": request.form.get("eligibility_criteria") or None,
+            "age_range": request.form.get("age_range") or None,
+            "prerequisite_skills": request.form.get("prerequisite_skills") or None,
+            "award_amount": request.form.get("award_amount") or None,
+            "program_dates": request.form.get("program_dates") or None,
+            "mentor_info": request.form.get("mentor_info") or None,
+            "research_field": request.form.get("research_field") or None,
+            "commitment_level": request.form.get("commitment_level") or None,
+            "application_materials": request.form.get("application_materials") or None,
+            "selection_process": request.form.get("selection_process") or None,
         }
 
         # For drafts, ensure all keys exist, but allow None values
@@ -849,6 +923,16 @@ def create_opportunity(opportunity_id=None):
                 "compensation",
                 "duration",
                 "application_deadline",
+                "eligibility_criteria",
+                "age_range",
+                "prerequisite_skills",
+                "award_amount",
+                "program_dates",
+                "mentor_info",
+                "research_field",
+                "commitment_level",
+                "application_materials",
+                "selection_process",
             ]:
                 if opportunity_data.get(key) is None:
                     opportunity_data[key] = None
