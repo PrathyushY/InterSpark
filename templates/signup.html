@@ -15,17 +15,17 @@
                 <form class="space-y-6" method="POST" id="signup-form">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-3">I am a:</label>
-                        <div class="flex space-x-4">
-                            <label class="inline-flex items-center">
-                                <input type="radio" name="user_type" value="student" checked
-                                       class="form-radio text-blue-600" onchange="Signup.toggleFormFields()">
-                                <span class="ml-2 text-sm font-medium text-gray-700">Student</span>
-                            </label>
-                            <label class="inline-flex items-center">
-                                <input type="radio" name="user_type" value="organization"
-                                       class="form-radio text-blue-600" onchange="Signup.toggleFormFields()">
-                                <span class="ml-2 text-sm font-medium text-gray-700">Organization</span>
-                            </label>
+                        <div class="relative bg-gray-200 rounded-lg p-1 w-fit mx-auto">
+                            <div id="slider-indicator" class="absolute top-1 left-1 w-32 h-8 bg-blue-600 rounded-md transition-transform duration-300 ease-in-out"></div>
+                            <div class="relative flex">
+                                <button type="button" id="student-btn" class="w-32 py-2 text-sm font-medium text-center rounded-md transition-colors duration-300 text-white z-10" onclick="Signup.selectUserType('student')">
+                                    Student
+                                </button>
+                                <button type="button" id="organization-btn" class="w-32 py-2 text-sm font-medium text-center rounded-md transition-colors duration-300 text-gray-700 z-10" onclick="Signup.selectUserType('organization')">
+                                    Organization
+                                </button>
+                            </div>
+                            <input type="hidden" name="user_type" id="user_type" value="student">
                         </div>
                     </div>
                     <div>
