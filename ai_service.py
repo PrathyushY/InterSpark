@@ -70,8 +70,8 @@ class AIService:
             extracted_skills = enhanced_query.get("skills", [])
             extracted_names = enhanced_query.get("names", [])
 
-            # Fallback: Use keyword matching if AI extraction fails, but only for clear technical terms
-            if not extracted_skills and not extracted_names and any(term in query.lower() for term in ['python', 'javascript', 'java', 'react', 'flask', 'django']):
+            # Always use fallback if AI extraction fails or returns empty results
+            if not extracted_skills and not extracted_names:
                 extracted_skills = self._extract_skills_fallback(query)
                 logger.info(f"Using fallback skill extraction: {extracted_skills}")
 
@@ -85,8 +85,8 @@ class AIService:
 
             # Search in profiles table with enhanced parameters
             # If we have extracted skills or names, use targeted search
-            if extracted_skills and any(skill in ['python', 'javascript', 'java', 'html', 'css', 'flask', 'django', 'react', 'vue', 'angular'] for skill in extracted_skills):
-                search_text = ""  # Focus on technical skills
+            if extracted_skills:
+                search_text = ""  # Focus on skills when any skills are detected
             elif extracted_names:
                 search_text = " ".join(extracted_names)
             else:
@@ -281,16 +281,19 @@ class AIService:
 
 Your role is to:
 1. Provide helpful, conversational responses to user queries
-2. When relevant, create interactive cards for matching students or opportunities using HTML
-3. Be encouraging and supportive, especially for students looking for opportunities
-4. Keep responses concise but informative
-5. **IMPORTANT: When showing results, create HTML cards instead of just text links**
+2. **CRITICAL: ONLY create HTML cards for profiles and opportunities that are EXPLICITLY provided in the "Current database context" section below**
+3. **NEVER create fake or example profiles - only use actual data from the database context**
+4. Be encouraging and supportive, especially for students looking for opportunities
+5. Keep responses concise but informative
 6. Maintain conversation flow and context from previous messages
-7. **CONVERSATIONAL REFERENCES: When users say "this opportunity", "the one you showed", "summarize this", etc., and you have relevant database results, use that information to provide helpful responses**
-7. **PROFILE CARD FORMAT:**
-   When showing student profiles, create interactive HTML cards directly in your response (no code blocks).
-   Use this exact HTML structure for each profile:
-   
+
+**STRICT DATA USAGE RULES:**
+- You can ONLY create HTML cards for profiles/opportunities that appear in the "RELEVANT STUDENT PROFILES" or "RELEVANT OPPORTUNITIES" sections below
+- If no profiles are found in the database context, say "I didn't find any matching student profiles" - DO NOT create fake examples
+- If no opportunities are found in the database context, say "I didn't find any matching opportunities" - DO NOT create fake examples
+- Use ONLY the exact names, schools, skills, and other data provided in the database context
+
+**PROFILE CARD FORMAT (ONLY when profiles exist in database context):**
    <div class="bg-white border border-gray-200 rounded-lg p-4 mb-3 hover:shadow-md transition-shadow cursor-pointer" onclick="window.open('/profile/[PROFILE_ID]', '_blank')">
      <div class="flex items-center space-x-3">
        <img src="[PROFILE_IMAGE_URL]" alt="[NAME]" class="w-12 h-12 rounded-full object-cover" onerror="this.src='https://via.placeholder.com/48x48/3B82F6/FFFFFF?text=[FIRST_INITIAL]'">
@@ -307,13 +310,8 @@ Your role is to:
    </div>
    
    For skills badges, use: <span class="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">[SKILL]</span>
-   
-   **IMPORTANT: Generate the HTML directly in your response, NOT inside code blocks or backticks.**
 
-8. **OPPORTUNITY CARD FORMAT:**
-   When showing opportunities, create interactive HTML cards directly in your response (no code blocks).
-   Use this exact HTML structure for each opportunity:
-   
+**OPPORTUNITY CARD FORMAT (ONLY when opportunities exist in database context):**
    <div class="bg-white border border-gray-200 rounded-lg p-4 mb-3 hover:shadow-md transition-shadow cursor-pointer" onclick="window.open('/opportunity/[OPPORTUNITY_ID]', '_blank')">
      <div class="flex items-start space-x-3">
        <div class="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -346,7 +344,7 @@ Current database context:
 - Pay special attention to Assistant messages that mention specific opportunities like "Backend Developer", "Marketing Assistant", etc.
 - When users ask for summaries or details about "the opportunity" or "this opportunity", refer back to what you previously shared in the conversation
 
-Remember: Always create interactive HTML cards when showing results. Make them clickable and visually appealing!"""
+**REMEMBER: NEVER create fake profiles or opportunities. Only use data that exists in the database context above!**"""
 
     def generate_response_with_context(
         self,
@@ -414,13 +412,18 @@ If no matches are found and no relevant conversation history, reply naturally: I
         try:
             system_prompt = """You are a skill extraction assistant. Your job is to identify technical skills, programming languages, frameworks, tools, or other professional skills mentioned in user queries.
 
-Return a structured response with the skills found.
+Return a structured response with the skills found. Use proper capitalization for skill names.
 
 Examples:
 - "I know Python and React" -> skills: ["Python", "React"]
 - "Looking for Java developers" -> skills: ["Java"]
 - "Need help with machine learning" -> skills: ["Machine Learning"]
-- "What opportunities are available?" -> skills: []"""
+- "Show me students with artificial intelligence projects" -> skills: ["Artificial Intelligence"]
+- "Find someone with data science experience" -> skills: ["Data Science"]
+- "Web development internships" -> skills: ["Web Development"]
+- "What opportunities are available?" -> skills: []
+
+IMPORTANT: Always extract skills even if they are multi-word (like "Machine Learning", "Artificial Intelligence", "Data Science", "Web Development", etc.)"""
 
             response = self.client.models.generate_content(
                 model=MODEL,
@@ -498,60 +501,63 @@ Examples:
 
         # Common programming skills and technologies
         skill_keywords = {
-            "python": ["python", "py"],
-            "javascript": ["javascript", "js", "node.js", "nodejs"],
-            "react": ["react", "reactjs", "react.js"],
-            "java": ["java"],
-            "html": ["html", "html5"],
-            "css": ["css", "css3"],
-            "sql": ["sql", "mysql", "postgresql", "database"],
-            "machine learning": [
+            "Python": ["python", "py"],
+            "JavaScript": ["javascript", "js", "node.js", "nodejs"],
+            "React": ["react", "reactjs", "react.js"],
+            "Java": ["java"],
+            "HTML": ["html", "html5"],
+            "CSS": ["css", "css3"],
+            "SQL": ["sql", "mysql", "postgresql", "database"],
+            "Machine Learning": [
                 "machine learning",
                 "ml",
-                "ai",
                 "artificial intelligence",
+                "ai",
             ],
-            "data science": ["data science", "data analysis", "analytics"],
-            "web development": [
+            "Data Science": ["data science", "data analysis", "analytics"],
+            "Web Development": [
                 "web development",
                 "web dev",
                 "frontend",
                 "backend",
                 "full stack",
             ],
-            "c++": ["c++", "cpp"],
-            "c#": ["c#", "csharp"],
-            "php": ["php"],
-            "ruby": ["ruby"],
-            "swift": ["swift"],
-            "kotlin": ["kotlin"],
-            "go": ["golang", "go programming"],
-            "rust": ["rust"],
-            "typescript": ["typescript", "ts"],
-            "vue": ["vue", "vue.js", "vuejs"],
-            "angular": ["angular", "angularjs"],
-            "django": ["django"],
-            "flask": ["flask"],
-            "spring": ["spring", "spring boot"],
-            "docker": ["docker"],
-            "kubernetes": ["kubernetes", "k8s"],
-            "aws": ["aws", "amazon web services"],
-            "git": ["git", "github", "version control"],
+            "C++": ["c++", "cpp"],
+            "C#": ["c#", "csharp"],
+            "PHP": ["php"],
+            "Ruby": ["ruby"],
+            "Swift": ["swift"],
+            "Kotlin": ["kotlin"],
+            "Go": ["golang", "go programming"],
+            "Rust": ["rust"],
+            "TypeScript": ["typescript", "ts"],
+            "Vue": ["vue", "vue.js", "vuejs"],
+            "Angular": ["angular", "angularjs"],
+            "Django": ["django"],
+            "Flask": ["flask"],
+            "Spring": ["spring", "spring boot"],
+            "Docker": ["docker"],
+            "Kubernetes": ["kubernetes", "k8s"],
+            "AWS": ["aws", "amazon web services"],
+            "Git": ["git", "github", "version control"],
+            "Artificial Intelligence": ["artificial intelligence", "ai", "machine learning", "ml"],
         }
         
         # Opportunity-specific terms
         opportunity_keywords = {
-            "internship": ["internship", "intern"],
-            "volunteer": ["volunteer", "volunteering"],
-            "part-time": ["part-time", "part time"],
-            "full-time": ["full-time", "full time"],
-            "remote": ["remote", "work from home"],
-            "marketing": ["marketing", "social media"],
-            "design": ["design", "ui", "ux", "graphic design"],
-            "research": ["research", "data analysis"],
+            "Internship": ["internship", "intern"],
+            "Volunteer": ["volunteer", "volunteering"],
+            "Part-time": ["part-time", "part time"],
+            "Full-time": ["full-time", "full time"],
+            "Remote": ["remote", "work from home"],
+            "Marketing": ["marketing", "social media"],
+            "Design": ["design", "ui", "ux", "graphic design"],
+            "Research": ["research", "data analysis"],
         }
 
         found_skills = []
+        
+        # Check skill keywords first (prioritize exact matches for multi-word skills)
         for skill, keywords in skill_keywords.items():
             if any(keyword in query_lower for keyword in keywords):
                 found_skills.append(skill)
@@ -561,4 +567,12 @@ Examples:
             if any(keyword in query_lower for keyword in keywords):
                 found_skills.append(term)
 
-        return found_skills
+        # Remove duplicates while preserving order
+        seen = set()
+        unique_skills = []
+        for skill in found_skills:
+            if skill not in seen:
+                seen.add(skill)
+                unique_skills.append(skill)
+
+        return unique_skills

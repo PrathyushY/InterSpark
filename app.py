@@ -1491,11 +1491,24 @@ def chat():
     if "user_id" not in session:
         return redirect(url_for("login"))
 
-    # Initialize chat history in session if it doesn't exist
-    if "chat_history" not in session:
-        session["chat_history"] = []
+    user_id = session.get("user_id")
+    
+    # Get chat history from database
+    try:
+        chat_history = supabase_service.get_chat_history(user_id)
+        # Convert to format expected by template
+        formatted_history = []
+        for msg in chat_history:
+            formatted_history.append({
+                "role": msg["role"],
+                "content": msg["content"],
+                "timestamp": msg["created_at"]
+            })
+    except Exception as e:
+        logger.error(f"Error loading chat history: {str(e)}")
+        formatted_history = []
 
-    return render_template("chat.html", chat_history=session["chat_history"])
+    return render_template("chat.html", chat_history=formatted_history)
 
 
 @app.route("/chat/send", methods=["POST"])
@@ -1512,18 +1525,20 @@ def chat_send():
         if not user_message:
             return jsonify({"success": False, "error": "Message cannot be empty"}), 400
 
-        # Initialize chat history if not exists
-        if "chat_history" not in session:
-            session["chat_history"] = []
+        user_id = session.get("user_id")
+        
+        # Save user message to database
+        supabase_service.save_chat_message(user_id, "user", user_message)
 
-        # Add user message to history
-        session["chat_history"].append(
-            {
-                "role": "user",
-                "content": user_message,
-                "timestamp": datetime.now().isoformat(),
-            }
-        )
+        # Get recent chat history from database for context
+        chat_history_db = supabase_service.get_chat_history(user_id, limit=20)
+        chat_history = []
+        for msg in chat_history_db:
+            chat_history.append({
+                "role": msg["role"],
+                "content": msg["content"],
+                "timestamp": msg["created_at"]
+            })
 
         # Search database for relevant results
         if ai_service:
@@ -1538,24 +1553,14 @@ def chat_send():
         # Generate AI response with conversation context
         if ai_service:
             ai_response = ai_service.generate_response_with_context(
-                user_message, db_results, session["chat_history"]
+                user_message, db_results, chat_history
             )
         else:
             # Fallback response without AI
             ai_response = generate_fallback_response(user_message, db_results)
 
-        # Add AI response to history
-        session["chat_history"].append(
-            {
-                "role": "assistant",
-                "content": ai_response,
-                "timestamp": datetime.now().isoformat(),
-            }
-        )
-
-        # Keep only last 20 messages to prevent session bloat
-        if len(session["chat_history"]) > 20:
-            session["chat_history"] = session["chat_history"][-20:]
+        # Save AI response to database
+        supabase_service.save_chat_message(user_id, "assistant", ai_response)
 
         return jsonify(
             {"success": True, "response": ai_response, "db_results": db_results}
@@ -1580,8 +1585,17 @@ def chat_clear():
     if "user_id" not in session:
         return jsonify({"success": False, "error": "Not authenticated"}), 401
 
-    session["chat_history"] = []
-    return jsonify({"success": True, "message": "Chat history cleared"})
+    user_id = session.get("user_id")
+    
+    try:
+        result = supabase_service.clear_chat_history(user_id)
+        if result["success"]:
+            return jsonify({"success": True, "message": "Chat history cleared"})
+        else:
+            return jsonify({"success": False, "error": result["error"]}), 500
+    except Exception as e:
+        logger.error(f"Error clearing chat history: {str(e)}")
+        return jsonify({"success": False, "error": "Failed to clear chat history"}), 500
 
 
 if __name__ == "__main__":
