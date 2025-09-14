@@ -1705,6 +1705,31 @@ class SupabaseService:
             logger.error(f"Error getting chat history: {str(e)}")
             return []
     
+    def get_user_prompt_count(self, user_id: str) -> int:
+        """
+        Get the total number of prompts a user has sent.
+        
+        Args:
+            user_id: The user's ID
+            
+        Returns:
+            Total number of prompts sent
+        """
+        try:
+            response = (
+                self.service_client.table("chat_history")
+                .select("id", count="exact")
+                .eq("user_id", user_id)
+                .eq("role", "user")
+                .execute()
+            )
+            
+            return response.count if response.count else 0
+            
+        except Exception as e:
+            logger.error(f"Error getting user prompt count: {str(e)}")
+            return 0
+    
     def clear_chat_history(self, user_id: str) -> Dict[str, Any]:
         """
         Clear all chat history for a user.

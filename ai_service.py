@@ -113,19 +113,25 @@ class AIService:
             
             # Check if this is an opportunity type-focused query
             job_types = enhanced_query.get("job_types", [])
-            if job_types or any(term in extracted_skills for term in ['internship', 'volunteer', 'part-time', 'full-time']):
+            opp_type = ""
+            
+            # Check for opportunity types in job_types, extracted_skills, or query directly
+            query_lower = query.lower()
+            if job_types or any(term in extracted_skills for term in ['Internship', 'Volunteer', 'Part-time', 'Full-time']) or any(term in query_lower for term in ['internship', 'volunteer', 'part-time', 'full-time']):
                 opp_search_text = ""  # Focus on type filtering
-                # Map extracted terms to opportunity types
-                if 'internship' in job_types or 'internship' in extracted_skills:
+                # Map extracted terms to opportunity types (check multiple sources)
+                if 'Internship' in job_types or 'Internship' in extracted_skills or 'internship' in query_lower:
                     opp_type = "Internship"
-                elif 'volunteer' in job_types or 'volunteer' in extracted_skills:
+                elif 'Volunteer' in job_types or 'Volunteer' in extracted_skills or 'volunteer' in query_lower:
                     opp_type = "Volunteer"
-                elif 'part-time' in job_types or 'part-time' in extracted_skills:
+                elif 'Part-time' in job_types or 'Part-time' in extracted_skills or 'part-time' in query_lower:
                     opp_type = "Part-time"
-                elif 'full-time' in job_types or 'full-time' in extracted_skills:
+                elif 'Full-time' in job_types or 'Full-time' in extracted_skills or 'full-time' in query_lower:
                     opp_type = "Full-time"
             elif technical_skills:
                 opp_search_text = ""  # Focus on skills search only
+            else:
+                opp_search_text = ""  # Empty search for general queries
             
             logger.info(f"Opportunity search parameters: search_query='{opp_search_text}', type='{opp_type}', location='{location_param}', skills='{opp_skills_param}'")
             
@@ -458,14 +464,18 @@ IMPORTANT: Always extract skills even if they are multi-word (like "Machine Lear
 Return structured data with these fields:
 - skills: array of technical skills mentioned
 - locations: array of locations/cities mentioned  
-- job_types: array of job types (internship, part-time, full-time, volunteer, etc.)
-- categories: array of categories (technology, marketing, design, etc.)
+- job_types: array of job types (Internship, Part-time, Full-time, Volunteer, etc.)
+- categories: array of categories (Technology, Marketing, Design, etc.)
 - general_terms: array of other important search terms
 - names: array of person names mentioned
 
 Examples:
-- "Python developer internship in San Francisco" -> skills: ["Python"], locations: ["San Francisco"], job_types: ["internship"], categories: ["technology"], general_terms: ["developer"], names: []
-- "Tell me about Hridhay's profile" -> skills: [], locations: [], job_types: [], categories: [], general_terms: ["profile"], names: ["Hridhay"]"""
+- "Python developer internship in San Francisco" -> skills: ["Python"], locations: ["San Francisco"], job_types: ["Internship"], categories: ["Technology"], general_terms: ["developer"], names: []
+- "Show me internship opportunities" -> skills: [], locations: [], job_types: ["Internship"], categories: [], general_terms: ["opportunities"], names: []
+- "Find volunteer work" -> skills: [], locations: [], job_types: ["Volunteer"], categories: [], general_terms: ["work"], names: []
+- "Tell me about Hridhay's profile" -> skills: [], locations: [], job_types: [], categories: [], general_terms: ["profile"], names: ["Hridhay"]
+
+IMPORTANT: Always extract job types like Internship, Volunteer, Part-time, Full-time when mentioned."""
 
             response = self.client.models.generate_content(
                 model=MODEL,
@@ -545,7 +555,7 @@ Examples:
         
         # Opportunity-specific terms
         opportunity_keywords = {
-            "Internship": ["internship", "intern"],
+            "Internship": ["internship", "intern", "internships"],
             "Volunteer": ["volunteer", "volunteering"],
             "Part-time": ["part-time", "part time"],
             "Full-time": ["full-time", "full time"],

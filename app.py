@@ -1507,8 +1507,12 @@ def chat():
     except Exception as e:
         logger.error(f"Error loading chat history: {str(e)}")
         formatted_history = []
+    
+    # Get remaining prompts for today
+    prompt_count = supabase_service.get_user_prompt_count(user_id)
+    remaining_prompts = max(0, 5 - prompt_count)
 
-    return render_template("chat.html", chat_history=formatted_history)
+    return render_template("chat.html", chat_history=formatted_history, remaining_prompts=remaining_prompts)
 
 
 @app.route("/chat/send", methods=["POST"])
@@ -1526,6 +1530,14 @@ def chat_send():
             return jsonify({"success": False, "error": "Message cannot be empty"}), 400
 
         user_id = session.get("user_id")
+        
+        # Check prompt limit (5 per day for beta)
+        prompt_count = supabase_service.get_user_prompt_count(user_id)
+        if prompt_count >= 5:
+            return jsonify({
+                "success": False, 
+                "error": "You've reached the limit of 5 prompts. This feature is in beta with limited usage."
+            }), 429
         
         # Save user message to database
         supabase_service.save_chat_message(user_id, "user", user_message)
