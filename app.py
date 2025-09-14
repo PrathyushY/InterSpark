@@ -767,15 +767,26 @@ def opportunities():
         category = request.args.get("category", "")
         location = request.args.get("location", "")
         skills_needed = request.args.get("skills_needed", "")
-
-        # Fetch opportunities with filters (including skills_needed)
-        opportunities = supabase_service.search_opportunities(
+        
+        # Get pagination parameters
+        page = int(request.args.get("page", 1))
+        per_page = 6  # 6 opportunities per page
+        
+        # Fetch all opportunities with filters first
+        all_opportunities = supabase_service.search_opportunities(
             search_query=search_query,
             opportunity_type=opportunity_type,
             category=category,
             location=location,
             skills_needed=skills_needed,
         )
+        
+        # Calculate pagination
+        total_opportunities = len(all_opportunities)
+        total_pages = (total_opportunities + per_page - 1) // per_page
+        start_idx = (page - 1) * per_page
+        end_idx = start_idx + per_page
+        opportunities = all_opportunities[start_idx:end_idx]
 
         # Parse skills_needed (comma-separated or JSON)
         import json
@@ -806,6 +817,9 @@ def opportunities():
             selected_location=location,
             selected_skills_needed=selected_skills_needed,
             skills_master=get_all_available_skills(),
+            current_page=page,
+            total_pages=total_pages,
+            total_opportunities=total_opportunities,
         )
     except Exception as e:
         flash(f"Error loading opportunities: {str(e)}", "error")
@@ -850,15 +864,26 @@ def talent_search():
         school = request.args.get("school", "")
         grade = request.args.get("grade", "")
         location = request.args.get("location", "")
+        
+        # Get pagination parameters
+        page = int(request.args.get("page", 1))
+        per_page = 9  # 9 profiles per page
 
-        # Search students with filters
-        students = supabase_service.search_students(
+        # Search all students with filters first
+        all_students = supabase_service.search_students(
             search_query=search_query,
             skills=skills,
             school=school,
             grade=grade,
             location=location,
         )
+        
+        # Calculate pagination
+        total_students = len(all_students)
+        total_pages = (total_students + per_page - 1) // per_page
+        start_idx = (page - 1) * per_page
+        end_idx = start_idx + per_page
+        students = all_students[start_idx:end_idx]
 
         # Get saved profiles to determine which ones are bookmarked
         saved_profiles = supabase_service.get_saved_profiles(user_id)
@@ -905,6 +930,9 @@ def talent_search():
             selected_location=location,
             saved_profile_ids=list(saved_profile_ids),
             skills_master=get_all_available_skills(),
+            current_page=page,
+            total_pages=total_pages,
+            total_students=total_students,
         )
     except Exception as e:
         flash(f"Error searching talent: {str(e)}", "error")
