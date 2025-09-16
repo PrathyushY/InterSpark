@@ -85,3 +85,4 @@ flask_session/
 
 # Uploads (if file upload is implemented later)
 uploads/
+.vercel
