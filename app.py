@@ -1,8 +1,8 @@
-import os
 import json
 import logging
 import os
 from datetime import datetime
+from typing import Dict, Any
 
 from dotenv import load_dotenv
 from flask import (
@@ -15,8 +15,8 @@ from flask import (
     flash,
     session,
 )
-
-from supabase_config import supabase_service
+from ai_service import AIService
+from supabase_config import SupabaseService
 
 # Load environment variables
 load_dotenv()
@@ -104,6 +104,135 @@ def normalize_skills_for_draft(value):
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "2a15f8283ab2353f15089e80d8acf104")
+
+# Initialize services after environment variables are loaded
+supabase_service = SupabaseService()
+
+# Initialize AI service with error handling
+try:
+    ai_service = AIService()  # Modern SDK automatically picks up GEMINI_API_KEY
+except ValueError as e:
+    logger.warning(f"AI service not available: {e}")
+    ai_service = None
+
+
+def fallback_search(query: str, supabase_service) -> Dict[str, Any]:
+    """
+    Fallback search function when AI service is not available.
+    Performs basic keyword-based search.
+    """
+    try:
+        results = {"profiles": [], "opportunities": [], "total_matches": 0}
+
+        # Simple keyword extraction
+        query_lower = query.lower()
+        skills_to_search = []
+
+        # Common skill keywords
+        skill_keywords = {
+            "python": ["python", "py"],
+            "javascript": ["javascript", "js", "node"],
+            "react": ["react", "reactjs"],
+            "java": ["java"],
+            "html": ["html"],
+            "css": ["css"],
+            "sql": ["sql", "database"],
+            "machine learning": [
+                "machine learning",
+                "ml",
+                "ai",
+                "artificial intelligence",
+            ],
+            "data science": ["data science", "data analysis"],
+            "web development": ["web development", "web dev", "frontend", "backend"],
+        }
+
+        # Extract skills from query
+        for skill, keywords in skill_keywords.items():
+            if any(keyword in query_lower for keyword in keywords):
+                skills_to_search.append(skill)
+
+        # Search profiles
+        profile_results = supabase_service.search_students_enhanced(
+            search_query=query,
+            skills=",".join(skills_to_search) if skills_to_search else "",
+            school="",
+            grade="",
+            location="",
+        )
+
+        # Search opportunities
+        opportunity_results = supabase_service.search_opportunities(
+            search_query=query,
+            opportunity_type="",
+            category="",
+            location="",
+            skills_needed=",".join(skills_to_search) if skills_to_search else "",
+        )
+
+        results["profiles"] = profile_results[:5]
+        results["opportunities"] = opportunity_results[:5]
+        results["total_matches"] = len(profile_results) + len(opportunity_results)
+
+        return results
+
+    except Exception as e:
+        logger.error(f"Error in fallback search: {str(e)}")
+        return {"profiles": [], "opportunities": [], "total_matches": 0}
+
+
+def generate_fallback_response(user_message: str, db_results: Dict[str, Any]) -> str:
+    """
+    Generate a fallback response when AI service is not available.
+    """
+    try:
+        response_parts = []
+
+        if db_results["total_matches"] > 0:
+            response_parts.append("I found some relevant results for you:")
+
+            if db_results["profiles"]:
+                response_parts.append("\n**Student Profiles:**")
+                for profile in db_results["profiles"]:
+                    name = profile.get("name", "Unknown")
+                    school = profile.get("school", "Unknown school")
+                    skills = profile.get("skills", [])
+                    if isinstance(skills, str):
+                        try:
+                            skills = json.loads(skills)
+                        except:
+                            skills = [skills] if skills else []
+
+                    response_parts.append(f"- **{name}** from {school}")
+                    if skills:
+                        response_parts.append(f"  Skills: {', '.join(skills[:5])}")
+                    response_parts.append(f"  [View Profile](/profile/{profile['id']})")
+
+            if db_results["opportunities"]:
+                response_parts.append("\n**Opportunities:**")
+                for opp in db_results["opportunities"]:
+                    title = opp.get("title", "Unknown title")
+                    org_name = "Unknown organization"
+                    if opp.get("profiles"):
+                        org_name = opp["profiles"].get("name", org_name)
+
+                    response_parts.append(f"- **{title}** at {org_name}")
+                    response_parts.append(
+                        f"  [View Opportunity](/opportunity/{opp['id']})"
+                    )
+        else:
+            response_parts.append(
+                "I didn't find any matching profiles or opportunities for your query."
+            )
+            response_parts.append(
+                "Try rephrasing your request or being more specific about the skills or type of opportunity you're looking for."
+            )
+
+        return "\n".join(response_parts)
+
+    except Exception as e:
+        logger.error(f"Error generating fallback response: {str(e)}")
+        return "I apologize, but I'm having trouble processing your request right now. Please try again later."
 
 
 def check_profile_completion():
@@ -638,15 +767,26 @@ def opportunities():
         category = request.args.get("category", "")
         location = request.args.get("location", "")
         skills_needed = request.args.get("skills_needed", "")
-
-        # Fetch opportunities with filters (including skills_needed)
-        opportunities = supabase_service.search_opportunities(
+        
+        # Get pagination parameters
+        page = int(request.args.get("page", 1))
+        per_page = 6  # 6 opportunities per page
+        
+        # Fetch all opportunities with filters first
+        all_opportunities = supabase_service.search_opportunities(
             search_query=search_query,
             opportunity_type=opportunity_type,
             category=category,
             location=location,
             skills_needed=skills_needed,
         )
+        
+        # Calculate pagination
+        total_opportunities = len(all_opportunities)
+        total_pages = (total_opportunities + per_page - 1) // per_page
+        start_idx = (page - 1) * per_page
+        end_idx = start_idx + per_page
+        opportunities = all_opportunities[start_idx:end_idx]
 
         # Parse skills_needed (comma-separated or JSON)
         import json
@@ -677,6 +817,9 @@ def opportunities():
             selected_location=location,
             selected_skills_needed=selected_skills_needed,
             skills_master=get_all_available_skills(),
+            current_page=page,
+            total_pages=total_pages,
+            total_opportunities=total_opportunities,
         )
     except Exception as e:
         flash(f"Error loading opportunities: {str(e)}", "error")
@@ -721,15 +864,26 @@ def talent_search():
         school = request.args.get("school", "")
         grade = request.args.get("grade", "")
         location = request.args.get("location", "")
+        
+        # Get pagination parameters
+        page = int(request.args.get("page", 1))
+        per_page = 9  # 9 profiles per page
 
-        # Search students with filters
-        students = supabase_service.search_students(
+        # Search all students with filters first
+        all_students = supabase_service.search_students(
             search_query=search_query,
             skills=skills,
             school=school,
             grade=grade,
             location=location,
         )
+        
+        # Calculate pagination
+        total_students = len(all_students)
+        total_pages = (total_students + per_page - 1) // per_page
+        start_idx = (page - 1) * per_page
+        end_idx = start_idx + per_page
+        students = all_students[start_idx:end_idx]
 
         # Get saved profiles to determine which ones are bookmarked
         saved_profiles = supabase_service.get_saved_profiles(user_id)
@@ -776,6 +930,9 @@ def talent_search():
             selected_location=location,
             saved_profile_ids=list(saved_profile_ids),
             skills_master=get_all_available_skills(),
+            current_page=page,
+            total_pages=total_pages,
+            total_students=total_students,
         )
     except Exception as e:
         flash(f"Error searching talent: {str(e)}", "error")
@@ -1326,6 +1483,135 @@ def add_skill():
     except Exception as e:
         logger.error(f"Error adding skill: {str(e)}")
         return {"success": False, "error": str(e)}, 500
+
+
+@app.route("/chat")
+def chat():
+    """AI chatbot interface for InterSpark."""
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+
+    user_id = session.get("user_id")
+    
+    # Get chat history from database
+    try:
+        chat_history = supabase_service.get_chat_history(user_id)
+        # Convert to format expected by template
+        formatted_history = []
+        for msg in chat_history:
+            formatted_history.append({
+                "role": msg["role"],
+                "content": msg["content"],
+                "timestamp": msg["created_at"]
+            })
+    except Exception as e:
+        logger.error(f"Error loading chat history: {str(e)}")
+        formatted_history = []
+    
+    # Get remaining prompts for today
+    prompt_count = supabase_service.get_user_prompt_count(user_id)
+    remaining_prompts = max(0, 5 - prompt_count)
+
+    return render_template("chat.html", chat_history=formatted_history, remaining_prompts=remaining_prompts)
+
+
+@app.route("/chat/send", methods=["POST"])
+def chat_send():
+    """Handle chat message and return AI response."""
+    if "user_id" not in session:
+        return jsonify({"success": False, "error": "Not authenticated"}), 401
+
+    if not ai_service:
+        return jsonify({"success": False, "error": "AI service is not available"}), 503
+
+    try:
+        user_message = request.json.get("message", "").strip()
+        if not user_message:
+            return jsonify({"success": False, "error": "Message cannot be empty"}), 400
+
+        user_id = session.get("user_id")
+        
+        # Check prompt limit (5 per day for beta)
+        prompt_count = supabase_service.get_user_prompt_count(user_id)
+        if prompt_count >= 5:
+            return jsonify({
+                "success": False, 
+                "error": "You've reached the limit of 5 prompts. This feature is in beta with limited usage."
+            }), 429
+        
+        # Save user message to database
+        supabase_service.save_chat_message(user_id, "user", user_message)
+
+        # Get recent chat history from database for context
+        chat_history_db = supabase_service.get_chat_history(user_id, limit=20)
+        chat_history = []
+        for msg in chat_history_db:
+            chat_history.append({
+                "role": msg["role"],
+                "content": msg["content"],
+                "timestamp": msg["created_at"]
+            })
+
+        # Search database for relevant results
+        if ai_service:
+            db_results = ai_service.search_database_for_context(
+                user_message, supabase_service
+            )
+        else:
+            # Fallback search without AI service
+            logger.warning("AI service not available, using fallback search")
+            db_results = fallback_search(user_message, supabase_service)
+
+        # Generate AI response with conversation context
+        if ai_service:
+            ai_response = ai_service.generate_response_with_context(
+                user_message, db_results, chat_history
+            )
+        else:
+            # Fallback response without AI
+            ai_response = generate_fallback_response(user_message, db_results)
+
+        # Save AI response to database
+        supabase_service.save_chat_message(user_id, "assistant", ai_response)
+        
+        # Get updated remaining prompts
+        updated_prompt_count = supabase_service.get_user_prompt_count(user_id)
+        remaining_prompts = max(0, 5 - updated_prompt_count)
+
+        return jsonify(
+            {"success": True, "response": ai_response, "db_results": db_results, "remaining_prompts": remaining_prompts}
+        )
+
+    except Exception as e:
+        logger.error(f"Error in chat_send: {str(e)}")
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "error": "An error occurred while processing your message",
+                }
+            ),
+            500,
+        )
+
+
+@app.route("/chat/clear", methods=["POST"])
+def chat_clear():
+    """Clear chat history."""
+    if "user_id" not in session:
+        return jsonify({"success": False, "error": "Not authenticated"}), 401
+
+    user_id = session.get("user_id")
+    
+    try:
+        result = supabase_service.clear_chat_history(user_id)
+        if result["success"]:
+            return jsonify({"success": True, "message": "Chat history cleared"})
+        else:
+            return jsonify({"success": False, "error": result["error"]}), 500
+    except Exception as e:
+        logger.error(f"Error clearing chat history: {str(e)}")
+        return jsonify({"success": False, "error": "Failed to clear chat history"}), 500
 
 
 if __name__ == "__main__":

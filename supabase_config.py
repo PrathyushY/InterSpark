@@ -5,6 +5,7 @@ Handles authentication, user management, and database operations.
 
 import logging
 import os
+from datetime import datetime
 from typing import Dict, Any, Optional, List
 
 from dotenv import load_dotenv
@@ -569,6 +570,134 @@ class SupabaseService:
             logger.error(f"Error searching students: {str(e)}")
             return []
 
+    def search_students_enhanced(
+        self,
+        search_query: str = "",
+        skills: str = "",
+        school: str = "",
+        grade: str = "",
+        location: str = "",
+    ) -> List[Dict[str, Any]]:
+        """
+        Enhanced search for student profiles with improved skills matching.
+        Uses ANY skills match instead of ALL skills match for better results.
+        """
+        import json
+
+        try:
+            query = self.client.table("profiles").select("*").eq("user_type", "student")
+
+            # Apply text search if provided
+            if search_query:
+                query = query.or_(
+                    f"name.ilike.%{search_query}%,bio.ilike.%{search_query}%"
+                )
+
+            # Apply school filter
+            if school:
+                query = query.ilike("school", f"%{school}%")
+
+            # Apply grade filter
+            if grade:
+                query = query.ilike("grade", f"%{grade}%")
+
+            # Apply location filter
+            if location:
+                query = query.ilike("location", f"%{location}%")
+
+            # Order by creation date, newest first
+            query = query.order("created_at", desc=True)
+
+            response = query.execute()
+            students = response.data if response.data else []
+
+            # Enhanced skills filtering - use ANY match instead of ALL match
+            def parse_skills(val):
+                if not val:
+                    return []
+                if isinstance(val, list):
+                    return val
+                try:
+                    loaded = json.loads(val)
+                    if isinstance(loaded, list):
+                        return loaded
+                except Exception:
+                    pass
+                if "," in val:
+                    return [s.strip() for s in val.split(",") if s.strip()]
+                return [val.strip()] if val.strip() else []
+
+            selected_skills = set(parse_skills(skills))
+            if selected_skills:
+                # Client-side filtering for skills
+                def student_has_any_skills(student):
+                    profile_skills = student.get("skills", [])
+                    # Robustly parse profile_skills
+                    if isinstance(profile_skills, str):
+                        try:
+                            loaded = json.loads(profile_skills)
+                            if isinstance(loaded, list):
+                                profile_skills = loaded
+                        except Exception:
+                            if "," in profile_skills:
+                                profile_skills = [
+                                    s.strip()
+                                    for s in profile_skills.split(",")
+                                    if s.strip()
+                                ]
+                            else:
+                                profile_skills = (
+                                    [profile_skills.strip()]
+                                    if profile_skills.strip()
+                                    else []
+                                )
+                    if not isinstance(profile_skills, list):
+                        return False
+                    # Check if any selected skill matches any profile skill (case-insensitive exact match)
+                    profile_skills_lower = [s.lower().strip() for s in profile_skills]
+                    selected_skills_lower = [s.lower().strip() for s in selected_skills]
+                    return any(skill in profile_skills_lower for skill in selected_skills_lower)
+
+                students = [s for s in students if student_has_any_skills(s)]
+
+            # If no skills filter but we have a search query, also search within skills
+            if not selected_skills and search_query:
+                def student_skills_match_query(student):
+                    profile_skills = student.get("skills", [])
+                    if isinstance(profile_skills, str):
+                        try:
+                            loaded = json.loads(profile_skills)
+                            if isinstance(loaded, list):
+                                profile_skills = loaded
+                        except Exception:
+                            if "," in profile_skills:
+                                profile_skills = [
+                                    s.strip()
+                                    for s in profile_skills.split(",")
+                                    if s.strip()
+                                ]
+                            else:
+                                profile_skills = (
+                                    [profile_skills.strip()]
+                                    if profile_skills.strip()
+                                    else []
+                                )
+                    if not isinstance(profile_skills, list):
+                        return False
+                    # Check if any skill contains the search query (case-insensitive)
+                    return any(search_query.lower() in skill.lower() for skill in profile_skills)
+
+                # Add students whose skills match the search query
+                skill_matches = [s for s in students if student_skills_match_query(s)]
+                # Prioritize skill matches by putting them first
+                students = skill_matches + [s for s in students if s not in skill_matches]
+
+            return students
+
+        except Exception as e:
+            logger.error(f"Error in enhanced student search: {str(e)}")
+            return []
+
     # Opportunities Management Methods
     def get_opportunities(
             self, filters: Optional[Dict[str, Any]] = None, limit: Optional[int] = None
@@ -686,8 +815,8 @@ class SupabaseService:
 
             selected_skills_needed = set(parse_skills(skills_needed))
             if selected_skills_needed:
-                # Only keep opportunities that require ALL selected skills
-                def opp_has_all_skills(opp):
+                # Use ANY match with case-insensitive comparison
+                def opp_has_any_skills(opp):
                     opp_skills = opp.get("skills_needed", [])
                     # Robustly parse opp_skills
                     if isinstance(opp_skills, str):
@@ -708,9 +837,12 @@ class SupabaseService:
                                 )
                     if not isinstance(opp_skills, list):
                         return False
-                    return selected_skills_needed.issubset(set(opp_skills))
+                    # Case-insensitive matching
+                    opp_skills_lower = [s.lower() for s in opp_skills]
+                    selected_skills_lower = [s.lower() for s in selected_skills_needed]
+                    return any(skill in opp_skills_lower for skill in selected_skills_lower)
 
-                opportunities = [o for o in opportunities if opp_has_all_skills(o)]
+                opportunities = [o for o in opportunities if opp_has_any_skills(o)]
 
             return opportunities
 
@@ -1513,6 +1645,115 @@ class SupabaseService:
             logger.error(f"Error getting profile picture URL: {str(e)}")
             return None
 
+    # --- Chat History Management ---
+
+    def save_chat_message(self, user_id: str, role: str, content: str) -> Dict[str, Any]:
+        """
+        Save a chat message to the database.
+        
+        Args:
+            user_id: The user's ID
+            role: 'user' or 'assistant'
+            content: The message content
+            
+        Returns:
+            Success/error response
+        """
+        try:
+            message_data = {
+                "user_id": user_id,
+                "role": role,
+                "content": content,
+                "created_at": datetime.now().isoformat()
+            }
+            
+            response = self.service_client.table("chat_history").insert(message_data).execute()
+            
+            if response.data:
+                return {"success": True, "data": response.data[0]}
+            else:
+                return {"success": False, "error": "Failed to save chat message"}
+                
+        except Exception as e:
+            logger.error(f"Error saving chat message: {str(e)}")
+            return {"success": False, "error": str(e)}
+    
+    def get_chat_history(self, user_id: str, limit: int = 50) -> List[Dict[str, Any]]:
+        """
+        Get chat history for a user.
+        
+        Args:
+            user_id: The user's ID
+            limit: Maximum number of messages to retrieve
+            
+        Returns:
+            List of chat messages
+        """
+        try:
+            response = (
+                self.service_client.table("chat_history")
+                .select("*")
+                .eq("user_id", user_id)
+                .order("created_at", desc=False)
+                .limit(limit)
+                .execute()
+            )
+            
+            return response.data if response.data else []
+            
+        except Exception as e:
+            logger.error(f"Error getting chat history: {str(e)}")
+            return []
+    
+    def get_user_prompt_count(self, user_id: str) -> int:
+        """
+        Get the total number of prompts a user has sent.
+        
+        Args:
+            user_id: The user's ID
+            
+        Returns:
+            Total number of prompts sent
+        """
+        try:
+            response = (
+                self.service_client.table("chat_history")
+                .select("id", count="exact")
+                .eq("user_id", user_id)
+                .eq("role", "user")
+                .execute()
+            )
+            
+            return response.count if response.count else 0
+            
+        except Exception as e:
+            logger.error(f"Error getting user prompt count: {str(e)}")
+            return 0
+    
+    def clear_chat_history(self, user_id: str) -> Dict[str, Any]:
+        """
+        Clear all chat history for a user.
+        
+        Args:
+            user_id: The user's ID
+            
+        Returns:
+            Success/error response
+        """
+        try:
+            response = (
+                self.service_client.table("chat_history")
+                .delete()
+                .eq("user_id", user_id)
+                .execute()
+            )
+            
+            return {"success": True, "message": "Chat history cleared"}
+            
+        except Exception as e:
+            logger.error(f"Error clearing chat history: {str(e)}")
+            return {"success": False, "error": str(e)}
+
     # --- Skills Management ---
 
     def add_new_skill(self, skill_name: str, user_id: str = None) -> Dict[str, Any]:
@@ -1606,5 +1847,5 @@ class SupabaseService:
             return False
 
 
-# Global instance
-supabase_service = SupabaseService()
+# Global instance - will be created in app.py after environment variables are loaded
+# supabase_service = SupabaseService()
