@@ -82,6 +82,26 @@ request.args.get('skills_needed') is not none %}
 
             <!-- Organization Info -->
             <div class="flex items-center mb-6">
+                {% if opportunity.profiles and opportunity.profiles.id %}
+                <a href="{{ url_for('view_profile', user_id=opportunity.profiles.id) }}"
+                    class="flex items-center hover:opacity-80 transition-opacity">
+                    {% if opportunity.profiles.profile_image %}
+                    <img src="{{ opportunity.profiles.profile_image }}"
+                        alt="{{ opportunity.profiles.name or opportunity.profiles.organization_name }}"
+                        class="w-12 h-12 rounded-full mr-4">
+                    {% else %}
+                    <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mr-4">
+                        <i class="fas fa-building text-blue-600"></i>
+                    </div>
+                    {% endif %}
+                    <div>
+                        <h2 class="text-lg font-semibold text-gray-900 hover:text-blue-600 transition-colors">{{
+                            opportunity.profiles.name or
+                            opportunity.profiles.organization_name or 'Organization' }}</h2>
+                        <p class="text-gray-600">{{ opportunity.profiles.location or opportunity.location }}</p>
+                    </div>
+                </a>
+                {% else %}
                 {% if opportunity.profiles and opportunity.profiles.profile_image %}
                 <img src="{{ opportunity.profiles.profile_image }}"
                     alt="{{ opportunity.profiles.name or opportunity.profiles.organization_name }}"
@@ -96,6 +116,7 @@ request.args.get('skills_needed') is not none %}
                         opportunity.profiles.organization_name or 'Organization' }}</h2>
                     <p class="text-gray-600">{{ opportunity.profiles.location or opportunity.location }}</p>
                 </div>
+                {% endif %}
             </div>
 
             <!-- Key Details -->
@@ -336,8 +357,15 @@ request.args.get('skills_needed') is not none %}
 
             <!-- Organization Details -->
             <div class="bg-white rounded-lg shadow-md p-6">
+                {% if opportunity.profiles and opportunity.profiles.id %}
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">About <a
+                        href="{{ url_for('view_profile', user_id=opportunity.profiles.id) }}"
+                        class="text-blue-600 hover:text-blue-800 hover:underline">{{ opportunity.profiles.name or
+                        opportunity.profiles.organization_name or 'Organization' }}</a></h3>
+                {% else %}
                 <h3 class="text-lg font-semibold text-gray-900 mb-4">About {{ opportunity.profiles.name or
                     opportunity.profiles.organization_name or 'Organization' }}</h3>
+                {% endif %}
                 {% if opportunity.profiles and opportunity.profiles.description %}
                 <p class="text-gray-700 text-sm mb-4">{{ opportunity.profiles.description }}</p>
                 {% endif %}
