@@ -74,6 +74,14 @@ class AIService:
             if not extracted_skills and not extracted_names:
                 extracted_skills = self._extract_skills_fallback(query)
                 logger.info(f"Using fallback skill extraction: {extracted_skills}")
+            
+            # Also get job types from fallback if AI didn't extract them
+            job_types = enhanced_query.get("job_types", [])
+            if not job_types:
+                # Check fallback for opportunity types
+                fallback_results = self._extract_skills_fallback(query)
+                job_types = [skill for skill in fallback_results if skill in ['Internship', 'Volunteer', 'Part-time', 'Full-time']]
+                logger.info(f"Using fallback job type extraction: {job_types}")
 
             skills_param = ",".join(extracted_skills) if extracted_skills else ""
             logger.info(f"Final extracted skills: {extracted_skills}")
@@ -104,16 +112,14 @@ class AIService:
 
             # Search in opportunities table with enhanced parameters
             # Always use technical skills for skills_needed, filtering out job types and general terms
-            technical_skills = [s for s in extracted_skills if s not in ['internship', 'volunteer', 'part-time', 'full-time', 'remote', 'marketing', 'design', 'research', 'web development']]
+            technical_skills = [s for s in extracted_skills if s not in ['Internship', 'Volunteer', 'Part-time', 'Full-time', 'Remote', 'Marketing', 'Design', 'Research', 'Web Development']]
             opp_skills_param = ",".join(technical_skills) if technical_skills else ""
             
             # Determine search strategy for opportunities
             opp_search_text = query  # Default to full query
             opp_type = ""
             
-            # Check if this is an opportunity type-focused query
-            job_types = enhanced_query.get("job_types", [])
-            opp_type = ""
+            # job_types already extracted above with fallback
             
             # Check for opportunity types in job_types, extracted_skills, or query directly
             query_lower = query.lower()

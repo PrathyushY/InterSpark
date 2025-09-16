@@ -1573,9 +1573,13 @@ def chat_send():
 
         # Save AI response to database
         supabase_service.save_chat_message(user_id, "assistant", ai_response)
+        
+        # Get updated remaining prompts
+        updated_prompt_count = supabase_service.get_user_prompt_count(user_id)
+        remaining_prompts = max(0, 5 - updated_prompt_count)
 
         return jsonify(
-            {"success": True, "response": ai_response, "db_results": db_results}
+            {"success": True, "response": ai_response, "db_results": db_results, "remaining_prompts": remaining_prompts}
         )
 
     except Exception as e:

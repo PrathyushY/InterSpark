@@ -80,8 +80,13 @@ async function sendMessage(message) {
         if (data.success) {
             // Add AI response to chat
             addMessage(data.response, 'assistant');
+            
+            // Update remaining prompts count if provided
+            if (data.remaining_prompts !== undefined) {
+                updateRemainingPrompts(data.remaining_prompts);
+            }
         } else {
-            addMessage('Sorry, I encountered an error. Please try again.', 'assistant');
+            addMessage(data.error || 'Sorry, I encountered an error. Please try again.', 'assistant');
         }
     } catch (error) {
         console.error('Error:', error);
@@ -143,6 +148,14 @@ function sendQuickMessage(message) {
         if (chatForm) {
             chatForm.dispatchEvent(new Event('submit'));
         }
+    }
+}
+
+// Update remaining prompts count
+function updateRemainingPrompts(remaining) {
+    const promptsCounter = document.getElementById('prompts-counter');
+    if (promptsCounter) {
+        promptsCounter.textContent = `This feature is in beta with 5 total prompts • ${remaining} remaining`;
     }
 }
 
