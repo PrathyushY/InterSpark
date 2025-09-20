@@ -15,6 +15,7 @@ from flask import (
     flash,
     session,
 )
+
 from ai_service import AIService
 from supabase_config import SupabaseService
 
@@ -449,14 +450,12 @@ def signup():
             result = supabase_service.create_user(email, password, user_data)
 
             if result["success"]:
-                # Auto-login the user
-                session["user_id"] = result["user"]["id"]
-                session["user_type"] = user_type
-                session["user_name"] = name
-                session["user_email"] = email
-
-                flash("Registration successful! Welcome to InterSpark!", "success")
-                return redirect(url_for("dashboard"))
+                # Don't auto-login - redirect to email verification page instead
+                session["pending_verification_email"] = email
+                flash(
+                    result.get("message", "Registration successful! Please check your email to confirm your account."),
+                    "info")
+                return redirect(url_for("email_verification_pending"))
             else:
                 flash(result.get("error", "Registration failed"), "error")
 
@@ -464,6 +463,66 @@ def signup():
             flash(f"Registration error: {str(e)}", "error")
 
     return render_template("signup.html")
+
+
+@app.route("/auth/confirm")
+def confirm_email():
+    """Handle email confirmation from Supabase"""
+    token_hash = request.args.get('token_hash')
+    type_param = request.args.get('type')
+
+    if not token_hash or type_param != 'signup':
+        flash("Invalid confirmation link", "error")
+        return redirect(url_for("login"))
+
+    try:
+        result = supabase_service.verify_email_token(token_hash)
+
+        if result["success"]:
+            flash(result.get("message", "Email verified successfully! You can now sign in."), "success")
+            return redirect(url_for("login"))
+        else:
+            flash(result.get("error", "Email verification failed"), "error")
+            return redirect(url_for("email_verification_pending"))
+
+    except Exception as e:
+        logger.error(f"Email confirmation error: {str(e)}")
+        flash("Email verification failed. Please try again.", "error")
+        return redirect(url_for("email_verification_pending"))
+
+
+@app.route("/email-verification-pending")
+def email_verification_pending():
+    """Show email verification pending page"""
+    email = session.get("pending_verification_email")
+    if not email:
+        return redirect(url_for("signup"))
+
+    return render_template("email_verification_pending.html", email=email)
+
+
+@app.route("/resend-confirmation", methods=["POST"])
+def resend_confirmation():
+    """Resend email confirmation"""
+    email = request.form.get("email") or session.get("pending_verification_email")
+
+    if not email:
+        flash("No email address provided", "error")
+        return redirect(url_for("signup"))
+
+    try:
+        result = supabase_service.resend_confirmation_email(email)
+
+        if result["success"]:
+            flash(result.get("message", "Confirmation email sent! Please check your inbox."), "info")
+        else:
+            flash(result.get("error", "Failed to resend confirmation email"), "error")
+
+    except Exception as e:
+        logger.error(f"Error resending confirmation: {str(e)}")
+        flash("Failed to resend confirmation email", "error")
+
+    return redirect(url_for("email_verification_pending"))
 
 
 @app.route("/logout")

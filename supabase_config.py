@@ -95,7 +95,7 @@ class SupabaseService:
             self, email: str, password: str, user_data: Dict[str, Any]
     ) -> Dict[str, Any]:
         """
-        Create a new user account with profile data.
+        Create a new user account with profile data and email verification.
 
         Args:
             email: User's email address
@@ -106,7 +106,7 @@ class SupabaseService:
             Dictionary containing user data or error information
         """
         try:
-            # Create user in auth.users table
+            # Create user in auth.users table with email confirmation required
             response = self.client.auth.sign_up(
                 {
                     "email": email,
@@ -115,21 +115,24 @@ class SupabaseService:
                         "data": {
                             "name": user_data.get("name", ""),
                             "user_type": user_data.get("user_type", "student"),
-                        }
+                        },
+                        # This will send a confirmation email
+                        "email_redirect_to": f"{os.getenv('SITE_URL', 'http://localhost:5000')}/auth/confirm"
                     },
                 }
             )
 
             if response.user:
                 logger.info(f"User created successfully in auth: {response.user.id}")
+                logger.info(f"Email confirmation required: {not response.user.email_confirmed_at}")
 
-                # Explicitly create profile in profiles table with all the provided data
-                # The trigger should handle this, but let's ensure it exists with complete data
+                # Store profile data temporarily (will be completed after email confirmation)
                 profile_data = {
                     "id": response.user.id,
                     "email": response.user.email,
                     "name": user_data.get("name", ""),
                     "user_type": user_data.get("user_type", "student"),
+                    "email_confirmed": False,  # Track email confirmation status
                 }
 
                 # Add user type-specific fields
@@ -152,7 +155,7 @@ class SupabaseService:
                     )
 
                 try:
-                    # Try to create the profile directly with all the data
+                    # Create the profile with email_confirmed flag
                     profile_response = (
                         self.service_client.table("profiles")
                         .insert(profile_data)
@@ -160,20 +163,17 @@ class SupabaseService:
                     )
                     if profile_response.data:
                         logger.info(
-                            f"Complete profile created successfully: {response.user.id}"
+                            f"Profile created successfully (pending email confirmation): {response.user.id}"
                         )
                     else:
                         logger.warning(
                             f"Profile creation may have failed, but user was created: {response.user.id}"
                         )
                 except Exception as profile_error:
-                    # This might fail if the trigger already created it, which is fine
-                    # But we should try to update it with the additional data
                     logger.info(
                         f"Profile creation via insert failed, trying update: {str(profile_error)}"
                     )
                     try:
-                        # Remove 'id' from profile_data for update
                         update_data = {
                             k: v for k, v in profile_data.items() if k != "id"
                         }
@@ -198,8 +198,9 @@ class SupabaseService:
                         "id": response.user.id,
                         "email": response.user.email,
                         "created_at": response.user.created_at,
+                        "email_confirmed": bool(response.user.email_confirmed_at),
                     },
-                    "session": response.session,
+                    "message": "Registration successful! Please check your email to confirm your account before signing in."
                 }
             else:
                 logger.error("Failed to create user - no user returned")
@@ -208,6 +209,76 @@ class SupabaseService:
         except Exception as e:
             logger.error(f"Error creating user: {str(e)}")
             return {"success": False, "error": str(e)}
+
+    def verify_email_token(self, token_hash: str) -> Dict[str, Any]:
+        """
+        Verify an email confirmation token.
+
+        Args:
+            token_hash: The email confirmation token
+
+        Returns:
+            Dictionary containing verification result
+        """
+        try:
+            # Verify the token using Supabase's verify OTP method
+            response = self.client.auth.verify_otp({
+                'token_hash': token_hash,
+                'type': 'signup'
+            })
+
+            if response.user:
+                # Update the profile to mark email as confirmed
+                profile_update = self.update_profile(
+                    response.user.id,
+                    {"email_confirmed": True}
+                )
+
+                logger.info(f"Email verified successfully for user: {response.user.id}")
+                return {
+                    "success": True,
+                    "user": {
+                        "id": response.user.id,
+                        "email": response.user.email,
+                        "email_confirmed": True,
+                    },
+                    "message": "Email verified successfully! You can now sign in."
+                }
+            else:
+                return {"success": False, "error": "Invalid or expired verification token"}
+
+        except Exception as e:
+            logger.error(f"Error verifying email token: {str(e)}")
+            return {"success": False, "error": "Invalid or expired verification token"}
+
+    def resend_confirmation_email(self, email: str) -> Dict[str, Any]:
+        """
+        Resend email confirmation for a user.
+
+        Args:
+            email: User's email address
+
+        Returns:
+            Dictionary containing success/error response
+        """
+        try:
+            response = self.client.auth.resend({
+                'type': 'signup',
+                'email': email,
+                'options': {
+                    'email_redirect_to': f"{os.getenv('SITE_URL', 'http://localhost:5000')}/auth/confirm"
+                }
+            })
+
+            logger.info(f"Confirmation email resent to: {email}")
+            return {
+                "success": True,
+                "message": "Confirmation email sent! Please check your inbox."
+            }
+
+        except Exception as e:
+            logger.error(f"Error resending confirmation email: {str(e)}")
+            return {"success": False, "error": "Failed to resend confirmation email"}
 
     def sign_in_user(self, email: str, password: str) -> Dict[str, Any]:
         """
