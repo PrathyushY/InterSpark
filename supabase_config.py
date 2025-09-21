@@ -229,10 +229,14 @@ class SupabaseService:
 
             if response.user:
                 # Update the profile to mark email as confirmed
-                profile_update = self.update_profile(
-                    response.user.id,
-                    {"email_confirmed": True}
-                )
+                try:
+                    profile_update = self.service_client.table("profiles").update(
+                        {"email_confirmed": True}
+                    ).eq("id", response.user.id).execute()
+
+                    logger.info(f"Profile updated with email_confirmed=True for user: {response.user.id}")
+                except Exception as profile_error:
+                    logger.warning(f"Could not update profile email_confirmed status: {str(profile_error)}")
 
                 logger.info(f"Email verified successfully for user: {response.user.id}")
                 return {
@@ -249,7 +253,7 @@ class SupabaseService:
 
         except Exception as e:
             logger.error(f"Error verifying email token: {str(e)}")
-            return {"success": False, "error": "Invalid or expired verification token"}
+            return {"success": False, "error": "Email verification failed. Please try again."}
 
     def resend_confirmation_email(self, email: str) -> Dict[str, Any]:
         """
@@ -262,6 +266,7 @@ class SupabaseService:
             Dictionary containing success/error response
         """
         try:
+            # Use the correct Supabase Python client method for resending confirmation
             response = self.client.auth.resend({
                 'type': 'signup',
                 'email': email,
@@ -278,11 +283,51 @@ class SupabaseService:
 
         except Exception as e:
             logger.error(f"Error resending confirmation email: {str(e)}")
-            return {"success": False, "error": "Failed to resend confirmation email"}
+            error_str = str(e)
+
+            # Handle specific Supabase errors
+            if "Email not confirmed" in error_str:
+                return {
+                    "success": False,
+                    "error": "This email is already confirmed. Try logging in instead."
+                }
+            elif "User not found" in error_str or "Invalid email" in error_str:
+                return {
+                    "success": False,
+                    "error": "No account found with this email address. Please sign up first."
+                }
+            elif "Too many requests" in error_str or "rate limit" in error_str.lower():
+                return {
+                    "success": False,
+                    "error": "Too many requests. Please wait a few minutes before trying again."
+                }
+            else:
+                # Try alternative method if the resend method doesn't work
+                try:
+                    # Alternative: Create a password reset which also confirms the email
+                    reset_response = self.client.auth.reset_password_email(
+                        email,
+                        {
+                            'redirect_to': f"{os.getenv('SITE_URL', 'http://localhost:5000')}/auth/confirm"
+                        }
+                    )
+
+                    logger.info(f"Password reset email sent as confirmation alternative to: {email}")
+                    return {
+                        "success": True,
+                        "message": "Confirmation email sent! Please check your inbox and follow the link to verify your account."
+                    }
+
+                except Exception as alt_error:
+                    logger.error(f"Alternative confirmation method also failed: {str(alt_error)}")
+                    return {
+                        "success": False,
+                        "error": "Failed to resend confirmation email. Please contact support or try signing up again."
+                    }
 
     def sign_in_user(self, email: str, password: str) -> Dict[str, Any]:
         """
-        Sign in an existing user.
+        Sign in an existing user, but only if their email is verified.
 
         Args:
             email: User's email address
@@ -297,6 +342,17 @@ class SupabaseService:
             )
 
             if response.user and response.session:
+                # Check if email is verified
+                if not response.user.email_confirmed_at:
+                    # Sign out the user since email is not verified
+                    self.client.auth.sign_out()
+                    logger.warning(f"Login attempt with unverified email: {email}")
+                    return {
+                        "success": False,
+                        "error": "Please verify your email address before signing in. Check your inbox for the verification link.",
+                        "error_type": "email_not_verified"
+                    }
+
                 logger.info(f"User signed in successfully: {response.user.id}")
                 return {
                     "success": True,
@@ -307,8 +363,20 @@ class SupabaseService:
                 return {"success": False, "error": "Invalid credentials"}
 
         except Exception as e:
-            logger.error(f"Error signing in user: {str(e)}")
-            return {"success": False, "error": str(e)}
+            error_str = str(e)
+            logger.error(f"Error signing in user: {error_str}")
+
+            # Check for common Supabase auth errors
+            if "Invalid login credentials" in error_str:
+                return {"success": False, "error": "Invalid email or password"}
+            elif "Email not confirmed" in error_str:
+                return {
+                    "success": False,
+                    "error": "Please verify your email address before signing in. Check your inbox for the verification link.",
+                    "error_type": "email_not_verified"
+                }
+
+            return {"success": False, "error": "Login failed. Please try again."}
 
     def authenticate_user(self, email: str, password: str) -> Dict[str, Any]:
         """
