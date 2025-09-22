@@ -1116,6 +1116,32 @@ def create_opportunity(opportunity_id=None):
                 request.form.get("skills_needed")
             )
 
+        # Handle image upload to Supabase Storage
+        image_url = None
+        image_file = request.files.get("image")
+        if image_file and image_file.filename:
+            from werkzeug.utils import secure_filename
+
+            filename = secure_filename(image_file.filename)
+            file_data = image_file.read()
+            content_type = image_file.mimetype
+            # Use opportunity_id if editing, else user_id (will be replaced after creation)
+            storage_id = opportunity_id if is_editing else user_id
+            upload_result = supabase_service.upload_opportunity_banner(
+                storage_id, file_data, filename, content_type
+            )
+            if upload_result.get("success"):
+                image_url = upload_result["url"]
+            else:
+                # Image upload failed, show error and return to form
+                flash(upload_result.get("error", "Failed to upload image"), "error")
+                return render_template(
+                    "create_opportunity.html",
+                    opportunity=opportunity,
+                    is_editing=is_editing,
+                    skills_master=get_all_available_skills(),
+                )
+
         opportunity_data = {
             "title": request.form.get("title") or None,
             "description": request.form.get("description") or None,
@@ -1129,6 +1155,15 @@ def create_opportunity(opportunity_id=None):
             "skills_needed": skills_needed_json,
             "status": status,
             "apply_link": request.form.get("apply_link") or None,
+            "image": (
+                image_url
+                if image_url
+                else (
+                    opportunity["image"]
+                    if opportunity and "image" in opportunity
+                    else None
+                )
+            ),
             # New type-specific fields
             "eligibility_criteria": request.form.get("eligibility_criteria") or None,
             "age_range": request.form.get("age_range") or None,
