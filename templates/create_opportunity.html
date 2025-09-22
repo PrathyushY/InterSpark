@@ -316,6 +316,18 @@
 
                 <div class="space-y-6">
                     <div>
+                        <label for="apply_link" class="block text-sm font-medium text-gray-700">More Info / Apply
+                            Link</label>
+                        <div class="mt-1">
+                            <input type="url" name="apply_link" id="apply_link"
+                                value="{% if opportunity and opportunity.apply_link %}{{ opportunity.apply_link|trim }}{% endif %}"
+                                placeholder="https://your-application-link.com"
+                                class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">
+                        </div>
+                        <p class="mt-2 text-sm text-gray-500">Provide a link for students to learn more or apply
+                            directly (optional).</p>
+                    </div>
+                    <div>
                         <label for="description"
                             class="block text-sm font-medium text-gray-700 {% if missing_fields and 'description' in missing_fields %}required-label{% endif %}">Description</label>
                         <div class="mt-1">
