@@ -142,6 +142,7 @@ CREATE TABLE IF NOT EXISTS public.opportunities
 ),
     application_deadline DATE,
     description TEXT,
+    apply_link VARCHAR(500),
     status VARCHAR
 (
     20

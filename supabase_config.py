@@ -5,6 +5,7 @@ Handles authentication, user management, and database operations.
 
 import logging
 import os
+from datetime import datetime
 from typing import Dict, Any, Optional, List
 
 from dotenv import load_dotenv
@@ -19,6 +20,71 @@ logger = logging.getLogger(__name__)
 
 
 class SupabaseService:
+    def upload_opportunity_banner(
+        self,
+        opportunity_id: str,
+        file_data: bytes,
+        file_name: str,
+        content_type: str = None,
+    ) -> Dict[str, Any]:
+        """
+        Upload a banner image for an opportunity to Supabase Storage.
+
+        Args:
+            opportunity_id: The opportunity's ID (or user_id if not yet created)
+            file_data: The image file data
+            file_name: Original file name
+            content_type: MIME type of the file
+
+        Returns:
+            Success/error response with file URL
+        """
+        try:
+            import uuid
+            import os
+
+            # Extract file extension
+            file_ext = os.path.splitext(file_name)[1].lower()
+            if not file_ext:
+                file_ext = ".jpg"
+            safe_id = str(opportunity_id).replace("/", "_").replace("\\", "_")
+            unique_filename = f"{safe_id}/banner_{uuid.uuid4().hex}{file_ext}"
+
+            # Default content type
+            if not content_type or not isinstance(content_type, str):
+                content_type_map = {
+                    ".jpg": "image/jpeg",
+                    ".jpeg": "image/jpeg",
+                    ".png": "image/png",
+                    ".webp": "image/webp",
+                    ".gif": "image/gif",
+                }
+                content_type = content_type_map.get(file_ext, "image/jpeg")
+
+            upload_options = {"content_type": content_type}
+            # Enforce 5MB max file size
+            max_size = 5 * 1024 * 1024  # 5MB in bytes
+            if len(file_data) > max_size:
+                return {"success": False, "error": "File size exceeds 5MB limit."}
+            response = self.service_client.storage.from_("opportunity-banners").upload(
+                path=unique_filename,
+                file=file_data,
+                file_options={
+                    "content-type": upload_options["content_type"],
+                    "upsert": "true",
+                },
+            )
+            if response:
+                public_url = self.service_client.storage.from_(
+                    "opportunity-banners"
+                ).get_public_url(unique_filename)
+                return {"success": True, "url": public_url, "path": unique_filename}
+            else:
+                return {"success": False, "error": "Failed to upload image"}
+        except Exception as e:
+            logger.error(f"Error uploading opportunity banner: {str(e)}")
+            return {"success": False, "error": str(e)}
+
     """Service class for all Supabase operations including auth and database."""
 
     def __init__(self):
@@ -44,7 +110,7 @@ class SupabaseService:
         logger.info("Supabase client initialized successfully")
 
     def is_profile_complete(
-            self, profile: Dict[str, Any], user_type: str = None
+        self, profile: Dict[str, Any], user_type: str = None
     ) -> Dict[str, Any]:
         """
         Check if a user profile has all required fields completed.
@@ -64,9 +130,9 @@ class SupabaseService:
 
         # Required fields for all users
         if (
-                not profile.get("name")
-                or profile.get("name").strip() == ""
-                or profile.get("name") == "User"
+            not profile.get("name")
+            or profile.get("name").strip() == ""
+            or profile.get("name") == "User"
         ):
             missing_fields.append("name")
 
@@ -82,8 +148,8 @@ class SupabaseService:
         # Additional required fields for organizations
         elif user_type == "organization":
             if (
-                    not profile.get("description")
-                    or profile.get("description").strip() == ""
+                not profile.get("description")
+                or profile.get("description").strip() == ""
             ):
                 missing_fields.append("description")
 
@@ -91,10 +157,10 @@ class SupabaseService:
 
     # Authentication Methods
     def create_user(
-            self, email: str, password: str, user_data: Dict[str, Any]
+        self, email: str, password: str, user_data: Dict[str, Any]
     ) -> Dict[str, Any]:
         """
-        Create a new user account with profile data.
+        Create a new user account with profile data and email verification.
 
         Args:
             email: User's email address
@@ -105,7 +171,7 @@ class SupabaseService:
             Dictionary containing user data or error information
         """
         try:
-            # Create user in auth.users table
+            # Create user in auth.users table with email confirmation required
             response = self.client.auth.sign_up(
                 {
                     "email": email,
@@ -114,21 +180,26 @@ class SupabaseService:
                         "data": {
                             "name": user_data.get("name", ""),
                             "user_type": user_data.get("user_type", "student"),
-                        }
+                        },
+                        # This will send a confirmation email
+                        "email_redirect_to": f"{os.getenv('SITE_URL', 'http://localhost:5000')}/auth/confirm",
                     },
                 }
             )
 
             if response.user:
                 logger.info(f"User created successfully in auth: {response.user.id}")
+                logger.info(
+                    f"Email confirmation required: {not response.user.email_confirmed_at}"
+                )
 
-                # Explicitly create profile in profiles table with all the provided data
-                # The trigger should handle this, but let's ensure it exists with complete data
+                # Store profile data temporarily (will be completed after email confirmation)
                 profile_data = {
                     "id": response.user.id,
                     "email": response.user.email,
                     "name": user_data.get("name", ""),
                     "user_type": user_data.get("user_type", "student"),
+                    "email_confirmed": False,  # Track email confirmation status
                 }
 
                 # Add user type-specific fields
@@ -151,7 +222,7 @@ class SupabaseService:
                     )
 
                 try:
-                    # Try to create the profile directly with all the data
+                    # Create the profile with email_confirmed flag
                     profile_response = (
                         self.service_client.table("profiles")
                         .insert(profile_data)
@@ -159,20 +230,17 @@ class SupabaseService:
                     )
                     if profile_response.data:
                         logger.info(
-                            f"Complete profile created successfully: {response.user.id}"
+                            f"Profile created successfully (pending email confirmation): {response.user.id}"
                         )
                     else:
                         logger.warning(
                             f"Profile creation may have failed, but user was created: {response.user.id}"
                         )
                 except Exception as profile_error:
-                    # This might fail if the trigger already created it, which is fine
-                    # But we should try to update it with the additional data
                     logger.info(
                         f"Profile creation via insert failed, trying update: {str(profile_error)}"
                     )
                     try:
-                        # Remove 'id' from profile_data for update
                         update_data = {
                             k: v for k, v in profile_data.items() if k != "id"
                         }
@@ -197,8 +265,9 @@ class SupabaseService:
                         "id": response.user.id,
                         "email": response.user.email,
                         "created_at": response.user.created_at,
+                        "email_confirmed": bool(response.user.email_confirmed_at),
                     },
-                    "session": response.session,
+                    "message": "Registration successful! Please check your email to confirm your account before signing in.",
                 }
             else:
                 logger.error("Failed to create user - no user returned")
@@ -207,6 +276,79 @@ class SupabaseService:
         except Exception as e:
             logger.error(f"Error creating user: {str(e)}")
             return {"success": False, "error": str(e)}
+
+    def verify_email_token(self, token_hash: str) -> Dict[str, Any]:
+        """
+        Verify an email confirmation token.
+
+        Args:
+            token_hash: The email confirmation token
+
+        Returns:
+            Dictionary containing verification result
+        """
+        try:
+            # Verify the token using Supabase's verify OTP method
+            response = self.client.auth.verify_otp(
+                {"token_hash": token_hash, "type": "signup"}
+            )
+
+            if response.user:
+                # Update the profile to mark email as confirmed
+                profile_update = self.update_profile(
+                    response.user.id, {"email_confirmed": True}
+                )
+
+                logger.info(f"Email verified successfully for user: {response.user.id}")
+                return {
+                    "success": True,
+                    "user": {
+                        "id": response.user.id,
+                        "email": response.user.email,
+                        "email_confirmed": True,
+                    },
+                    "message": "Email verified successfully! You can now sign in.",
+                }
+            else:
+                return {
+                    "success": False,
+                    "error": "Invalid or expired verification token",
+                }
+
+        except Exception as e:
+            logger.error(f"Error verifying email token: {str(e)}")
+            return {"success": False, "error": "Invalid or expired verification token"}
+
+    def resend_confirmation_email(self, email: str) -> Dict[str, Any]:
+        """
+        Resend email confirmation for a user.
+
+        Args:
+            email: User's email address
+
+        Returns:
+            Dictionary containing success/error response
+        """
+        try:
+            response = self.client.auth.resend(
+                {
+                    "type": "signup",
+                    "email": email,
+                    "options": {
+                        "email_redirect_to": f"{os.getenv('SITE_URL', 'http://localhost:5000')}/auth/confirm"
+                    },
+                }
+            )
+
+            logger.info(f"Confirmation email resent to: {email}")
+            return {
+                "success": True,
+                "message": "Confirmation email sent! Please check your inbox.",
+            }
+
+        except Exception as e:
+            logger.error(f"Error resending confirmation email: {str(e)}")
+            return {"success": False, "error": "Failed to resend confirmation email"}
 
     def sign_in_user(self, email: str, password: str) -> Dict[str, Any]:
         """
@@ -340,7 +482,7 @@ class SupabaseService:
 
     # Profile Management Methods
     def ensure_profile_exists(
-            self, user_id: str, email: str, name: str = "", user_type: str = "student"
+        self, user_id: str, email: str, name: str = "", user_type: str = "student"
     ) -> Dict[str, Any]:
         """
         Ensure a profile exists for a user, create if missing.
@@ -429,7 +571,7 @@ class SupabaseService:
             return None
 
     def update_profile(
-            self, user_id: str, profile_data: Dict[str, Any]
+        self, user_id: str, profile_data: Dict[str, Any]
     ) -> Dict[str, Any]:
         """
         Update user profile data.
@@ -569,9 +711,145 @@ class SupabaseService:
             logger.error(f"Error searching students: {str(e)}")
             return []
 
+    def search_students_enhanced(
+        self,
+        search_query: str = "",
+        skills: str = "",
+        school: str = "",
+        grade: str = "",
+        location: str = "",
+    ) -> List[Dict[str, Any]]:
+        """
+        Enhanced search for student profiles with improved skills matching.
+        Uses ANY skills match instead of ALL skills match for better results.
+        """
+        import json
+
+        try:
+            query = self.client.table("profiles").select("*").eq("user_type", "student")
+
+            # Apply text search if provided
+            if search_query:
+                query = query.or_(
+                    f"name.ilike.%{search_query}%,bio.ilike.%{search_query}%"
+                )
+
+            # Apply school filter
+            if school:
+                query = query.ilike("school", f"%{school}%")
+
+            # Apply grade filter
+            if grade:
+                query = query.ilike("grade", f"%{grade}%")
+
+            # Apply location filter
+            if location:
+                query = query.ilike("location", f"%{location}%")
+
+            # Order by creation date, newest first
+            query = query.order("created_at", desc=True)
+
+            response = query.execute()
+            students = response.data if response.data else []
+
+            # Enhanced skills filtering - use ANY match instead of ALL match
+            def parse_skills(val):
+                if not val:
+                    return []
+                if isinstance(val, list):
+                    return val
+                try:
+                    loaded = json.loads(val)
+                    if isinstance(loaded, list):
+                        return loaded
+                except Exception:
+                    pass
+                if "," in val:
+                    return [s.strip() for s in val.split(",") if s.strip()]
+                return [val.strip()] if val.strip() else []
+
+            selected_skills = set(parse_skills(skills))
+            if selected_skills:
+                # Client-side filtering for skills
+                def student_has_any_skills(student):
+                    profile_skills = student.get("skills", [])
+                    # Robustly parse profile_skills
+                    if isinstance(profile_skills, str):
+                        try:
+                            loaded = json.loads(profile_skills)
+                            if isinstance(loaded, list):
+                                profile_skills = loaded
+                        except Exception:
+                            if "," in profile_skills:
+                                profile_skills = [
+                                    s.strip()
+                                    for s in profile_skills.split(",")
+                                    if s.strip()
+                                ]
+                            else:
+                                profile_skills = (
+                                    [profile_skills.strip()]
+                                    if profile_skills.strip()
+                                    else []
+                                )
+                    if not isinstance(profile_skills, list):
+                        return False
+                    # Check if any selected skill matches any profile skill (case-insensitive exact match)
+                    profile_skills_lower = [s.lower().strip() for s in profile_skills]
+                    selected_skills_lower = [s.lower().strip() for s in selected_skills]
+                    return any(
+                        skill in profile_skills_lower for skill in selected_skills_lower
+                    )
+
+                students = [s for s in students if student_has_any_skills(s)]
+
+            # If no skills filter but we have a search query, also search within skills
+            if not selected_skills and search_query:
+
+                def student_skills_match_query(student):
+                    profile_skills = student.get("skills", [])
+                    if isinstance(profile_skills, str):
+                        try:
+                            loaded = json.loads(profile_skills)
+                            if isinstance(loaded, list):
+                                profile_skills = loaded
+                        except Exception:
+                            if "," in profile_skills:
+                                profile_skills = [
+                                    s.strip()
+                                    for s in profile_skills.split(",")
+                                    if s.strip()
+                                ]
+                            else:
+                                profile_skills = (
+                                    [profile_skills.strip()]
+                                    if profile_skills.strip()
+                                    else []
+                                )
+                    if not isinstance(profile_skills, list):
+                        return False
+                    # Check if any skill contains the search query (case-insensitive)
+                    return any(
+                        search_query.lower() in skill.lower()
+                        for skill in profile_skills
+                    )
+
+                # Add students whose skills match the search query
+                skill_matches = [s for s in students if student_skills_match_query(s)]
+                # Prioritize skill matches by putting them first
+                students = skill_matches + [
+                    s for s in students if s not in skill_matches
+                ]
+
+            return students
+
+        except Exception as e:
+            logger.error(f"Error in enhanced student search: {str(e)}")
+            return []
+
     # Opportunities Management Methods
     def get_opportunities(
-            self, filters: Optional[Dict[str, Any]] = None, limit: Optional[int] = None
+        self, filters: Optional[Dict[str, Any]] = None, limit: Optional[int] = None
     ) -> List[Dict[str, Any]]:
         """
         Get all opportunities with optional filters and limit.
@@ -686,8 +964,8 @@ class SupabaseService:
 
             selected_skills_needed = set(parse_skills(skills_needed))
             if selected_skills_needed:
-                # Only keep opportunities that require ALL selected skills
-                def opp_has_all_skills(opp):
+                # Use ANY match with case-insensitive comparison
+                def opp_has_any_skills(opp):
                     opp_skills = opp.get("skills_needed", [])
                     # Robustly parse opp_skills
                     if isinstance(opp_skills, str):
@@ -708,9 +986,14 @@ class SupabaseService:
                                 )
                     if not isinstance(opp_skills, list):
                         return False
-                    return selected_skills_needed.issubset(set(opp_skills))
+                    # Case-insensitive matching
+                    opp_skills_lower = [s.lower() for s in opp_skills]
+                    selected_skills_lower = [s.lower() for s in selected_skills_needed]
+                    return any(
+                        skill in opp_skills_lower for skill in selected_skills_lower
+                    )
 
-                opportunities = [o for o in opportunities if opp_has_all_skills(o)]
+                opportunities = [o for o in opportunities if opp_has_any_skills(o)]
 
             return opportunities
 
@@ -800,7 +1083,7 @@ class SupabaseService:
             return {"success": False, "error": str(e)}
 
     def update_opportunity(
-            self, opportunity_id: int, opportunity_data: Dict[str, Any]
+        self, opportunity_id: int, opportunity_data: Dict[str, Any]
     ) -> Dict[str, Any]:
         """
         Update an existing opportunity.
@@ -850,9 +1133,9 @@ class SupabaseService:
 
             # Treat non-empty response.data as success
             if (
-                    response.data
-                    and isinstance(response.data, list)
-                    and len(response.data) > 0
+                response.data
+                and isinstance(response.data, list)
+                and len(response.data) > 0
             ):
                 logger.info(f"Opportunity deleted successfully: {opportunity_id}")
                 return {"success": True}
@@ -865,7 +1148,7 @@ class SupabaseService:
             return {"success": False, "error": str(e)}
 
     def get_organization_opportunities(
-            self, organization_id: str
+        self, organization_id: str
     ) -> List[Dict[str, Any]]:
         """
         Get all opportunities for a specific organization, including drafts and all statuses.
@@ -956,8 +1239,8 @@ class SupabaseService:
             # Check if it's a duplicate key constraint error
             error_str = str(e)
             if (
-                    "duplicate key value violates unique constraint" in error_str
-                    or "23505" in error_str
+                "duplicate key value violates unique constraint" in error_str
+                or "23505" in error_str
             ):
                 logger.info(
                     f"Opportunity {opportunity_id} already saved by user {user_id}"
@@ -1029,8 +1312,8 @@ class SupabaseService:
             # Check if it's a duplicate key constraint error
             error_str = str(e)
             if (
-                    "duplicate key value violates unique constraint" in error_str
-                    or "23505" in error_str
+                "duplicate key value violates unique constraint" in error_str
+                or "23505" in error_str
             ):
                 logger.info(f"Profile {profile_id} already saved by user {user_id}")
                 return {
@@ -1209,8 +1492,8 @@ class SupabaseService:
             # Bucket might already exist
             error_str = str(e)
             if (
-                    "already exists" in error_str.lower()
-                    or "duplicate" in error_str.lower()
+                "already exists" in error_str.lower()
+                or "duplicate" in error_str.lower()
             ):
                 logger.info("Profile pictures bucket already exists")
                 return {"success": True, "message": "Bucket already exists"}
@@ -1306,7 +1589,7 @@ class SupabaseService:
             return True  # Don't fail the upload because of cleanup error
 
     def upload_profile_picture(
-            self, user_id: str, file_data: bytes, file_name: str, content_type: str = None
+        self, user_id: str, file_data: bytes, file_name: str, content_type: str = None
     ) -> Dict[str, Any]:
         """
         Upload a profile picture for a user.
@@ -1423,7 +1706,7 @@ class SupabaseService:
             return {"success": False, "error": str(e)}
 
     def delete_profile_picture(
-            self, user_id: str, file_path: str = None
+        self, user_id: str, file_path: str = None
     ) -> Dict[str, Any]:
         """
         Delete a user's profile picture from storage.
@@ -1512,6 +1795,119 @@ class SupabaseService:
         except Exception as e:
             logger.error(f"Error getting profile picture URL: {str(e)}")
             return None
+
+    # --- Chat History Management ---
+
+    def save_chat_message(
+        self, user_id: str, role: str, content: str
+    ) -> Dict[str, Any]:
+        """
+        Save a chat message to the database.
+
+        Args:
+            user_id: The user's ID
+            role: 'user' or 'assistant'
+            content: The message content
+
+        Returns:
+            Success/error response
+        """
+        try:
+            message_data = {
+                "user_id": user_id,
+                "role": role,
+                "content": content,
+                "created_at": datetime.now().isoformat(),
+            }
+
+            response = (
+                self.service_client.table("chat_history").insert(message_data).execute()
+            )
+
+            if response.data:
+                return {"success": True, "data": response.data[0]}
+            else:
+                return {"success": False, "error": "Failed to save chat message"}
+
+        except Exception as e:
+            logger.error(f"Error saving chat message: {str(e)}")
+            return {"success": False, "error": str(e)}
+
+    def get_chat_history(self, user_id: str, limit: int = 50) -> List[Dict[str, Any]]:
+        """
+        Get chat history for a user.
+
+        Args:
+            user_id: The user's ID
+            limit: Maximum number of messages to retrieve
+
+        Returns:
+            List of chat messages
+        """
+        try:
+            response = (
+                self.service_client.table("chat_history")
+                .select("*")
+                .eq("user_id", user_id)
+                .order("created_at", desc=False)
+                .limit(limit)
+                .execute()
+            )
+
+            return response.data if response.data else []
+
+        except Exception as e:
+            logger.error(f"Error getting chat history: {str(e)}")
+            return []
+
+    def get_user_prompt_count(self, user_id: str) -> int:
+        """
+        Get the total number of prompts a user has sent.
+
+        Args:
+            user_id: The user's ID
+
+        Returns:
+            Total number of prompts sent
+        """
+        try:
+            response = (
+                self.service_client.table("chat_history")
+                .select("id", count="exact")
+                .eq("user_id", user_id)
+                .eq("role", "user")
+                .execute()
+            )
+
+            return response.count if response.count else 0
+
+        except Exception as e:
+            logger.error(f"Error getting user prompt count: {str(e)}")
+            return 0
+
+    def clear_chat_history(self, user_id: str) -> Dict[str, Any]:
+        """
+        Clear all chat history for a user.
+
+        Args:
+            user_id: The user's ID
+
+        Returns:
+            Success/error response
+        """
+        try:
+            response = (
+                self.service_client.table("chat_history")
+                .delete()
+                .eq("user_id", user_id)
+                .execute()
+            )
+
+            return {"success": True, "message": "Chat history cleared"}
+
+        except Exception as e:
+            logger.error(f"Error clearing chat history: {str(e)}")
+            return {"success": False, "error": str(e)}
 
     # --- Skills Management ---
 
@@ -1606,5 +2002,5 @@ class SupabaseService:
             return False
 
 
-# Global instance
-supabase_service = SupabaseService()
+# Global instance - will be created in app.py after environment variables are loaded
+# supabase_service = SupabaseService()

@@ -59,6 +59,7 @@ dist-ssr
 
 # Editor directories and files
 .vscode/*
+.vscode/
 !.vscode/extensions.json
 .idea
 .DS_Store
@@ -85,3 +86,4 @@ flask_session/
 
 # Uploads (if file upload is implemented later)
 uploads/
+.vercel

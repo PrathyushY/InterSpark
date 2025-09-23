@@ -1,8 +1,8 @@
-import os
 import json
 import logging
 import os
 from datetime import datetime
+from typing import Dict, Any
 
 from dotenv import load_dotenv
 from flask import (
@@ -16,7 +16,8 @@ from flask import (
     session,
 )
 
-from supabase_config import supabase_service
+from ai_service import AIService
+from supabase_config import SupabaseService
 
 # Load environment variables
 load_dotenv()
@@ -104,6 +105,135 @@ def normalize_skills_for_draft(value):
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "2a15f8283ab2353f15089e80d8acf104")
+
+# Initialize services after environment variables are loaded
+supabase_service = SupabaseService()
+
+# Initialize AI service with error handling
+try:
+    ai_service = AIService()  # Modern SDK automatically picks up GEMINI_API_KEY
+except ValueError as e:
+    logger.warning(f"AI service not available: {e}")
+    ai_service = None
+
+
+def fallback_search(query: str, supabase_service) -> Dict[str, Any]:
+    """
+    Fallback search function when AI service is not available.
+    Performs basic keyword-based search.
+    """
+    try:
+        results = {"profiles": [], "opportunities": [], "total_matches": 0}
+
+        # Simple keyword extraction
+        query_lower = query.lower()
+        skills_to_search = []
+
+        # Common skill keywords
+        skill_keywords = {
+            "python": ["python", "py"],
+            "javascript": ["javascript", "js", "node"],
+            "react": ["react", "reactjs"],
+            "java": ["java"],
+            "html": ["html"],
+            "css": ["css"],
+            "sql": ["sql", "database"],
+            "machine learning": [
+                "machine learning",
+                "ml",
+                "ai",
+                "artificial intelligence",
+            ],
+            "data science": ["data science", "data analysis"],
+            "web development": ["web development", "web dev", "frontend", "backend"],
+        }
+
+        # Extract skills from query
+        for skill, keywords in skill_keywords.items():
+            if any(keyword in query_lower for keyword in keywords):
+                skills_to_search.append(skill)
+
+        # Search profiles
+        profile_results = supabase_service.search_students_enhanced(
+            search_query=query,
+            skills=",".join(skills_to_search) if skills_to_search else "",
+            school="",
+            grade="",
+            location="",
+        )
+
+        # Search opportunities
+        opportunity_results = supabase_service.search_opportunities(
+            search_query=query,
+            opportunity_type="",
+            category="",
+            location="",
+            skills_needed=",".join(skills_to_search) if skills_to_search else "",
+        )
+
+        results["profiles"] = profile_results[:5]
+        results["opportunities"] = opportunity_results[:5]
+        results["total_matches"] = len(profile_results) + len(opportunity_results)
+
+        return results
+
+    except Exception as e:
+        logger.error(f"Error in fallback search: {str(e)}")
+        return {"profiles": [], "opportunities": [], "total_matches": 0}
+
+
+def generate_fallback_response(user_message: str, db_results: Dict[str, Any]) -> str:
+    """
+    Generate a fallback response when AI service is not available.
+    """
+    try:
+        response_parts = []
+
+        if db_results["total_matches"] > 0:
+            response_parts.append("I found some relevant results for you:")
+
+            if db_results["profiles"]:
+                response_parts.append("\n**Student Profiles:**")
+                for profile in db_results["profiles"]:
+                    name = profile.get("name", "Unknown")
+                    school = profile.get("school", "Unknown school")
+                    skills = profile.get("skills", [])
+                    if isinstance(skills, str):
+                        try:
+                            skills = json.loads(skills)
+                        except:
+                            skills = [skills] if skills else []
+
+                    response_parts.append(f"- **{name}** from {school}")
+                    if skills:
+                        response_parts.append(f"  Skills: {', '.join(skills[:5])}")
+                    response_parts.append(f"  [View Profile](/profile/{profile['id']})")
+
+            if db_results["opportunities"]:
+                response_parts.append("\n**Opportunities:**")
+                for opp in db_results["opportunities"]:
+                    title = opp.get("title", "Unknown title")
+                    org_name = "Unknown organization"
+                    if opp.get("profiles"):
+                        org_name = opp["profiles"].get("name", org_name)
+
+                    response_parts.append(f"- **{title}** at {org_name}")
+                    response_parts.append(
+                        f"  [View Opportunity](/opportunity/{opp['id']})"
+                    )
+        else:
+            response_parts.append(
+                "I didn't find any matching profiles or opportunities for your query."
+            )
+            response_parts.append(
+                "Try rephrasing your request or being more specific about the skills or type of opportunity you're looking for."
+            )
+
+        return "\n".join(response_parts)
+
+    except Exception as e:
+        logger.error(f"Error generating fallback response: {str(e)}")
+        return "I apologize, but I'm having trouble processing your request right now. Please try again later."
 
 
 def check_profile_completion():
@@ -288,17 +418,16 @@ def signup():
         if user_type == "student":
             school = request.form.get("school", "").strip()
             grade = request.form.get("grade", "").strip()
-            bio = request.form.get("bio", "").strip()
 
             # Validate required student fields
-            if not school or not grade or not bio:
+            if not school or not grade:
                 flash(
-                    "Please fill in all required fields: School, Grade, and Bio",
+                    "Please fill in all required fields: School and Grade",
                     "error",
                 )
                 return render_template("signup.html")
 
-            user_data.update({"school": school, "grade": grade, "bio": bio})
+            user_data.update({"school": school, "grade": grade})
 
         elif user_type == "organization":
             description = request.form.get("description", "").strip()
@@ -320,14 +449,16 @@ def signup():
             result = supabase_service.create_user(email, password, user_data)
 
             if result["success"]:
-                # Auto-login the user
-                session["user_id"] = result["user"]["id"]
-                session["user_type"] = user_type
-                session["user_name"] = name
-                session["user_email"] = email
-
-                flash("Registration successful! Welcome to InterSpark!", "success")
-                return redirect(url_for("dashboard"))
+                # Don't auto-login - redirect to email verification page instead
+                session["pending_verification_email"] = email
+                flash(
+                    result.get(
+                        "message",
+                        "Registration successful! Please check your email to confirm your account.",
+                    ),
+                    "info",
+                )
+                return redirect(url_for("email_verification_pending"))
             else:
                 flash(result.get("error", "Registration failed"), "error")
 
@@ -335,6 +466,76 @@ def signup():
             flash(f"Registration error: {str(e)}", "error")
 
     return render_template("signup.html")
+
+
+@app.route("/auth/confirm")
+def confirm_email():
+    """Handle email confirmation from Supabase"""
+    token_hash = request.args.get("token_hash")
+    type_param = request.args.get("type")
+
+    if not token_hash or type_param != "signup":
+        flash("Invalid confirmation link", "error")
+        return redirect(url_for("login"))
+
+    try:
+        result = supabase_service.verify_email_token(token_hash)
+
+        if result["success"]:
+            flash(
+                result.get(
+                    "message", "Email verified successfully! You can now sign in."
+                ),
+                "success",
+            )
+            return redirect(url_for("login"))
+        else:
+            flash(result.get("error", "Email verification failed"), "error")
+            return redirect(url_for("email_verification_pending"))
+
+    except Exception as e:
+        logger.error(f"Email confirmation error: {str(e)}")
+        flash("Email verification failed. Please try again.", "error")
+        return redirect(url_for("email_verification_pending"))
+
+
+@app.route("/email-verification-pending")
+def email_verification_pending():
+    """Show email verification pending page"""
+    email = session.get("pending_verification_email")
+    if not email:
+        return redirect(url_for("signup"))
+
+    return render_template("email_verification_pending.html", email=email)
+
+
+@app.route("/resend-confirmation", methods=["POST"])
+def resend_confirmation():
+    """Resend email confirmation"""
+    email = request.form.get("email") or session.get("pending_verification_email")
+
+    if not email:
+        flash("No email address provided", "error")
+        return redirect(url_for("signup"))
+
+    try:
+        result = supabase_service.resend_confirmation_email(email)
+
+        if result["success"]:
+            flash(
+                result.get(
+                    "message", "Confirmation email sent! Please check your inbox."
+                ),
+                "info",
+            )
+        else:
+            flash(result.get("error", "Failed to resend confirmation email"), "error")
+
+    except Exception as e:
+        logger.error(f"Error resending confirmation: {str(e)}")
+        flash("Failed to resend confirmation email", "error")
+
+    return redirect(url_for("email_verification_pending"))
 
 
 @app.route("/logout")
@@ -639,14 +840,25 @@ def opportunities():
         location = request.args.get("location", "")
         skills_needed = request.args.get("skills_needed", "")
 
-        # Fetch opportunities with filters (including skills_needed)
-        opportunities = supabase_service.search_opportunities(
+        # Get pagination parameters
+        page = int(request.args.get("page", 1))
+        per_page = 6  # 6 opportunities per page
+
+        # Fetch all opportunities with filters first
+        all_opportunities = supabase_service.search_opportunities(
             search_query=search_query,
             opportunity_type=opportunity_type,
             category=category,
             location=location,
             skills_needed=skills_needed,
         )
+
+        # Calculate pagination
+        total_opportunities = len(all_opportunities)
+        total_pages = (total_opportunities + per_page - 1) // per_page
+        start_idx = (page - 1) * per_page
+        end_idx = start_idx + per_page
+        opportunities = all_opportunities[start_idx:end_idx]
 
         # Parse skills_needed (comma-separated or JSON)
         import json
@@ -677,6 +889,9 @@ def opportunities():
             selected_location=location,
             selected_skills_needed=selected_skills_needed,
             skills_master=get_all_available_skills(),
+            current_page=page,
+            total_pages=total_pages,
+            total_opportunities=total_opportunities,
         )
     except Exception as e:
         flash(f"Error loading opportunities: {str(e)}", "error")
@@ -722,14 +937,25 @@ def talent_search():
         grade = request.args.get("grade", "")
         location = request.args.get("location", "")
 
-        # Search students with filters
-        students = supabase_service.search_students(
+        # Get pagination parameters
+        page = int(request.args.get("page", 1))
+        per_page = 9  # 9 profiles per page
+
+        # Search all students with filters first
+        all_students = supabase_service.search_students(
             search_query=search_query,
             skills=skills,
             school=school,
             grade=grade,
             location=location,
         )
+
+        # Calculate pagination
+        total_students = len(all_students)
+        total_pages = (total_students + per_page - 1) // per_page
+        start_idx = (page - 1) * per_page
+        end_idx = start_idx + per_page
+        students = all_students[start_idx:end_idx]
 
         # Get saved profiles to determine which ones are bookmarked
         saved_profiles = supabase_service.get_saved_profiles(user_id)
@@ -776,6 +1002,9 @@ def talent_search():
             selected_location=location,
             saved_profile_ids=list(saved_profile_ids),
             skills_master=get_all_available_skills(),
+            current_page=page,
+            total_pages=total_pages,
+            total_students=total_students,
         )
     except Exception as e:
         flash(f"Error searching talent: {str(e)}", "error")
@@ -886,6 +1115,32 @@ def create_opportunity(opportunity_id=None):
                 request.form.get("skills_needed")
             )
 
+        # Handle image upload to Supabase Storage
+        image_url = None
+        image_file = request.files.get("image")
+        if image_file and image_file.filename:
+            from werkzeug.utils import secure_filename
+
+            filename = secure_filename(image_file.filename)
+            file_data = image_file.read()
+            content_type = image_file.mimetype
+            # Use opportunity_id if editing, else user_id (will be replaced after creation)
+            storage_id = opportunity_id if is_editing else user_id
+            upload_result = supabase_service.upload_opportunity_banner(
+                storage_id, file_data, filename, content_type
+            )
+            if upload_result.get("success"):
+                image_url = upload_result["url"]
+            else:
+                # Image upload failed, show error and return to form
+                flash(upload_result.get("error", "Failed to upload image"), "error")
+                return render_template(
+                    "create_opportunity.html",
+                    opportunity=opportunity,
+                    is_editing=is_editing,
+                    skills_master=get_all_available_skills(),
+                )
+
         opportunity_data = {
             "title": request.form.get("title") or None,
             "description": request.form.get("description") or None,
@@ -898,6 +1153,16 @@ def create_opportunity(opportunity_id=None):
             "application_deadline": request.form.get("application_deadline") or None,
             "skills_needed": skills_needed_json,
             "status": status,
+            "apply_link": request.form.get("apply_link") or None,
+            "image": (
+                image_url
+                if image_url
+                else (
+                    opportunity["image"]
+                    if opportunity and "image" in opportunity
+                    else None
+                )
+            ),
             # New type-specific fields
             "eligibility_criteria": request.form.get("eligibility_criteria") or None,
             "age_range": request.form.get("age_range") or None,
@@ -1326,6 +1591,151 @@ def add_skill():
     except Exception as e:
         logger.error(f"Error adding skill: {str(e)}")
         return {"success": False, "error": str(e)}, 500
+
+
+@app.route("/chat")
+def chat():
+    """AI chatbot interface for InterSpark."""
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+
+    user_id = session.get("user_id")
+
+    # Get chat history from database
+    try:
+        chat_history = supabase_service.get_chat_history(user_id)
+        # Convert to format expected by template
+        formatted_history = []
+        for msg in chat_history:
+            formatted_history.append(
+                {
+                    "role": msg["role"],
+                    "content": msg["content"],
+                    "timestamp": msg["created_at"],
+                }
+            )
+    except Exception as e:
+        logger.error(f"Error loading chat history: {str(e)}")
+        formatted_history = []
+
+    # Get remaining prompts for today
+    prompt_count = supabase_service.get_user_prompt_count(user_id)
+    remaining_prompts = max(0, 5 - prompt_count)
+
+    return render_template(
+        "chat.html", chat_history=formatted_history, remaining_prompts=remaining_prompts
+    )
+
+
+@app.route("/chat/send", methods=["POST"])
+def chat_send():
+    """Handle chat message and return AI response."""
+    if "user_id" not in session:
+        return jsonify({"success": False, "error": "Not authenticated"}), 401
+
+    if not ai_service:
+        return jsonify({"success": False, "error": "AI service is not available"}), 503
+
+    try:
+        user_message = request.json.get("message", "").strip()
+        if not user_message:
+            return jsonify({"success": False, "error": "Message cannot be empty"}), 400
+
+        user_id = session.get("user_id")
+
+        # Check prompt limit (5 per day for beta)
+        prompt_count = supabase_service.get_user_prompt_count(user_id)
+        if prompt_count >= 5:
+            return (
+                jsonify(
+                    {
+                        "success": False,
+                        "error": "You've reached the limit of 5 prompts. This feature is in beta with limited usage.",
+                    }
+                ),
+                429,
+            )
+
+        # Save user message to database
+        supabase_service.save_chat_message(user_id, "user", user_message)
+
+        # Get recent chat history from database for context
+        chat_history_db = supabase_service.get_chat_history(user_id, limit=20)
+        chat_history = []
+        for msg in chat_history_db:
+            chat_history.append(
+                {
+                    "role": msg["role"],
+                    "content": msg["content"],
+                    "timestamp": msg["created_at"],
+                }
+            )
+
+        # Search database for relevant results
+        if ai_service:
+            db_results = ai_service.search_database_for_context(
+                user_message, supabase_service
+            )
+        else:
+            # Fallback search without AI service
+            logger.warning("AI service not available, using fallback search")
+            db_results = fallback_search(user_message, supabase_service)
+
+        # Generate AI response with conversation context
+        if ai_service:
+            ai_response = ai_service.generate_response_with_context(
+                user_message, db_results, chat_history
+            )
+        else:
+            # Fallback response without AI
+            ai_response = generate_fallback_response(user_message, db_results)
+
+        # Save AI response to database
+        supabase_service.save_chat_message(user_id, "assistant", ai_response)
+
+        # Get updated remaining prompts
+        updated_prompt_count = supabase_service.get_user_prompt_count(user_id)
+        remaining_prompts = max(0, 5 - updated_prompt_count)
+
+        return jsonify(
+            {
+                "success": True,
+                "response": ai_response,
+                "db_results": db_results,
+                "remaining_prompts": remaining_prompts,
+            }
+        )
+
+    except Exception as e:
+        logger.error(f"Error in chat_send: {str(e)}")
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "error": "An error occurred while processing your message",
+                }
+            ),
+            500,
+        )
+
+
+@app.route("/chat/clear", methods=["POST"])
+def chat_clear():
+    """Clear chat history."""
+    if "user_id" not in session:
+        return jsonify({"success": False, "error": "Not authenticated"}), 401
+
+    user_id = session.get("user_id")
+
+    try:
+        result = supabase_service.clear_chat_history(user_id)
+        if result["success"]:
+            return jsonify({"success": True, "message": "Chat history cleared"})
+        else:
+            return jsonify({"success": False, "error": result["error"]}), 500
+    except Exception as e:
+        logger.error(f"Error clearing chat history: {str(e)}")
+        return jsonify({"success": False, "error": "Failed to clear chat history"}), 500
 
 
 if __name__ == "__main__":
