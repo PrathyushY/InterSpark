@@ -4,9 +4,9 @@ class Signup {
         const studentBtn = document.getElementById('student-btn');
         const organizationBtn = document.getElementById('organization-btn');
         const userTypeInput = document.getElementById('user_type');
-        
+
         userTypeInput.value = type;
-        
+
         if (type === 'student') {
             slider.style.transform = 'translateX(0)';
             studentBtn.classList.remove('text-gray-700');
@@ -20,10 +20,10 @@ class Signup {
             studentBtn.classList.remove('text-white');
             studentBtn.classList.add('text-gray-700');
         }
-        
+
         this.toggleFormFields();
     }
-    
+
     static toggleFormFields() {
         const userType = document.getElementById('user_type').value;
         const studentFields = document.getElementById('student-fields');
@@ -34,31 +34,29 @@ class Signup {
             studentFields.classList.remove('hidden');
             organizationFields.classList.add('hidden');
             nameLabel.textContent = 'Full Name';
-            
+
             // Make student fields required
             document.getElementById('school').required = true;
             document.getElementById('grade').required = true;
-            document.getElementById('bio').required = true;
-            
+
             // Make organization fields not required
             document.getElementById('description').required = false;
         } else {
             studentFields.classList.add('hidden');
             organizationFields.classList.remove('hidden');
             nameLabel.textContent = 'Organization Name';
-            
+
             // Make organization fields required
             document.getElementById('description').required = true;
-            
+
             // Make student fields not required
             document.getElementById('school').required = false;
             document.getElementById('grade').required = false;
-            document.getElementById('bio').required = false;
         }
     }
 }
 
 // Initialize form on page load
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     Signup.toggleFormFields();
 });

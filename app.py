@@ -418,17 +418,16 @@ def signup():
         if user_type == "student":
             school = request.form.get("school", "").strip()
             grade = request.form.get("grade", "").strip()
-            bio = request.form.get("bio", "").strip()
 
             # Validate required student fields
-            if not school or not grade or not bio:
+            if not school or not grade:
                 flash(
-                    "Please fill in all required fields: School, Grade, and Bio",
+                    "Please fill in all required fields: School and Grade",
                     "error",
                 )
                 return render_template("signup.html")
 
-            user_data.update({"school": school, "grade": grade, "bio": bio})
+            user_data.update({"school": school, "grade": grade})
 
         elif user_type == "organization":
             description = request.form.get("description", "").strip()
@@ -453,8 +452,12 @@ def signup():
                 # Don't auto-login - redirect to email verification page instead
                 session["pending_verification_email"] = email
                 flash(
-                    result.get("message", "Registration successful! Please check your email to confirm your account."),
-                    "info")
+                    result.get(
+                        "message",
+                        "Registration successful! Please check your email to confirm your account.",
+                    ),
+                    "info",
+                )
                 return redirect(url_for("email_verification_pending"))
             else:
                 flash(result.get("error", "Registration failed"), "error")
@@ -468,10 +471,10 @@ def signup():
 @app.route("/auth/confirm")
 def confirm_email():
     """Handle email confirmation from Supabase"""
-    token_hash = request.args.get('token_hash')
-    type_param = request.args.get('type')
+    token_hash = request.args.get("token_hash")
+    type_param = request.args.get("type")
 
-    if not token_hash or type_param != 'signup':
+    if not token_hash or type_param != "signup":
         flash("Invalid confirmation link", "error")
         return redirect(url_for("login"))
 
@@ -479,7 +482,12 @@ def confirm_email():
         result = supabase_service.verify_email_token(token_hash)
 
         if result["success"]:
-            flash(result.get("message", "Email verified successfully! You can now sign in."), "success")
+            flash(
+                result.get(
+                    "message", "Email verified successfully! You can now sign in."
+                ),
+                "success",
+            )
             return redirect(url_for("login"))
         else:
             flash(result.get("error", "Email verification failed"), "error")
@@ -514,7 +522,12 @@ def resend_confirmation():
         result = supabase_service.resend_confirmation_email(email)
 
         if result["success"]:
-            flash(result.get("message", "Confirmation email sent! Please check your inbox."), "info")
+            flash(
+                result.get(
+                    "message", "Confirmation email sent! Please check your inbox."
+                ),
+                "info",
+            )
         else:
             flash(result.get("error", "Failed to resend confirmation email"), "error")
 
@@ -826,11 +839,11 @@ def opportunities():
         category = request.args.get("category", "")
         location = request.args.get("location", "")
         skills_needed = request.args.get("skills_needed", "")
-        
+
         # Get pagination parameters
         page = int(request.args.get("page", 1))
         per_page = 6  # 6 opportunities per page
-        
+
         # Fetch all opportunities with filters first
         all_opportunities = supabase_service.search_opportunities(
             search_query=search_query,
@@ -839,7 +852,7 @@ def opportunities():
             location=location,
             skills_needed=skills_needed,
         )
-        
+
         # Calculate pagination
         total_opportunities = len(all_opportunities)
         total_pages = (total_opportunities + per_page - 1) // per_page
@@ -923,7 +936,7 @@ def talent_search():
         school = request.args.get("school", "")
         grade = request.args.get("grade", "")
         location = request.args.get("location", "")
-        
+
         # Get pagination parameters
         page = int(request.args.get("page", 1))
         per_page = 9  # 9 profiles per page
@@ -936,7 +949,7 @@ def talent_search():
             grade=grade,
             location=location,
         )
-        
+
         # Calculate pagination
         total_students = len(all_students)
         total_pages = (total_students + per_page - 1) // per_page
@@ -1102,6 +1115,32 @@ def create_opportunity(opportunity_id=None):
                 request.form.get("skills_needed")
             )
 
+        # Handle image upload to Supabase Storage
+        image_url = None
+        image_file = request.files.get("image")
+        if image_file and image_file.filename:
+            from werkzeug.utils import secure_filename
+
+            filename = secure_filename(image_file.filename)
+            file_data = image_file.read()
+            content_type = image_file.mimetype
+            # Use opportunity_id if editing, else user_id (will be replaced after creation)
+            storage_id = opportunity_id if is_editing else user_id
+            upload_result = supabase_service.upload_opportunity_banner(
+                storage_id, file_data, filename, content_type
+            )
+            if upload_result.get("success"):
+                image_url = upload_result["url"]
+            else:
+                # Image upload failed, show error and return to form
+                flash(upload_result.get("error", "Failed to upload image"), "error")
+                return render_template(
+                    "create_opportunity.html",
+                    opportunity=opportunity,
+                    is_editing=is_editing,
+                    skills_master=get_all_available_skills(),
+                )
+
         opportunity_data = {
             "title": request.form.get("title") or None,
             "description": request.form.get("description") or None,
@@ -1114,6 +1153,16 @@ def create_opportunity(opportunity_id=None):
             "application_deadline": request.form.get("application_deadline") or None,
             "skills_needed": skills_needed_json,
             "status": status,
+            "apply_link": request.form.get("apply_link") or None,
+            "image": (
+                image_url
+                if image_url
+                else (
+                    opportunity["image"]
+                    if opportunity and "image" in opportunity
+                    else None
+                )
+            ),
             # New type-specific fields
             "eligibility_criteria": request.form.get("eligibility_criteria") or None,
             "age_range": request.form.get("age_range") or None,
@@ -1551,27 +1600,31 @@ def chat():
         return redirect(url_for("login"))
 
     user_id = session.get("user_id")
-    
+
     # Get chat history from database
     try:
         chat_history = supabase_service.get_chat_history(user_id)
         # Convert to format expected by template
         formatted_history = []
         for msg in chat_history:
-            formatted_history.append({
-                "role": msg["role"],
-                "content": msg["content"],
-                "timestamp": msg["created_at"]
-            })
+            formatted_history.append(
+                {
+                    "role": msg["role"],
+                    "content": msg["content"],
+                    "timestamp": msg["created_at"],
+                }
+            )
     except Exception as e:
         logger.error(f"Error loading chat history: {str(e)}")
         formatted_history = []
-    
+
     # Get remaining prompts for today
     prompt_count = supabase_service.get_user_prompt_count(user_id)
     remaining_prompts = max(0, 5 - prompt_count)
 
-    return render_template("chat.html", chat_history=formatted_history, remaining_prompts=remaining_prompts)
+    return render_template(
+        "chat.html", chat_history=formatted_history, remaining_prompts=remaining_prompts
+    )
 
 
 @app.route("/chat/send", methods=["POST"])
@@ -1589,15 +1642,20 @@ def chat_send():
             return jsonify({"success": False, "error": "Message cannot be empty"}), 400
 
         user_id = session.get("user_id")
-        
+
         # Check prompt limit (5 per day for beta)
         prompt_count = supabase_service.get_user_prompt_count(user_id)
         if prompt_count >= 5:
-            return jsonify({
-                "success": False, 
-                "error": "You've reached the limit of 5 prompts. This feature is in beta with limited usage."
-            }), 429
-        
+            return (
+                jsonify(
+                    {
+                        "success": False,
+                        "error": "You've reached the limit of 5 prompts. This feature is in beta with limited usage.",
+                    }
+                ),
+                429,
+            )
+
         # Save user message to database
         supabase_service.save_chat_message(user_id, "user", user_message)
 
@@ -1605,11 +1663,13 @@ def chat_send():
         chat_history_db = supabase_service.get_chat_history(user_id, limit=20)
         chat_history = []
         for msg in chat_history_db:
-            chat_history.append({
-                "role": msg["role"],
-                "content": msg["content"],
-                "timestamp": msg["created_at"]
-            })
+            chat_history.append(
+                {
+                    "role": msg["role"],
+                    "content": msg["content"],
+                    "timestamp": msg["created_at"],
+                }
+            )
 
         # Search database for relevant results
         if ai_service:
@@ -1632,13 +1692,18 @@ def chat_send():
 
         # Save AI response to database
         supabase_service.save_chat_message(user_id, "assistant", ai_response)
-        
+
         # Get updated remaining prompts
         updated_prompt_count = supabase_service.get_user_prompt_count(user_id)
         remaining_prompts = max(0, 5 - updated_prompt_count)
 
         return jsonify(
-            {"success": True, "response": ai_response, "db_results": db_results, "remaining_prompts": remaining_prompts}
+            {
+                "success": True,
+                "response": ai_response,
+                "db_results": db_results,
+                "remaining_prompts": remaining_prompts,
+            }
         )
 
     except Exception as e:
@@ -1661,7 +1726,7 @@ def chat_clear():
         return jsonify({"success": False, "error": "Not authenticated"}), 401
 
     user_id = session.get("user_id")
-    
+
     try:
         result = supabase_service.clear_chat_history(user_id)
         if result["success"]:

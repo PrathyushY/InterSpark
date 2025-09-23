@@ -19,10 +19,23 @@
     </div>
 
     <div class="bg-white shadow rounded-lg">
-        <form method="POST" class="divide-y divide-gray-200" id="opportunity-form">
+        <form method="POST" enctype="multipart/form-data" class="divide-y divide-gray-200" id="opportunity-form">
             <input type="hidden" name="status" id="status-field" value="active">
             <input type="hidden" name="referrer" value="{{ request.referrer or url_for('dashboard') }}">
-            <!-- Basic Information -->
+            <!-- Banner Image Upload -->
+            <div class="px-4 py-5 sm:p-6">
+                <label for="image" class="block text-sm font-medium text-gray-700">Opportunity Banner Image</label>
+                <input type="file" name="image" id="image" accept="image/*"
+                    class="mt-1 block w-full text-sm text-gray-700 border border-gray-300 rounded-md">
+                <p class="mt-2 text-sm text-gray-500">Upload a banner image for this opportunity (optional, max 5MB). If
+                    not
+                    provided, a default image will be used.</p>
+                {% if opportunity and opportunity.image %}
+                <div class="mt-2">
+                    <img src="{{ opportunity.image }}" alt="Current Banner" class="h-32 rounded shadow">
+                </div>
+                {% endif %}
+            </div>
             <div class="px-4 py-5 sm:p-6">
                 <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">Basic Information</h3>
                 <div class="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
@@ -40,7 +53,8 @@
 
                     <div class="sm:col-span-2">
                         <label for="type"
-                            class="block text-sm font-medium text-gray-700 {% if missing_fields and 'type' in missing_fields %}required-label{% endif %}">Type</label>
+                            class="block text-sm font-medium text-gray-700 {% if missing_fields and 'type' in missing_fields %}required-label{% endif %}">Type
+                            *</label>
                         <div class="mt-1">
                             <select name="type" id="type"
                                 class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md{% if missing_fields and 'type' in missing_fields %} required-highlight{% endif %}">
@@ -77,7 +91,8 @@
 
                     <div class="sm:col-span-3">
                         <label for="category"
-                            class="block text-sm font-medium text-gray-700 {% if missing_fields and 'category' in missing_fields %}required-label{% endif %}">Category</label>
+                            class="block text-sm font-medium text-gray-700 {% if missing_fields and 'category' in missing_fields %}required-label{% endif %}">Category
+                            *</label>
                         <div class="mt-1">
                             <select name="category" id="category"
                                 class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md {% if missing_fields and 'category' in missing_fields %}required-highlight{% endif %}">
@@ -112,7 +127,8 @@
                     </div>
                     <div class="sm:col-span-3">
                         <label for="location"
-                            class="block text-sm font-medium text-gray-700 {% if missing_fields and 'location' in missing_fields %}required-label{% endif %}">Location</label>
+                            class="block text-sm font-medium text-gray-700 {% if missing_fields and 'location' in missing_fields %}required-label{% endif %}">Location
+                            *</label>
                         <div class="mt-1">
                             <input type="text" name="location" id="location"
                                 value="{% if opportunity and opportunity.location %}{{ opportunity.location|trim }}{% endif %}"
@@ -130,7 +146,8 @@
                 <div class="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
                     <div class="sm:col-span-3">
                         <label for="duration"
-                            class="block text-sm font-medium text-gray-700 {% if missing_fields and 'duration' in missing_fields %}required-label{% endif %}">Duration</label>
+                            class="block text-sm font-medium text-gray-700 {% if missing_fields and 'duration' in missing_fields %}required-label{% endif %}">Duration
+                            *</label>
                         <div class="mt-1">
                             <input type="text" name="duration" id="duration"
                                 value="{% if opportunity and opportunity.duration %}{{ opportunity.duration|trim }}{% endif %}"
@@ -143,7 +160,7 @@
                     <div class="sm:col-span-3">
                         <label for="application_deadline"
                             class="block text-sm font-medium text-gray-700 {% if missing_fields and 'application_deadline' in missing_fields %}required-label{% endif %}">Application
-                            Deadline</label>
+                            Deadline *</label>
                         <div class="mt-1">
                             <input type="date" name="application_deadline" id="application_deadline"
                                 value="{% if opportunity and opportunity.application_deadline %}{{ opportunity.application_deadline|trim }}{% endif %}"
@@ -156,7 +173,8 @@
 
                     <div class="sm:col-span-6">
                         <label for="compensation"
-                            class="block text-sm font-medium text-gray-700 {% if missing_fields and 'compensation' in missing_fields %}required-label{% endif %}">Compensation</label>
+                            class="block text-sm font-medium text-gray-700 {% if missing_fields and 'compensation' in missing_fields %}required-label{% endif %}">Compensation
+                            *</label>
                         <div class="mt-1">
                             <input type="text" name="compensation" id="compensation"
                                 value="{% if opportunity and opportunity.compensation %}{{ opportunity.compensation|trim }}{% endif %}"
@@ -176,7 +194,7 @@
                                 autocomplete="off" placeholder="Type a skill and press Enter..."
                                 class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">
                             <input type="hidden" name="skills_needed" id="skills-needed-hidden-input"
-                                value="{% if opportunity and opportunity.skills_needed %}{{ opportunity.skills_needed|tojson }}{% else %}[]{% endif %}">
+                                value="{% if opportunity and opportunity.get('skills_needed') %}{{ opportunity.skills_needed|tojson }}{% else %}[]{% endif %}">
                             <div id="skills-needed-autocomplete-list"
                                 class="absolute z-10 bg-white border border-gray-300 rounded-md mt-1 w-full"
                                 style="display:none;"></div>
@@ -316,8 +334,21 @@
 
                 <div class="space-y-6">
                     <div>
+                        <label for="apply_link" class="block text-sm font-medium text-gray-700">More Info / Apply
+                            Link</label>
+                        <div class="mt-1">
+                            <input type="url" name="apply_link" id="apply_link"
+                                value="{% if opportunity and opportunity.apply_link %}{{ opportunity.apply_link|trim }}{% endif %}"
+                                placeholder="https://your-application-link.com"
+                                class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">
+                        </div>
+                        <p class="mt-2 text-sm text-gray-500">Provide a link for students to learn more or apply
+                            directly (optional).</p>
+                    </div>
+                    <div>
                         <label for="description"
-                            class="block text-sm font-medium text-gray-700 {% if missing_fields and 'description' in missing_fields %}required-label{% endif %}">Description</label>
+                            class="block text-sm font-medium text-gray-700 {% if missing_fields and 'description' in missing_fields %}required-label{% endif %}">Description
+                            *</label>
                         <div class="mt-1">
                             <textarea name="description" id="description" rows="6"
                                 placeholder="Provide a detailed description of the opportunity, what the student will learn, responsibilities, and why they should be excited about this role..."
@@ -329,7 +360,8 @@
 
                     <div>
                         <label for="requirements"
-                            class="block text-sm font-medium text-gray-700 {% if missing_fields and 'requirements' in missing_fields %}required-label{% endif %}">Requirements</label>
+                            class="block text-sm font-medium text-gray-700 {% if missing_fields and 'requirements' in missing_fields %}required-label{% endif %}">Requirements
+                            *</label>
                         <div class="mt-1">
                             <textarea name="requirements" id="requirements" rows="4"
                                 placeholder="List the skills, qualifications, or characteristics you're looking for. Put each requirement on a new line."
@@ -417,7 +449,7 @@
     // Store skills data from server for later initialization
     window.skillsData = {
         allowedSkills: JSON.parse('{{ skills_master|tojson|safe }}'),
-        initialSkillsFromServer: {{ opportunity.skills_needed | tojson | safe if opportunity and opportunity.skills_needed else '[]' | safe }}
+        initialSkillsFromServer: {{ opportunity.get('skills_needed') | tojson | safe if opportunity and opportunity.get('skills_needed') else '[]' | safe }}
     };
 
     // Initialize when the external JS is loaded
@@ -519,6 +551,23 @@
                 handleTypeChange();
             }
         }
+
+        // Image file size validation
+        const imageInput = document.getElementById('image');
+        if (imageInput) {
+            imageInput.addEventListener('change', function () {
+                if (this.files && this.files[0]) {
+                    const file = this.files[0];
+                    const maxSize = 5 * 1024 * 1024; // 5MB in bytes
+                    if (file.size > maxSize) {
+                        alert('File size exceeds 5MB limit. Please choose a smaller image.');
+                        this.value = '';
+                        return false;
+                    }
+                }
+            });
+        }
+
         const deadlineInput = document.getElementById('application_deadline');
         if (deadlineInput) {
             // Set minimum date to today
@@ -550,6 +599,18 @@
                         e.preventDefault();
                         alert('Application deadline cannot be in the past. Please select a future date.');
                         deadlineInput.focus();
+                        return false;
+                    }
+                }
+
+                // Also validate image size on form submission
+                const imageFile = imageInput.files[0];
+                if (imageFile) {
+                    const maxSize = 5 * 1024 * 1024; // 5MB in bytes
+                    if (imageFile.size > maxSize) {
+                        e.preventDefault();
+                        alert('File size exceeds 5MB limit. Please choose a smaller image.');
+                        imageInput.focus();
                         return false;
                     }
                 }
