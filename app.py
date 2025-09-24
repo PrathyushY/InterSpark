@@ -418,17 +418,16 @@ def signup():
         if user_type == "student":
             school = request.form.get("school", "").strip()
             grade = request.form.get("grade", "").strip()
-            bio = request.form.get("bio", "").strip()
 
             # Validate required student fields
-            if not school or not grade or not bio:
+            if not school or not grade:
                 flash(
-                    "Please fill in all required fields: School, Grade, and Bio",
+                    "Please fill in all required fields: School and Grade",
                     "error",
                 )
                 return render_template("signup.html")
 
-            user_data.update({"school": school, "grade": grade, "bio": bio})
+            user_data.update({"school": school, "grade": grade})
 
         elif user_type == "organization":
             description = request.form.get("description", "").strip()
