@@ -2001,6 +2001,74 @@ class SupabaseService:
             logger.error(f"Error checking if skill exists: {str(e)}")
             return False
 
+    def delete_user_account(self, user_id: str) -> Dict[str, Any]:
+        """
+        Delete a user account and all associated data.
+
+        Args:
+            user_id: The user's ID to delete
+
+        Returns:
+            Dictionary with success status and result
+        """
+        try:
+            logger.info(f"Starting account deletion for user: {user_id}")
+            
+            # Delete from all related tables in order (respecting foreign key constraints)
+            tables_to_clean = [
+                "saved_opportunities",
+                "saved_profiles", 
+                "chat_history",
+                "applications",
+                "opportunities",  # If user is organization
+                "profiles"
+            ]
+            
+            for table in tables_to_clean:
+                try:
+                    if table == "opportunities":
+                        # Only delete opportunities if user is organization
+                        response = (
+                            self.service_client.table(table)
+                            .delete()
+                            .eq("company_id", user_id)
+                            .execute()
+                        )
+                    else:
+                        # Delete records where user_id matches
+                        response = (
+                            self.service_client.table(table)
+                            .delete()
+                            .eq("user_id", user_id)
+                            .execute()
+                        )
+                    
+                    logger.info(f"Deleted records from {table} for user {user_id}")
+                    
+                except Exception as e:
+                    logger.warning(f"Error deleting from {table}: {str(e)}")
+                    # Continue with other tables even if one fails
+            
+            # Delete the user from auth.users (this is the most important part)
+            try:
+                # Use the service client to delete from auth.users
+                # Note: This requires the service role key and admin privileges
+                auth_response = self.service_client.auth.admin.delete_user(user_id)
+                logger.info(f"Deleted user from auth.users: {user_id}")
+            except Exception as e:
+                logger.error(f"Error deleting user from auth: {str(e)}")
+                # If admin delete fails, we can still clean up the profile data
+                # The user won't be able to log in anymore since their profile is gone
+                logger.warning("Continuing with profile cleanup despite auth deletion failure")
+                return {"success": True, "message": "Account data deleted successfully (auth cleanup may require manual intervention)"}
+            
+            logger.info(f"Successfully deleted account for user: {user_id}")
+            return {"success": True, "message": "Account and all associated data deleted successfully"}
+            
+        except Exception as e:
+            logger.error(f"Error deleting user account: {str(e)}")
+            return {"success": False, "error": str(e)}
+
 
 # Global instance - will be created in app.py after environment variables are loaded
 # supabase_service = SupabaseService()

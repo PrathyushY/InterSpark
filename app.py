@@ -546,6 +546,39 @@ def logout():
     return redirect(url_for("home"))
 
 
+@app.route("/delete_account", methods=["POST"])
+def delete_account():
+    """Delete user account and all associated data"""
+    if "user_id" not in session:
+        return jsonify({"success": False, "error": "Not authenticated"}), 401
+
+    user_id = session.get("user_id")
+    
+    try:
+        # Delete user account from Supabase
+        result = supabase_service.delete_user_account(user_id)
+        
+        if result["success"]:
+            # Clear session
+            session.clear()
+            return jsonify({
+                "success": True, 
+                "message": "Account deleted successfully"
+            })
+        else:
+            return jsonify({
+                "success": False, 
+                "error": result.get("error", "Failed to delete account")
+            }), 400
+            
+    except Exception as e:
+        logger.error(f"Error deleting account: {str(e)}")
+        return jsonify({
+            "success": False, 
+            "error": "An error occurred while deleting your account"
+        }), 500
+
+
 @app.route("/dashboard")
 def dashboard():
     if "user_id" not in session:
