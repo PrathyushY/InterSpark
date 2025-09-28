@@ -2,6 +2,16 @@
 <html lang="en">
 
 <head>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-0Y5WTN5QYD"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
+
+        gtag('config', 'G-0Y5WTN5QYD');
+    </script>
+
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}InterSpark{% endblock %}</title>
@@ -32,7 +42,8 @@
                             Talent</a>
                         <a href="{{ url_for('chat') }}"
                             class="{% if request.endpoint == 'chat' %}border-blue-500 text-blue-700 font-bold{% else %}border-transparent text-gray-500 hover:border-blue-500 hover:text-gray-700{% endif %} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
-                            Spark Agent <span class="ml-1 text-xs bg-orange-100 text-orange-800 px-1.5 py-0.5 rounded-full">BETA</span>
+                            Spark Agent <span
+                                class="ml-1 text-xs bg-orange-100 text-orange-800 px-1.5 py-0.5 rounded-full">BETA</span>
                         </a>
                     </div>
                 </div>
@@ -90,7 +101,8 @@
                     Talent</a>
                 <a href="{{ url_for('chat') }}"
                     class="block px-3 py-2 text-base font-medium {% if request.endpoint == 'chat' %}bg-blue-100 text-blue-700 font-bold{% else %}text-gray-500 hover:bg-gray-50 hover:text-gray-700{% endif %}">
-                    Spark Agent <span class="ml-1 text-xs bg-orange-100 text-orange-800 px-1.5 py-0.5 rounded-full">BETA</span>
+                    Spark Agent <span
+                        class="ml-1 text-xs bg-orange-100 text-orange-800 px-1.5 py-0.5 rounded-full">BETA</span>
                 </a>
             </div>
             {% if session.user_id %}
