@@ -476,6 +476,112 @@
     // Make removeSkill globally accessible
     window.removeSkill = removeSkill;
 
+    // Delete Account Functionality
+    function showDeleteAccountModal() {
+        const modal = document.getElementById('delete-account-modal');
+        if (modal) {
+            modal.classList.remove('hidden');
+            // Focus on cancel button for accessibility
+            const cancelBtn = document.getElementById('cancel-delete-btn');
+            if (cancelBtn) {
+                cancelBtn.focus();
+            }
+        }
+    }
+
+    function hideDeleteAccountModal() {
+        const modal = document.getElementById('delete-account-modal');
+        if (modal) {
+            modal.classList.add('hidden');
+        }
+    }
+
+    function deleteAccount() {
+        const confirmBtn = document.getElementById('confirm-delete-btn');
+        const cancelBtn = document.getElementById('cancel-delete-btn');
+        
+        // Disable buttons to prevent double-clicks
+        if (confirmBtn) confirmBtn.disabled = true;
+        if (cancelBtn) cancelBtn.disabled = true;
+        
+        // Show loading state
+        if (confirmBtn) {
+            confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Deleting...';
+        }
+
+        fetch('/delete_account', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Show success message briefly before redirect
+                showAlert('Account deleted successfully. Redirecting...', 'success');
+                // Redirect to home page after a short delay
+                setTimeout(() => {
+                    window.location.href = '/';
+                }, 2000);
+            } else {
+                showAlert(data.error || 'Failed to delete account', 'error');
+                // Re-enable buttons
+                if (confirmBtn) {
+                    confirmBtn.disabled = false;
+                    confirmBtn.innerHTML = 'Delete Account';
+                }
+                if (cancelBtn) cancelBtn.disabled = false;
+            }
+        })
+        .catch(error => {
+            console.error('Delete account error:', error);
+            showAlert('Error deleting account. Please try again.', 'error');
+            // Re-enable buttons
+            if (confirmBtn) {
+                confirmBtn.disabled = false;
+                confirmBtn.innerHTML = 'Delete Account';
+            }
+            if (cancelBtn) cancelBtn.disabled = false;
+        });
+    }
+
+    // Event listeners for delete account functionality
+    document.addEventListener('DOMContentLoaded', function() {
+        const deleteBtn = document.getElementById('delete-account-btn');
+        const cancelDeleteBtn = document.getElementById('cancel-delete-btn');
+        const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
+        const modal = document.getElementById('delete-account-modal');
+
+        if (deleteBtn) {
+            deleteBtn.addEventListener('click', showDeleteAccountModal);
+        }
+
+        if (cancelDeleteBtn) {
+            cancelDeleteBtn.addEventListener('click', hideDeleteAccountModal);
+        }
+
+        if (confirmDeleteBtn) {
+            confirmDeleteBtn.addEventListener('click', deleteAccount);
+        }
+
+        // Close modal when clicking outside
+        if (modal) {
+            modal.addEventListener('click', function(e) {
+                if (e.target === modal) {
+                    hideDeleteAccountModal();
+                }
+            });
+        }
+
+        // Close modal with Escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && modal && !modal.classList.contains('hidden')) {
+                hideDeleteAccountModal();
+            }
+        });
+    });
+
     // Initialize skills when DOM is ready
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', initializeSkills);

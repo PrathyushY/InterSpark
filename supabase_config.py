@@ -109,27 +109,6 @@ class SupabaseService:
 
         logger.info("Supabase client initialized successfully")
 
-    def _get_base_url(self) -> str:
-        """
-        Get the correct base URL for email redirects based on environment.
-        Returns 127.0.0.1:port for development, or SITE_URL for production.
-        """
-        # Check if we're in development environment
-        flask_env = os.getenv("FLASK_ENV", "").lower()
-        is_development = (
-            flask_env == "development"
-            or os.getenv("DEBUG", "").lower() in ["true", "1"]
-            or not os.getenv("SITE_URL")  # If SITE_URL is not set, assume development
-        )
-
-        if is_development:
-            # Use 127.0.0.1 for development (works better with some email services)
-            port = os.getenv("FLASK_RUN_PORT", "5000")  # Default to 5000 if not set
-            return f"http://127.0.0.1:{port}"
-        else:
-            # Use configured SITE_URL for production
-            return os.getenv("SITE_URL", "http://localhost:5000")
-
     def is_profile_complete(
         self, profile: Dict[str, Any], user_type: str = None
     ) -> Dict[str, Any]:
@@ -192,14 +171,6 @@ class SupabaseService:
             Dictionary containing user data or error information
         """
         try:
-            # Log the redirect URL being used for debugging
-            redirect_url = f"{self._get_base_url()}/auth/confirm"
-            logger.info(f"Creating user with email: {email}")
-            logger.info(f"Using email redirect URL: {redirect_url}")
-            logger.info(
-                f"Environment - FLASK_ENV: {os.getenv('FLASK_ENV')}, DEBUG: {os.getenv('DEBUG')}, SITE_URL: {os.getenv('SITE_URL')}"
-            )
-
             # Create user in auth.users table with email confirmation required
             response = self.client.auth.sign_up(
                 {
@@ -211,7 +182,7 @@ class SupabaseService:
                             "user_type": user_data.get("user_type", "student"),
                         },
                         # This will send a confirmation email
-                        "email_redirect_to": redirect_url,
+                        "email_redirect_to": f"{os.getenv('SITE_URL', 'http://localhost:5000')}/auth/confirm",
                     },
                 }
             )
@@ -303,157 +274,127 @@ class SupabaseService:
                 return {"success": False, "error": "Failed to create user"}
 
         except Exception as e:
-            error_message = str(e)
-            logger.error(f"Error creating user: {error_message}")
+            logger.error(f"Error creating user: {str(e)}")
+            return {"success": False, "error": str(e)}
 
-            # Provide more specific error messages for common issues
-            if "email" in error_message.lower() and "confirm" in error_message.lower():
-                return {
-                    "success": False,
-                    "error": "Email service temporarily unavailable. This is usually due to Supabase email configuration. Please contact support or try again later.",
-                    "error_type": "email_service_error",
-                }
-            elif "redirect" in error_message.lower() or "url" in error_message.lower():
-                return {
-                    "success": False,
-                    "error": "Invalid redirect URL. Please check your Supabase Auth settings and allowed redirect URLs.",
-                }
-            elif "rate limit" in error_message.lower():
-                return {
-                    "success": False,
-                    "error": "Too many requests. Please wait a moment before trying again.",
-                }
-            elif (
-                "invalid" in error_message.lower() and "email" in error_message.lower()
-            ):
-                return {"success": False, "error": "Invalid email address format."}
-            else:
-                return {
-                    "success": False,
-                    "error": f"Registration failed: {error_message}",
-                }
-
-    def verify_email_token(self, token_hash: str) -> Dict[str, Any]:
+    def create_user_without_email_verification(
+        self, email: str, password: str, user_data: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """
-        Verify an email confirmation token.
+        Create a new user account without email verification requirement.
 
         Args:
-            token_hash: The email confirmation token
+            email: User's email address
+            password: User's password
+            user_data: Additional profile data (name, user_type, etc.)
 
         Returns:
-            Dictionary containing verification result
+            Dictionary containing user data or error information
         """
         try:
-            # Verify the token using Supabase's verify OTP method
-            response = self.client.auth.verify_otp(
-                {"token_hash": token_hash, "type": "signup"}
+            # Create user in auth.users table using service client to bypass email confirmation
+            response = self.service_client.auth.admin.create_user(
+                {
+                    "email": email,
+                    "password": password,
+                    "email_confirm": True,  # Automatically confirm email
+                    "user_metadata": {
+                        "name": user_data.get("name", ""),
+                        "user_type": user_data.get("user_type", "student"),
+                    },
+                }
             )
 
             if response.user:
-                # Update the profile to mark email as confirmed
-                profile_update = self.update_profile(
-                    response.user.id, {"email_confirmed": True}
+                logger.info(
+                    f"User created without email verification: {response.user.id}"
                 )
 
-                logger.info(f"Email verified successfully for user: {response.user.id}")
+                # Create profile data
+                profile_data = {
+                    "id": response.user.id,
+                    "email": response.user.email,
+                    "name": user_data.get("name", ""),
+                    "user_type": user_data.get("user_type", "student"),
+                    "email_confirmed": True,  # Already confirmed
+                }
+
+                # Add user type-specific fields
+                if user_data.get("user_type") == "student":
+                    profile_data.update(
+                        {
+                            "school": user_data.get("school", ""),
+                            "grade": user_data.get("grade", ""),
+                            "bio": user_data.get("bio", ""),
+                        }
+                    )
+                elif user_data.get("user_type") == "organization":
+                    profile_data.update(
+                        {
+                            "description": user_data.get("description", ""),
+                            "organization_name": user_data.get(
+                                "organization_name", user_data.get("name", "")
+                            ),
+                        }
+                    )
+
+                try:
+                    # Create the profile
+                    profile_response = (
+                        self.service_client.table("profiles")
+                        .insert(profile_data)
+                        .execute()
+                    )
+                    if profile_response.data:
+                        logger.info(f"Profile created successfully: {response.user.id}")
+                    else:
+                        logger.warning(
+                            f"Profile creation may have failed, but user was created: {response.user.id}"
+                        )
+                except Exception as profile_error:
+                    logger.info(
+                        f"Profile creation via insert failed, trying update: {str(profile_error)}"
+                    )
+                    try:
+                        update_data = {
+                            k: v for k, v in profile_data.items() if k != "id"
+                        }
+                        update_response = (
+                            self.service_client.table("profiles")
+                            .update(update_data)
+                            .eq("id", response.user.id)
+                            .execute()
+                        )
+                        if update_response.data:
+                            logger.info(
+                                f"Profile updated with complete data: {response.user.id}"
+                            )
+                    except Exception as update_error:
+                        logger.warning(
+                            f"Could not update profile with complete data: {str(update_error)}"
+                        )
+
                 return {
                     "success": True,
                     "user": {
                         "id": response.user.id,
                         "email": response.user.email,
-                        "email_confirmed": True,
+                        "created_at": response.user.created_at,
+                        "email_confirmed": True,  # Always true for this method
                     },
-                    "message": "Email verified successfully! You can now sign in.",
+                    "message": "Registration successful! You are now logged in.",
                 }
             else:
-                return {
-                    "success": False,
-                    "error": "Invalid or expired verification token",
-                }
+                logger.error("Failed to create user - no user returned")
+                return {"success": False, "error": "Failed to create user"}
 
         except Exception as e:
-            logger.error(f"Error verifying email token: {str(e)}")
-            return {
-                "success": False,
-                "error": "Email verification failed. Please try again.",
-            }
-
-    def resend_confirmation_email(self, email: str) -> Dict[str, Any]:
-        """
-        Resend email confirmation for a user.
-
-        Args:
-            email: User's email address
-
-        Returns:
-            Dictionary containing success/error response
-        """
-        try:
-            response = self.client.auth.resend(
-                {
-                    "type": "signup",
-                    "email": email,
-                    "options": {
-                        "email_redirect_to": f"{self._get_base_url()}/auth/confirm"
-                    },
-                }
-            )
-
-            logger.info(f"Confirmation email resent to: {email}")
-            return {
-                "success": True,
-                "message": "Confirmation email sent! Please check your inbox.",
-            }
-
-        except Exception as e:
-            logger.error(f"Error resending confirmation email: {str(e)}")
-            error_str = str(e)
-
-            # Handle specific Supabase errors
-            if "Email not confirmed" in error_str:
-                return {
-                    "success": False,
-                    "error": "This email is already confirmed. Try logging in instead.",
-                }
-            elif "User not found" in error_str or "Invalid email" in error_str:
-                return {
-                    "success": False,
-                    "error": "No account found with this email address. Please sign up first.",
-                }
-            elif "Too many requests" in error_str or "rate limit" in error_str.lower():
-                return {
-                    "success": False,
-                    "error": "Too many requests. Please wait a few minutes before trying again.",
-                }
-            else:
-                # Try alternative method if the resend method doesn't work
-                try:
-                    # Alternative: Create a password reset which also confirms the email
-                    reset_response = self.client.auth.reset_password_email(
-                        email,
-                        {"redirect_to": f"{self._get_base_url()}/auth/confirm"},
-                    )
-
-                    logger.info(
-                        f"Password reset email sent as confirmation alternative to: {email}"
-                    )
-                    return {
-                        "success": True,
-                        "message": "Confirmation email sent! Please check your inbox and follow the link to verify your account.",
-                    }
-
-                except Exception as alt_error:
-                    logger.error(
-                        f"Alternative confirmation method also failed: {str(alt_error)}"
-                    )
-                    return {
-                        "success": False,
-                        "error": "Failed to resend confirmation email. Please contact support or try signing up again.",
-                    }
+            logger.error(f"Error creating user without email verification: {str(e)}")
+            return {"success": False, "error": str(e)}
 
     def sign_in_user(self, email: str, password: str) -> Dict[str, Any]:
         """
-        Sign in an existing user, but only if their email is verified.
+        Sign in an existing user.
 
         Args:
             email: User's email address
@@ -468,17 +409,6 @@ class SupabaseService:
             )
 
             if response.user and response.session:
-                # Check if email is verified
-                if not response.user.email_confirmed_at:
-                    # Sign out the user since email is not verified
-                    self.client.auth.sign_out()
-                    logger.warning(f"Login attempt with unverified email: {email}")
-                    return {
-                        "success": False,
-                        "error": "Please verify your email address before signing in. Check your inbox for the verification link.",
-                        "error_type": "email_not_verified",
-                    }
-
                 logger.info(f"User signed in successfully: {response.user.id}")
                 return {
                     "success": True,
@@ -489,20 +419,8 @@ class SupabaseService:
                 return {"success": False, "error": "Invalid credentials"}
 
         except Exception as e:
-            error_str = str(e)
-            logger.error(f"Error signing in user: {error_str}")
-
-            # Check for common Supabase auth errors
-            if "Invalid login credentials" in error_str:
-                return {"success": False, "error": "Invalid email or password"}
-            elif "Email not confirmed" in error_str:
-                return {
-                    "success": False,
-                    "error": "Please verify your email address before signing in. Check your inbox for the verification link.",
-                    "error_type": "email_not_verified",
-                }
-
-            return {"success": False, "error": "Login failed. Please try again."}
+            logger.error(f"Error signing in user: {str(e)}")
+            return {"success": False, "error": str(e)}
 
     def authenticate_user(self, email: str, password: str) -> Dict[str, Any]:
         """
@@ -2124,6 +2042,82 @@ class SupabaseService:
         except Exception as e:
             logger.error(f"Error checking if skill exists: {str(e)}")
             return False
+
+    def delete_user_account(self, user_id: str) -> Dict[str, Any]:
+        """
+        Delete a user account and all associated data.
+
+        Args:
+            user_id: The user's ID to delete
+
+        Returns:
+            Dictionary with success status and result
+        """
+        try:
+            logger.info(f"Starting account deletion for user: {user_id}")
+
+            # Delete from all related tables in order (respecting foreign key constraints)
+            tables_to_clean = [
+                "saved_opportunities",
+                "saved_profiles",
+                "chat_history",
+                "applications",
+                "opportunities",  # If user is organization
+                "profiles",
+            ]
+
+            for table in tables_to_clean:
+                try:
+                    if table == "opportunities":
+                        # Only delete opportunities if user is organization
+                        response = (
+                            self.service_client.table(table)
+                            .delete()
+                            .eq("company_id", user_id)
+                            .execute()
+                        )
+                    else:
+                        # Delete records where user_id matches
+                        response = (
+                            self.service_client.table(table)
+                            .delete()
+                            .eq("user_id", user_id)
+                            .execute()
+                        )
+
+                    logger.info(f"Deleted records from {table} for user {user_id}")
+
+                except Exception as e:
+                    logger.warning(f"Error deleting from {table}: {str(e)}")
+                    # Continue with other tables even if one fails
+
+            # Delete the user from auth.users (this is the most important part)
+            try:
+                # Use the service client to delete from auth.users
+                # Note: This requires the service role key and admin privileges
+                auth_response = self.service_client.auth.admin.delete_user(user_id)
+                logger.info(f"Deleted user from auth.users: {user_id}")
+            except Exception as e:
+                logger.error(f"Error deleting user from auth: {str(e)}")
+                # If admin delete fails, we can still clean up the profile data
+                # The user won't be able to log in anymore since their profile is gone
+                logger.warning(
+                    "Continuing with profile cleanup despite auth deletion failure"
+                )
+                return {
+                    "success": True,
+                    "message": "Account data deleted successfully (auth cleanup may require manual intervention)",
+                }
+
+            logger.info(f"Successfully deleted account for user: {user_id}")
+            return {
+                "success": True,
+                "message": "Account and all associated data deleted successfully",
+            }
+
+        except Exception as e:
+            logger.error(f"Error deleting user account: {str(e)}")
+            return {"success": False, "error": str(e)}
 
 
 # Global instance - will be created in app.py after environment variables are loaded

@@ -169,15 +169,6 @@ request.args.get('skills_needed') is not none %}
             <div class="bg-white rounded-lg shadow-md p-6">
                 <h3 class="text-xl font-semibold text-gray-900 mb-4">About This Opportunity</h3>
                 <p class="text-gray-700 leading-relaxed">{{ opportunity.description }}</p>
-                {% if opportunity.apply_link %}
-                <div class="mt-4">
-                    <a href="{{ opportunity.apply_link }}" target="_blank" rel="noopener"
-                        class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
-                        <i class="fas fa-external-link-alt mr-2"></i>
-                        More Information / Apply
-                    </a>
-                </div>
-                {% endif %}
                 {% if opportunity.skills_needed %}
                 <div class="mt-4">
                     <h4 class="text-sm font-medium text-gray-900 mb-2">Skills Required</h4>
@@ -338,12 +329,17 @@ request.args.get('skills_needed') is not none %}
                     {% if session.user_type == 'student' %}Apply Now{% else %}Actions{% endif %}
                 </h3>
                 {% if session.user_id %}
-                {% if session.user_type == 'student' %}
-                <button
-                    class="w-full bg-blue-600 text-white px-4 py-3 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 mb-3">
-                    <i class="fas fa-paper-plane mr-2"></i>
-                    Apply for This Position
-                </button>
+                {% if session.user_type == 'student' and opportunity.apply_link %}
+                <a href="{{ opportunity.apply_link }}" target="_blank" rel="noopener"
+                    class="w-full inline-flex justify-center items-center bg-blue-600 text-white px-4 py-3 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 mb-3 transition-colors">
+                    <i class="fas fa-external-link-alt mr-2"></i>
+                    Apply Now
+                </a>
+                {% elif session.user_type == 'student' and not opportunity.apply_link %}
+                <div class="w-full bg-gray-100 text-gray-500 px-4 py-3 rounded-md mb-3 text-center">
+                    <i class="fas fa-info-circle mr-2"></i>
+                    No application link provided
+                </div>
                 {% endif %}
                 <button id="save-opportunity-btn" onclick="OpportunityDetails.toggleSave()"
                     class="w-full border px-4 py-2 rounded-md transition-colors {% if is_saved %}bg-blue-50 border-blue-300 text-blue-700{% else %}border-gray-300 text-gray-700 hover:bg-blue-50{% endif %}">
