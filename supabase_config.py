@@ -275,7 +275,44 @@ class SupabaseService:
 
         except Exception as e:
             logger.error(f"Error creating user: {str(e)}")
-            return {"success": False, "error": str(e)}
+            error_message = str(e).lower()
+
+            # Provide more specific error messages based on the error type
+            if "email" in error_message and (
+                "not configured" in error_message or "smtp" in error_message
+            ):
+                return {
+                    "success": False,
+                    "error": "Email service not configured. Please contact support or try again later.",
+                    "error_type": "email_config",
+                }
+            elif "email" in error_message and "invalid" in error_message:
+                return {
+                    "success": False,
+                    "error": "Invalid email address format. Please check and try again.",
+                    "error_type": "invalid_email",
+                }
+            elif "rate limit" in error_message or "too many" in error_message:
+                return {
+                    "success": False,
+                    "error": "Too many signup attempts. Please wait a few minutes and try again.",
+                    "error_type": "rate_limit",
+                }
+            elif (
+                "already registered" in error_message
+                or "user already exists" in error_message
+            ):
+                return {
+                    "success": False,
+                    "error": "An account with this email already exists. Please try logging in instead.",
+                    "error_type": "user_exists",
+                }
+            else:
+                return {
+                    "success": False,
+                    "error": f"Registration failed: {str(e)}",
+                    "error_type": "general",
+                }
 
     def create_user_without_email_verification(
         self, email: str, password: str, user_data: Dict[str, Any]

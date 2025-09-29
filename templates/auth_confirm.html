@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Confirmation - InterSpark</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-50">
+    <div class="min-h-screen flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+        <div class="sm:mx-auto sm:w-full sm:max-w-md">
+            <div class="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
+                <div class="text-center">
+                    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+                    <h2 class="mt-4 text-lg font-medium text-gray-900">Confirming your email...</h2>
+                    <p class="mt-2 text-sm text-gray-600">Please wait while we verify your email address.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Handle URL hash fragments from Supabase and convert to query parameters
+        function processConfirmation() {
+            const hash = window.location.hash;
+            const search = window.location.search;
+
+            if (hash) {
+                // Parse hash parameters (error cases)
+                const params = new URLSearchParams(hash.substring(1));
+                const error = params.get('error');
+                const error_code = params.get('error_code');
+                const error_description = params.get('error_description');
+                const access_token = params.get('access_token');
+                const refresh_token = params.get('refresh_token');
+                const token_hash = params.get('token_hash');
+                const type = params.get('type');
+
+                // Build new URL with query parameters
+                const newParams = new URLSearchParams();
+
+                if (error) newParams.set('error', error);
+                if (error_code) newParams.set('error_code', error_code);
+                if (error_description) newParams.set('error_description', error_description);
+                if (access_token) newParams.set('access_token', access_token);
+                if (refresh_token) newParams.set('refresh_token', refresh_token);
+                if (token_hash) newParams.set('token_hash', token_hash);
+                if (type) newParams.set('type', type);
+
+                // Redirect to the same URL but with query parameters instead of hash
+                if (newParams.toString()) {
+                    window.location.href = '/auth/confirm?' + newParams.toString();
+                    return;
+                }
+            }
+
+            // If no hash parameters or already has query parameters, proceed normally
+            if (search || !hash) {
+                // Let the server handle it
+                window.location.href = '/auth/confirm' + search;
+            } else {
+                // No parameters at all - invalid link
+                window.location.href = '/login';
+            }
+        }
+
+        // Run when page loads
+        processConfirmation();
+    </script>
+</body>
+
+</html>

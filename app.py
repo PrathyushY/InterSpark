@@ -344,7 +344,7 @@ def login():
         email = request.form["email"]
         password = request.form["password"]
 
-        # Authenticate with Supabase - no longer need user_type selection
+        # Authenticate with Supabase
         try:
             auth_result = supabase_service.authenticate_user(email, password)
 
@@ -354,22 +354,39 @@ def login():
 
                 # Check if profile exists and has user_type
                 if profile and profile.get("user_type"):
-                    session["user_id"] = user["id"]
-                    session["user_type"] = profile["user_type"]
-                    session["user_name"] = profile["name"]
-                    session["user_email"] = profile["email"]
+                    # Check if email is confirmed
+                    if profile.get(
+                        "email_confirmed", True
+                    ):  # Default to True for existing users
+                        session["user_id"] = user["id"]
+                        session["user_type"] = profile["user_type"]
+                        session["user_name"] = profile["name"]
+                        session["user_email"] = profile["email"]
 
-                    flash("Login successful!", "success")
-                    return redirect(url_for("dashboard"))
+                        flash("Login successful!", "success")
+                        return redirect(url_for("dashboard"))
+                    else:
+                        flash(
+                            "Please verify your email address before logging in. Check your email for the verification link.",
+                            "warning",
+                        )
+                        return render_template("login.html")
                 elif profile and profile.get("name") == "User":
                     # This is a newly created default profile, redirect to complete profile
-                    session["user_id"] = user["id"]
-                    session["user_type"] = "student"  # Default to student
-                    session["user_name"] = profile["name"]
-                    session["user_email"] = profile["email"]
+                    if profile.get("email_confirmed", True):  # Check email confirmation
+                        session["user_id"] = user["id"]
+                        session["user_type"] = "student"  # Default to student
+                        session["user_name"] = profile["name"]
+                        session["user_email"] = profile["email"]
 
-                    flash("Please complete your profile to continue.", "info")
-                    return redirect(url_for("profile"))
+                        flash("Please complete your profile to continue.", "info")
+                        return redirect(url_for("profile"))
+                    else:
+                        flash(
+                            "Please verify your email address before completing your profile. Check your email for the verification link.",
+                            "warning",
+                        )
+                        return render_template("login.html")
                 else:
                     if not profile:
                         flash(
@@ -380,13 +397,32 @@ def login():
                             "Profile incomplete. Please complete your profile.",
                             "warning",
                         )
-                        session["user_id"] = user["id"]
-                        session["user_type"] = profile.get("user_type", "student")
-                        session["user_name"] = profile.get("name", "User")
-                        session["user_email"] = profile.get("email", email)
-                        return redirect(url_for("profile"))
+                        if profile.get(
+                            "email_confirmed", True
+                        ):  # Check email confirmation
+                            session["user_id"] = user["id"]
+                            session["user_type"] = profile.get("user_type", "student")
+                            session["user_name"] = profile.get("name", "User")
+                            session["user_email"] = profile.get("email", email)
+                            return redirect(url_for("profile"))
+                        else:
+                            flash(
+                                "Please verify your email address before completing your profile. Check your email for the verification link.",
+                                "warning",
+                            )
+                            return render_template("login.html")
             else:
-                flash(auth_result.get("error", "Invalid credentials"), "error")
+                error_message = auth_result.get("error", "Invalid credentials")
+                if (
+                    "email" in error_message.lower()
+                    and "confirm" in error_message.lower()
+                ):
+                    flash(
+                        "Please check your email and click the verification link to activate your account.",
+                        "warning",
+                    )
+                else:
+                    flash(error_message, "error")
 
         except Exception as e:
             flash(f"Login error: {str(e)}", "error")
@@ -444,42 +480,273 @@ def signup():
                 }
             )
 
-        # Create user with Supabase
+        # Create user with Supabase (with email verification)
         try:
-            result = supabase_service.create_user_without_email_verification(
-                email, password, user_data
-            )
+            result = supabase_service.create_user(email, password, user_data)
 
             if result["success"]:
-                # Auto-login the user after successful registration
                 user = result["user"]
-                profile = result.get("profile")
 
-                if profile:
-                    session["user_id"] = user["id"]
-                    session["user_type"] = profile["user_type"]
-                    session["user_name"] = profile["name"]
-                    session["user_email"] = profile["email"]
+                if user.get("email_confirmed"):
+                    # If email is already confirmed, auto-login
+                    profile = result.get("profile")
+                    if profile:
+                        session["user_id"] = user["id"]
+                        session["user_type"] = profile["user_type"]
+                        session["user_name"] = profile["name"]
+                        session["user_email"] = profile["email"]
 
-                    flash("Registration successful! Welcome to InterSpark!", "success")
-                    return redirect(url_for("dashboard"))
+                        flash(
+                            "Registration successful! Welcome to InterSpark!", "success"
+                        )
+                        return redirect(url_for("dashboard"))
                 else:
+                    # Email verification required
                     flash(
-                        "Registration successful! Please complete your profile.",
-                        "success",
+                        "Registration successful! Please check your email and click the verification link to activate your account.",
+                        "info",
                     )
-                    session["user_id"] = user["id"]
-                    session["user_type"] = user_data.get("user_type", "student")
-                    session["user_name"] = user_data.get("name", "User")
-                    session["user_email"] = email
-                    return redirect(url_for("profile"))
+                    return redirect(url_for("login"))
             else:
-                flash(result.get("error", "Registration failed"), "error")
+                error_type = result.get("error_type", "general")
+                error_message = result.get("error", "Registration failed")
+
+                # If it's an email configuration issue or 500 error, offer fallback
+                if (
+                    error_type == "email_config"
+                    or "Error sending confirmation email" in error_message
+                ):
+                    flash(
+                        "Email verification is temporarily unavailable. Creating your account without email verification for now.",
+                        "warning",
+                    )
+                    # Try creating user without email verification as fallback
+                    try:
+                        fallback_result = (
+                            supabase_service.create_user_without_email_verification(
+                                email, password, user_data
+                            )
+                        )
+                        if fallback_result["success"]:
+                            user = fallback_result["user"]
+                            profile = fallback_result.get("profile")
+                            if profile:
+                                session["user_id"] = user["id"]
+                                session["user_type"] = profile["user_type"]
+                                session["user_name"] = profile["name"]
+                                session["user_email"] = profile["email"]
+                                flash(
+                                    "Registration completed! You are now logged in. (Email verification will be enabled later)",
+                                    "success",
+                                )
+                                return redirect(url_for("dashboard"))
+                    except Exception as fallback_error:
+                        logger.error(
+                            f"Fallback registration also failed: {str(fallback_error)}"
+                        )
+                        flash(
+                            "Registration failed. Please try again later or contact support.",
+                            "error",
+                        )
+                        return render_template("signup.html")
+
+                flash(error_message, "error")
 
         except Exception as e:
             flash(f"Registration error: {str(e)}", "error")
 
     return render_template("signup.html")
+
+
+@app.route("/auth/confirm")
+def confirm_email():
+    """Handle email confirmation after user clicks the link in their email."""
+    try:
+        # If this is the initial request (no query parameters), serve the processing page
+        # This page will handle URL hash fragments and redirect back with query parameters
+        if not request.args:
+            return render_template("auth_confirm.html")
+
+        # Check for error parameters first (these come in the URL fragment, but may be passed as query params)
+        error = request.args.get("error")
+        error_code = request.args.get("error_code")
+        error_description = request.args.get("error_description")
+
+        if error:
+            # Handle various error cases
+            if error_code == "otp_expired":
+                flash(
+                    "The email verification link has expired. Please request a new verification email below.",
+                    "error",
+                )
+            elif error == "access_denied":
+                flash(
+                    "Email verification was denied or cancelled. Please try again.",
+                    "error",
+                )
+            else:
+                flash(
+                    f"Email verification failed: {error_description or error}. Please try again.",
+                    "error",
+                )
+            return redirect(url_for("login"))
+
+        # Get the various possible parameters from Supabase
+        access_token = request.args.get("access_token")
+        refresh_token = request.args.get("refresh_token")
+        token = request.args.get("token")
+        token_hash = request.args.get("token_hash")
+        type_param = request.args.get("type")
+
+        if not access_token and not token_hash and not token:
+            flash("Invalid confirmation link. Please try signing up again.", "error")
+            return redirect(url_for("signup"))
+
+        # Handle different token formats from Supabase
+        verification_successful = False
+        user_id = None
+        user_email = None
+
+        # Method 1: Try token verification (newer format)
+        if token and type_param:
+            try:
+                result = supabase_service.client.auth.verify_otp(
+                    {"token": token, "type": type_param}
+                )
+                if result.user:
+                    verification_successful = True
+                    user_id = result.user.id
+                    user_email = result.user.email
+                    logger.info(
+                        f"Email verified successfully using token method for user: {user_id}"
+                    )
+            except Exception as e:
+                logger.error(f"Token verification failed: {str(e)}")
+
+        # Method 2: Try token_hash verification
+        if not verification_successful and token_hash and type_param == "email":
+            try:
+                result = supabase_service.client.auth.verify_otp(
+                    {"token_hash": token_hash, "type": "email"}
+                )
+                if result.user:
+                    verification_successful = True
+                    user_id = result.user.id
+                    user_email = result.user.email
+                    logger.info(
+                        f"Email verified successfully using token_hash method for user: {user_id}"
+                    )
+            except Exception as e:
+                logger.error(f"Token hash verification failed: {str(e)}")
+
+        # Method 3: Try session-based verification (older format)
+        if not verification_successful and access_token and refresh_token:
+            try:
+                session_result = supabase_service.set_session(
+                    access_token, refresh_token
+                )
+                if session_result["success"]:
+                    current_user = supabase_service.get_current_user()
+                    if current_user:
+                        verification_successful = True
+                        user_id = current_user["id"]
+                        user_email = current_user["email"]
+                        logger.info(
+                            f"Email verified successfully using session method for user: {user_id}"
+                        )
+            except Exception as e:
+                logger.error(f"Session verification failed: {str(e)}")
+
+        if not verification_successful:
+            flash(
+                "Email verification failed. Please try again or request a new verification email.",
+                "error",
+            )
+            return redirect(url_for("login"))
+
+        # Update the profile to mark email as confirmed
+        try:
+            profile_update_result = supabase_service.update_profile(
+                user_id, {"email_confirmed": True}
+            )
+            logger.info(
+                f"Profile updated to mark email as confirmed for user: {user_id}"
+            )
+        except Exception as e:
+            logger.warning(f"Failed to update email_confirmed status: {str(e)}")
+
+        # Get the user's profile
+        profile = supabase_service.get_profile(user_id)
+
+        if profile:
+            # Auto-login the user after email confirmation
+            session["user_id"] = user_id
+            session["user_type"] = profile.get("user_type", "student")
+            session["user_name"] = profile.get("name", "User")
+            session["user_email"] = user_email
+
+            flash("Email confirmed successfully! Welcome to InterSpark!", "success")
+
+            # Check if profile is complete, redirect accordingly
+            completion_check = supabase_service.is_profile_complete(
+                profile, profile.get("user_type")
+            )
+            if completion_check["complete"]:
+                return redirect(url_for("dashboard"))
+            else:
+                flash("Please complete your profile to get started.", "info")
+                return redirect(url_for("profile"))
+        else:
+            flash("Profile not found. Please complete your registration.", "warning")
+            return redirect(url_for("profile"))
+
+    except Exception as e:
+        logger.error(f"Error in email confirmation: {str(e)}")
+        flash(
+            "An error occurred during email confirmation. Please try logging in.",
+            "error",
+        )
+        return redirect(url_for("login"))
+
+
+@app.route("/auth/resend-confirmation", methods=["POST"])
+def resend_confirmation():
+    """Resend email confirmation link."""
+    try:
+        email = request.form.get("email")
+        if not email:
+            flash("Please provide your email address.", "error")
+            return redirect(url_for("login"))
+
+        # Get the user by email to check if they exist
+        profile = supabase_service.get_profile_by_email(email)
+        if not profile:
+            flash("No account found with that email address.", "error")
+            return redirect(url_for("login"))
+
+        # Check if email is already confirmed
+        if profile.get("email_confirmed", True):
+            flash("Your email is already confirmed. Please try logging in.", "info")
+            return redirect(url_for("login"))
+
+        # Resend confirmation email using Supabase auth
+        try:
+            result = supabase_service.client.auth.resend(
+                {"type": "signup", "email": email}
+            )
+            flash("Confirmation email resent! Please check your email.", "success")
+        except Exception as e:
+            logger.error(f"Error resending confirmation email: {str(e)}")
+            flash(
+                "Failed to resend confirmation email. Please try again later.", "error"
+            )
+
+        return redirect(url_for("login"))
+
+    except Exception as e:
+        logger.error(f"Error in resend confirmation: {str(e)}")
+        flash("An error occurred. Please try again.", "error")
+        return redirect(url_for("login"))
 
 
 @app.route("/logout")
