@@ -598,7 +598,22 @@ def confirm_email():
         token_hash = request.args.get("token_hash")
         type_param = request.args.get("type")
 
+        # Debug logging
+        logger.info(f"Confirmation attempt with parameters:")
+        logger.info(f"  - token: {'***' + str(token)[-4:] if token else None}")
+        logger.info(f"  - type: {type_param}")
+        logger.info(
+            f"  - token_hash: {'***' + str(token_hash)[-4:] if token_hash else None}"
+        )
+        logger.info(
+            f"  - access_token: {'***' + str(access_token)[-4:] if access_token else None}"
+        )
+        logger.info(
+            f"  - refresh_token: {'***' + str(refresh_token)[-4:] if refresh_token else None}"
+        )
+
         if not access_token and not token_hash and not token:
+            logger.error("No valid tokens found in confirmation request")
             flash("Invalid confirmation link. Please try signing up again.", "error")
             return redirect(url_for("signup"))
 
@@ -610,25 +625,121 @@ def confirm_email():
         # Method 1: Try token verification (newer format)
         if token and type_param:
             try:
-                result = supabase_service.client.auth.verify_otp(
-                    {"token": token, "type": type_param}
+                logger.info(
+                    f"Attempting token verification with token: ***{token[-4:]} and type: {type_param}"
                 )
-                if result.user:
-                    verification_successful = True
-                    user_id = result.user.id
-                    user_email = result.user.email
-                    logger.info(
-                        f"Email verified successfully using token method for user: {user_id}"
+
+                # For signup tokens, try multiple approaches
+                if type_param == "signup":
+                    # Approach 1: Try exchange_code_for_session
+                    try:
+                        logger.info("Using exchange_code_for_session for signup token")
+                        result = supabase_service.client.auth.exchange_code_for_session(
+                            token
+                        )
+                        logger.info(f"Exchange code result type: {type(result)}")
+                        logger.info(f"Exchange code result: {str(result)[:200]}...")
+
+                        # Handle different response formats
+                        if hasattr(result, "user") and result.user:
+                            verification_successful = True
+                            user_id = result.user.id
+                            user_email = result.user.email
+                            logger.info(
+                                f"Email verified successfully using exchange_code_for_session for user: {user_id}"
+                            )
+                        elif (
+                            hasattr(result, "session")
+                            and result.session
+                            and hasattr(result.session, "user")
+                        ):
+                            verification_successful = True
+                            user_id = result.session.user.id
+                            user_email = result.session.user.email
+                            logger.info(
+                                f"Email verified successfully using session from exchange_code_for_session for user: {user_id}"
+                            )
+                        elif isinstance(result, dict):
+                            # Handle dictionary response
+                            if "user" in result and result["user"]:
+                                verification_successful = True
+                                user_data = result["user"]
+                                user_id = user_data["id"]
+                                user_email = user_data["email"]
+                                logger.info(
+                                    f"Email verified successfully using dict result for user: {user_id}"
+                                )
+                            elif (
+                                "session" in result
+                                and result["session"]
+                                and "user" in result["session"]
+                            ):
+                                verification_successful = True
+                                user_data = result["session"]["user"]
+                                user_id = user_data["id"]
+                                user_email = user_data["email"]
+                                logger.info(
+                                    f"Email verified successfully using dict session for user: {user_id}"
+                                )
+                        else:
+                            logger.warning(
+                                f"exchange_code_for_session returned unexpected format: {type(result)}"
+                            )
+
+                    except Exception as e1:
+                        logger.error(f"exchange_code_for_session failed: {str(e1)}")
+
+                    # Approach 2: If exchange_code_for_session failed, try verify_otp with phone/email format
+                    if not verification_successful:
+                        try:
+                            logger.info(
+                                "Trying verify_otp with token_hash approach for signup"
+                            )
+                            # Sometimes signup tokens work with verify_otp if we treat them as token_hash
+                            result = supabase_service.client.auth.verify_otp(
+                                {"token_hash": token, "type": "signup"}
+                            )
+                            logger.info(f"verify_otp result: {result}")
+                            if hasattr(result, "user") and result.user:
+                                verification_successful = True
+                                user_id = result.user.id
+                                user_email = result.user.email
+                                logger.info(
+                                    f"Email verified successfully using verify_otp token_hash method for user: {user_id}"
+                                )
+                        except Exception as e2:
+                            logger.error(
+                                f"verify_otp token_hash approach failed: {str(e2)}"
+                            )
+
+                else:
+                    # For other types (like email), use the standard verify_otp
+                    result = supabase_service.client.auth.verify_otp(
+                        {"token": token, "type": type_param}
                     )
+                    logger.info(f"Token verification result: {result}")
+                    if result.user:
+                        verification_successful = True
+                        user_id = result.user.id
+                        user_email = result.user.email
+                        logger.info(
+                            f"Email verified successfully using token method for user: {user_id}"
+                        )
+
             except Exception as e:
                 logger.error(f"Token verification failed: {str(e)}")
+                logger.error(f"Exception type: {type(e)}")
 
         # Method 2: Try token_hash verification
         if not verification_successful and token_hash and type_param == "email":
             try:
+                logger.info(
+                    f"Attempting token_hash verification with hash: ***{token_hash[-4:]}"
+                )
                 result = supabase_service.client.auth.verify_otp(
                     {"token_hash": token_hash, "type": "email"}
                 )
+                logger.info(f"Token hash verification result: {result}")
                 if result.user:
                     verification_successful = True
                     user_id = result.user.id
@@ -638,6 +749,7 @@ def confirm_email():
                     )
             except Exception as e:
                 logger.error(f"Token hash verification failed: {str(e)}")
+                logger.error(f"Exception type: {type(e)}")
 
         # Method 3: Try session-based verification (older format)
         if not verification_successful and access_token and refresh_token:
@@ -658,6 +770,10 @@ def confirm_email():
                 logger.error(f"Session verification failed: {str(e)}")
 
         if not verification_successful:
+            logger.error("All verification methods failed")
+            logger.error(
+                f"Final state - token: {bool(token)}, token_hash: {bool(token_hash)}, access_token: {bool(access_token)}"
+            )
             flash(
                 "Email verification failed. Please try again or request a new verification email.",
                 "error",
@@ -1990,4 +2106,4 @@ def chat_clear():
 
 
 if __name__ == "__main__":
-    app.run(debug=True, port=5000)
+    app.run(debug=True, port=5001)
