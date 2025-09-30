@@ -285,7 +285,7 @@ def format_date_filter(date_string, format="%B %d, %Y"):
     Format an ISO date string to a readable format.
 
     Args:
-        date_string: ISO format date string from Supabase
+        date_string: ISO format date string from database
         format: strftime format string
 
     Returns:
@@ -329,7 +329,7 @@ def home():
     # Redirect logged-in users to dashboard
     if "user_id" in session:
         return redirect(url_for("dashboard"))
-    # Get featured opportunities from Supabase
+    # Get featured opportunities from database
     try:
         opportunities = supabase_service.get_opportunities(limit=3)
         return render_template("home.html", opportunities=opportunities)
@@ -344,7 +344,7 @@ def login():
         email = request.form["email"]
         password = request.form["password"]
 
-        # Authenticate with Supabase
+        # Authenticate user credentials
         try:
             auth_result = supabase_service.authenticate_user(email, password)
 
@@ -480,7 +480,7 @@ def signup():
                 }
             )
 
-        # Create user with Supabase (with email verification)
+        # Create user with custom email verification
         try:
             # Try user creation with our custom email verification
             result = supabase_service.create_user(email, password, user_data)
@@ -592,7 +592,7 @@ def confirm_email():
                 )
             return redirect(url_for("login"))
 
-        # Get the various possible parameters from Supabase
+        # Get the various possible parameters for verification
         access_token = request.args.get("access_token")
         refresh_token = request.args.get("refresh_token")
         token = request.args.get("token")
@@ -607,7 +607,7 @@ def confirm_email():
             flash("Invalid confirmation link. Please try signing up again.", "error")
             return redirect(url_for("signup"))
 
-        # Handle different token formats from Supabase
+        # Handle different token formats for verification
         verification_successful = False
         user_id = None
         user_email = None
@@ -1038,7 +1038,7 @@ def resend_confirmation():
             flash("Your email is already confirmed. Please try logging in.", "info")
             return redirect(url_for("login"))
 
-        # Resend confirmation email with secure token
+        # Resend verification email with secure token
         try:
             user_id = profile.get("id")
 

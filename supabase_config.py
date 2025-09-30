@@ -171,8 +171,8 @@ class SupabaseService:
             Dictionary containing user data or error information
         """
         try:
-            # Create user in auth.users table WITHOUT triggering Supabase email
-            # We'll handle email verification with our own system
+            # Create user in auth.users table without triggering automatic emails
+            # We'll handle email verification with our own custom system
             response = self.service_client.auth.admin.create_user(
                 {
                     "email": email,
@@ -311,121 +311,6 @@ class SupabaseService:
                     "error": f"Registration failed: {str(e)}",
                     "error_type": "general",
                 }
-
-    def create_user_without_email_verification(
-        self, email: str, password: str, user_data: Dict[str, Any]
-    ) -> Dict[str, Any]:
-        """
-        Create a new user account without email verification requirement.
-
-        Args:
-            email: User's email address
-            password: User's password
-            user_data: Additional profile data (name, user_type, etc.)
-
-        Returns:
-            Dictionary containing user data or error information
-        """
-        try:
-            # Create user in auth.users table using service client to bypass email confirmation
-            response = self.service_client.auth.admin.create_user(
-                {
-                    "email": email,
-                    "password": password,
-                    "email_confirm": True,  # Automatically confirm email
-                    "user_metadata": {
-                        "name": user_data.get("name", ""),
-                        "user_type": user_data.get("user_type", "student"),
-                    },
-                }
-            )
-
-            if response.user:
-                logger.info(
-                    f"User created without email verification: {response.user.id}"
-                )
-
-                # Create profile data
-                profile_data = {
-                    "id": response.user.id,
-                    "email": response.user.email,
-                    "name": user_data.get("name", ""),
-                    "user_type": user_data.get("user_type", "student"),
-                    "email_confirmed": True,  # Already confirmed
-                }
-
-                # Add user type-specific fields
-                if user_data.get("user_type") == "student":
-                    profile_data.update(
-                        {
-                            "school": user_data.get("school", ""),
-                            "grade": user_data.get("grade", ""),
-                            "bio": user_data.get("bio", ""),
-                        }
-                    )
-                elif user_data.get("user_type") == "organization":
-                    profile_data.update(
-                        {
-                            "description": user_data.get("description", ""),
-                            "organization_name": user_data.get(
-                                "organization_name", user_data.get("name", "")
-                            ),
-                        }
-                    )
-
-                try:
-                    # Create the profile
-                    profile_response = (
-                        self.service_client.table("profiles")
-                        .insert(profile_data)
-                        .execute()
-                    )
-                    if profile_response.data:
-                        logger.info(f"Profile created successfully: {response.user.id}")
-                    else:
-                        logger.warning(
-                            f"Profile creation may have failed, but user was created: {response.user.id}"
-                        )
-                except Exception as profile_error:
-                    logger.info(
-                        f"Profile creation via insert failed, trying update: {str(profile_error)}"
-                    )
-                    try:
-                        update_data = {
-                            k: v for k, v in profile_data.items() if k != "id"
-                        }
-                        update_response = (
-                            self.service_client.table("profiles")
-                            .update(update_data)
-                            .eq("id", response.user.id)
-                            .execute()
-                        )
-                        if update_response.data:
-                            logger.info(
-                                f"Profile updated with complete data: {response.user.id}"
-                            )
-                    except Exception as update_error:
-                        logger.warning(
-                            f"Could not update profile with complete data: {str(update_error)}"
-                        )
-
-                return {
-                    "success": True,
-                    "user": {
-                        "id": response.user.id,
-                        "email": response.user.email,
-                        "created_at": response.user.created_at,
-                        "email_confirmed": True,  # Always true for this method
-                    },
-                    "message": "Registration successful! You are now logged in.",
-                }
-            else:
-                logger.error("Failed to create user - no user returned")
-                return {"success": False, "error": "Failed to create user"}
-
-        except Exception as e:
-            logger.error(f"Error creating user without email verification: {str(e)}")
-            return {"success": False, "error": str(e)}
 
     def sign_in_user(self, email: str, password: str) -> Dict[str, Any]:
         """
@@ -2282,7 +2167,7 @@ class SupabaseService:
 
     def send_verification_email(self, user_id: str, email: str) -> Dict[str, Any]:
         """
-        Create a verification token and send confirmation email.
+        Create a verification token and send verification email.
 
         Args:
             user_id: The user's ID
