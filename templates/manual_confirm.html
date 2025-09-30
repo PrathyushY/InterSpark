@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block title %}Email Confirmation - InterSpark{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h2 class="card-title mb-4">
+                        <i class="fas fa-envelope-check text-success"></i>
+                        Email Confirmation
+                    </h2>
+
+                    <div class="alert alert-info">
+                        <h5>Confirm Your Email Address</h5>
+                        <p class="mb-0">Click the link below to confirm your email address and activate your InterSpark
+                            account.</p>
+                    </div>
+
+                    <div class="mb-4">
+                        <p><strong>Email:</strong> {{ email }}</p>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <a href="{{ url_for('confirm_email_manual', email=email) }}" class="btn btn-success btn-lg">
+                            <i class="fas fa-check-circle me-2"></i>
+                            Confirm Email Address
+                        </a>
+
+                        <a href="{{ url_for('login') }}" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>
+                            Back to Login
+                        </a>
+                    </div>
+
+                    <div class="mt-4">
+                        <small class="text-muted">
+                            <i class="fas fa-info-circle"></i>
+                            This confirmation is secure and will only confirm the email address associated with your
+                            account.
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

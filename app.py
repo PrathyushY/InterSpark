@@ -482,78 +482,79 @@ def signup():
 
         # Create user with Supabase (with email verification)
         try:
+            # Try user creation with our custom email verification
             result = supabase_service.create_user(email, password, user_data)
 
             if result["success"]:
                 user = result["user"]
+                user_id = user["id"]
 
-                if user.get("email_confirmed"):
-                    # If email is already confirmed, auto-login
-                    profile = result.get("profile")
-                    if profile:
-                        session["user_id"] = user["id"]
-                        session["user_type"] = profile["user_type"]
-                        session["user_name"] = profile["name"]
-                        session["user_email"] = profile["email"]
+                # Send our custom verification email
+                logger.info(
+                    f"User created successfully: {user_id}, sending custom verification email"
+                )
 
+                email_result = supabase_service.send_verification_email(user_id, email)
+
+                if email_result["success"]:
+                    verification_link = email_result["verification_link"]
+                    expires_at = email_result["expires_at"]
+                    email_sent = email_result.get("email_sent", False)
+
+                    if email_sent:
                         flash(
-                            "Registration successful! Welcome to InterSpark!", "success"
+                            "Registration successful! Please check your email and click the verification link to activate your account. "
+                            f"The verification link will expire in 24 hours.",
+                            "info",
                         )
-                        return redirect(url_for("dashboard"))
-                else:
-                    # Email verification required
-                    flash(
-                        "Registration successful! Please check your email and click the verification link to activate your account.",
-                        "info",
-                    )
-                    return redirect(url_for("login"))
-            else:
-                error_type = result.get("error_type", "general")
-                error_message = result.get("error", "Registration failed")
+                        logger.info(
+                            f"User {email} registered with secure verification token - email sent successfully"
+                        )
+                        # Don't show development link when email is sent successfully
+                    else:
+                        flash(
+                            "Registration successful! Email verification system is temporarily unavailable. "
+                            "Please use the manual verification link below.",
+                            "warning",
+                        )
+                        logger.warning(
+                            f"User {email} registered with secure verification token - email could not be sent"
+                        )
 
-                # If it's an email configuration issue or 500 error, offer fallback
-                if (
-                    error_type == "email_config"
-                    or "Error sending confirmation email" in error_message
-                ):
+                        # Only show development link when email FAILED to send
+                        if os.getenv("FLASK_ENV") == "development":
+                            flash(
+                                f"Development: Direct verification link: "
+                                f'<a href="{verification_link}" target="_blank">Verify Email</a>',
+                                "info",
+                            )
+
+                    logger.info(f"Verification link: {verification_link}")
+                else:
+                    # Fallback to manual confirmation if token creation fails
+                    site_url = os.getenv("SITE_URL", "http://localhost:5001")
+                    manual_confirmation_link = (
+                        f"{site_url}/auth/confirm-manual?email={email}"
+                    )
+
                     flash(
-                        "Email verification is temporarily unavailable. Creating your account without email verification for now.",
+                        "Registration successful! Email verification system is temporarily unavailable. "
+                        f'You can confirm manually here: <a href="{manual_confirmation_link}" target="_blank">Confirm Email</a>',
                         "warning",
                     )
-                    # Try creating user without email verification as fallback
-                    try:
-                        fallback_result = (
-                            supabase_service.create_user_without_email_verification(
-                                email, password, user_data
-                            )
-                        )
-                        if fallback_result["success"]:
-                            user = fallback_result["user"]
-                            profile = fallback_result.get("profile")
-                            if profile:
-                                session["user_id"] = user["id"]
-                                session["user_type"] = profile["user_type"]
-                                session["user_name"] = profile["name"]
-                                session["user_email"] = profile["email"]
-                                flash(
-                                    "Registration completed! You are now logged in. (Email verification will be enabled later)",
-                                    "success",
-                                )
-                                return redirect(url_for("dashboard"))
-                    except Exception as fallback_error:
-                        logger.error(
-                            f"Fallback registration also failed: {str(fallback_error)}"
-                        )
-                        flash(
-                            "Registration failed. Please try again later or contact support.",
-                            "error",
-                        )
-                        return render_template("signup.html")
+                    logger.warning(
+                        f"Failed to create verification token for {email}, using manual fallback"
+                    )
 
+                return redirect(url_for("login"))
+            else:
+                error_message = result.get("error", "Registration failed")
                 flash(error_message, "error")
+                logger.error(f"User creation failed for {email}: {error_message}")
 
         except Exception as e:
             flash(f"Registration error: {str(e)}", "error")
+            logger.error(f"Registration exception for {email}: {str(e)}")
 
     return render_template("signup.html")
 
@@ -597,17 +598,6 @@ def confirm_email():
         token = request.args.get("token")
         token_hash = request.args.get("token_hash")
         type_param = request.args.get("type")
-
-        # Debug logging
-        logger.info(f"Confirmation attempt with parameters:")
-        logger.info(f"  - token: {'***' + str(token)[-4:] if token else None}")
-        logger.info(f"  - type: {type_param}")
-        logger.info(
-            f"  - token_hash: {'***' + str(token_hash)[-4:] if token_hash else None}"
-        )
-        logger.info(
-            f"  - access_token: {'***' + str(access_token)[-4:] if access_token else None}"
-        )
         logger.info(
             f"  - refresh_token: {'***' + str(refresh_token)[-4:] if refresh_token else None}"
         )
@@ -825,6 +815,209 @@ def confirm_email():
         return redirect(url_for("login"))
 
 
+@app.route("/auth/verify")
+def verify_email():
+    """Secure email verification using our custom tokens."""
+    try:
+        token = request.args.get("token")
+
+        if not token:
+            flash("Invalid verification link. Missing token.", "error")
+            return redirect(url_for("login"))
+
+        logger.info(f"Email verification attempt with token: ***{token[-4:]}")
+
+        # Verify the token
+        verification_result = supabase_service.verify_token(token)
+
+        if not verification_result["success"]:
+            error_message = verification_result.get(
+                "error", "Invalid verification token"
+            )
+
+            if "expired" in error_message.lower():
+                flash(
+                    "The verification link has expired. Please request a new verification email.",
+                    "warning",
+                )
+            elif "already been used" in error_message.lower():
+                flash(
+                    "This verification link has already been used. Please try logging in.",
+                    "info",
+                )
+            else:
+                flash(
+                    "Invalid verification link. Please request a new verification email.",
+                    "error",
+                )
+
+            return redirect(url_for("login"))
+
+        # Token is valid, get user info
+        user_id = verification_result["user_id"]
+        email = verification_result["email"]
+
+        # Update the profile to mark email as confirmed
+        try:
+            profile_update_result = supabase_service.update_profile(
+                user_id, {"email_confirmed": True}
+            )
+
+            if profile_update_result:
+                logger.info(
+                    f"Email verified successfully for user: {user_id} ({email})"
+                )
+
+                # Get the user's profile for auto-login
+                profile = supabase_service.get_profile(user_id)
+
+                if profile:
+                    # Auto-login the user after email confirmation
+                    session["user_id"] = user_id
+                    session["user_type"] = profile.get("user_type", "student")
+                    session["user_name"] = profile.get("name", "User")
+                    session["user_email"] = email
+
+                    flash(
+                        "Email verified successfully! Welcome to InterSpark!", "success"
+                    )
+
+                    # Check if profile is complete, redirect accordingly
+                    completion_check = supabase_service.is_profile_complete(
+                        profile, profile.get("user_type")
+                    )
+                    if completion_check["complete"]:
+                        return redirect(url_for("dashboard"))
+                    else:
+                        flash("Please complete your profile to get started.", "info")
+                        return redirect(url_for("profile"))
+                else:
+                    flash("Profile not found. Please contact support.", "error")
+                    return redirect(url_for("login"))
+            else:
+                flash(
+                    "Failed to update email confirmation status. Please contact support.",
+                    "error",
+                )
+                return redirect(url_for("login"))
+
+        except Exception as update_error:
+            logger.error(
+                f"Failed to update email confirmation status: {str(update_error)}"
+            )
+            flash("Email verification failed. Please contact support.", "error")
+            return redirect(url_for("login"))
+
+    except Exception as e:
+        logger.error(f"Error in email verification: {str(e)}")
+        flash("An error occurred during email verification. Please try again.", "error")
+        return redirect(url_for("login"))
+
+
+@app.route("/auth/confirm-manual")
+def confirm_email_manual():
+    """Manual email confirmation using email parameter instead of unreliable tokens."""
+    try:
+        email = request.args.get("email")
+
+        if not email:
+            flash("Invalid confirmation link. Missing email parameter.", "error")
+            return redirect(url_for("login"))
+
+        # Validate email format
+        import re
+
+        email_pattern = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
+        if not re.match(email_pattern, email):
+            flash("Invalid email format in confirmation link.", "error")
+            return redirect(url_for("login"))
+
+        logger.info(f"Manual email confirmation attempt for: {email}")
+
+        # Check if user exists in our profiles table
+        profile = supabase_service.get_profile_by_email(email)
+        if not profile:
+            flash(
+                "No account found with that email address. Please sign up first.",
+                "error",
+            )
+            return redirect(url_for("signup"))
+
+        # Check if email is already confirmed
+        if profile.get("email_confirmed", False):
+            flash("Your email is already confirmed! Please log in.", "info")
+            return redirect(url_for("login"))
+
+        # Update the profile to mark email as confirmed
+        try:
+            user_id = profile.get("id")
+            profile_update_result = supabase_service.update_profile(
+                user_id, {"email_confirmed": True}
+            )
+
+            if profile_update_result:
+                logger.info(f"Email manually confirmed for user: {user_id} ({email})")
+
+                # Auto-login the user after email confirmation
+                session["user_id"] = user_id
+                session["user_type"] = profile.get("user_type", "student")
+                session["user_name"] = profile.get("name", "User")
+                session["user_email"] = email
+
+                flash("Email confirmed successfully! Welcome to InterSpark!", "success")
+
+                # Check if profile is complete, redirect accordingly
+                completion_check = supabase_service.is_profile_complete(
+                    profile, profile.get("user_type")
+                )
+                if completion_check["complete"]:
+                    return redirect(url_for("dashboard"))
+                else:
+                    flash("Please complete your profile to get started.", "info")
+                    return redirect(url_for("profile"))
+            else:
+                flash(
+                    "Failed to confirm email. Please try again or contact support.",
+                    "error",
+                )
+                return redirect(url_for("login"))
+
+        except Exception as update_error:
+            logger.error(
+                f"Failed to update email confirmation status: {str(update_error)}"
+            )
+            flash(
+                "Email confirmation failed. Please try again or contact support.",
+                "error",
+            )
+            return redirect(url_for("login"))
+
+    except Exception as e:
+        logger.error(f"Error in manual email confirmation: {str(e)}")
+        flash("An error occurred during email confirmation. Please try again.", "error")
+        return redirect(url_for("login"))
+
+
+@app.route("/auth/manual-confirm-page")
+def manual_confirm_page():
+    """Show manual email confirmation page."""
+    email = request.args.get("email")
+
+    if not email:
+        flash("Invalid confirmation request. Missing email parameter.", "error")
+        return redirect(url_for("login"))
+
+    # Validate email format
+    import re
+
+    email_pattern = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
+    if not re.match(email_pattern, email):
+        flash("Invalid email format.", "error")
+        return redirect(url_for("login"))
+
+    return render_template("manual_confirm.html", email=email)
+
+
 @app.route("/auth/resend-confirmation", methods=["POST"])
 def resend_confirmation():
     """Resend email confirmation link."""
@@ -845,16 +1038,57 @@ def resend_confirmation():
             flash("Your email is already confirmed. Please try logging in.", "info")
             return redirect(url_for("login"))
 
-        # Resend confirmation email using Supabase auth
+        # Resend confirmation email with secure token
         try:
-            result = supabase_service.client.auth.resend(
-                {"type": "signup", "email": email}
-            )
-            flash("Confirmation email resent! Please check your email.", "success")
+            user_id = profile.get("id")
+
+            # Create and send verification email with our secure token
+            email_result = supabase_service.send_verification_email(user_id, email)
+
+            if email_result["success"]:
+                verification_link = email_result["verification_link"]
+
+                logger.info(f"Secure verification email resent to: {email}")
+                logger.info(f"Verification link: {verification_link}")
+
+                flash(
+                    "Verification email resent! Please check your email and click the verification link. "
+                    "The link will expire in 24 hours.",
+                    "success",
+                )
+
+                # For development, also show the direct link
+                if os.getenv("FLASK_ENV") == "development":
+                    flash(
+                        f"Development: Direct verification link: "
+                        f'<a href="{verification_link}" target="_blank">Verify Email</a>',
+                        "info",
+                    )
+            else:
+                # Fallback to manual confirmation if token creation fails
+                site_url = os.getenv("SITE_URL", "http://localhost:5001")
+                confirmation_link = f"{site_url}/auth/confirm-manual?email={email}"
+
+                flash(
+                    "Verification system temporarily unavailable. "
+                    f'You can confirm manually here: <a href="{confirmation_link}" target="_blank">Confirm Email</a>',
+                    "warning",
+                )
+                logger.warning(
+                    f"Failed to create verification token for resend: {email}"
+                )
+
         except Exception as e:
-            logger.error(f"Error resending confirmation email: {str(e)}")
+            logger.error(f"Error resending verification email: {str(e)}")
+
+            # Provide fallback manual confirmation link
+            site_url = os.getenv("SITE_URL", "http://localhost:5001")
+            confirmation_link = f"{site_url}/auth/confirm-manual?email={email}"
+
             flash(
-                "Failed to resend confirmation email. Please try again later.", "error"
+                f"Email service temporarily unavailable. You can confirm your email directly using this link: "
+                f'<a href="{confirmation_link}" target="_blank">Confirm Email</a>',
+                "warning",
             )
 
         return redirect(url_for("login"))
