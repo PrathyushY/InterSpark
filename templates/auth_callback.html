@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block title %}Completing sign-in...{% endblock %}
+
+{% block content %}
+<div class="min-h-screen flex items-center justify-center">
+    <div class="bg-white p-6 rounded shadow">
+        <p class="mb-4">Completing sign-in. If your browser doesn't redirect, click continue.</p>
+        <button id="continue-btn" class="px-4 py-2 bg-blue-600 text-white rounded">Continue</button>
+    </div>
+</div>
+
+<script>
+// Supabase returns tokens in the URL fragment (after #). Parse them and POST to server.
+(function(){
+    function parseFragment(hash){
+        if(!hash) return {};
+        return hash.substring(1).split('&').reduce(function(acc, kv){
+            var parts = kv.split('=');
+            acc[decodeURIComponent(parts[0])] = decodeURIComponent(parts[1] || '');
+            return acc;
+        }, {});
+    }
+    var frag = parseFragment(window.location.hash);
+    var access_token = frag['access_token'];
+    var user_type = '{{ user_type }}' || 'student';
+    if(access_token){
+        fetch('/auth/complete', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({access_token: access_token, user_type: user_type})
+        }).then(r=>r.json()).then(function(json){
+            if(json.success && json.redirect){
+                window.location = json.redirect;
+            } else {
+                document.getElementById('continue-btn').innerText = 'Error - retry';
+            }
+        }).catch(function(){
+            document.getElementById('continue-btn').innerText = 'Error - retry';
+        });
+    }
+    document.getElementById('continue-btn').addEventListener('click', function(){
+        window.location.reload();
+    })
+})();
+</script>
+{% endblock %}
