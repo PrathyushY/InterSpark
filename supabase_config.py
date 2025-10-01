@@ -2088,6 +2088,7 @@ class SupabaseService:
     def create_verification_token(self, user_id: str, email: str) -> Dict[str, Any]:
         """
         Create a secure email verification token.
+        Invalidates any existing unused tokens for the same user.
 
         Args:
             user_id: The user's ID
@@ -2100,6 +2101,32 @@ class SupabaseService:
             import secrets
             import string
             from datetime import datetime, timedelta
+
+            # First, invalidate any existing unused tokens for this user
+            try:
+                existing_tokens_response = (
+                    self.service_client.table("email_verification_tokens")
+                    .update({"used_at": datetime.utcnow().isoformat()})
+                    .eq("user_id", user_id)
+                    .is_("used_at", "null")
+                    .execute()
+                )
+
+                invalidated_count = (
+                    len(existing_tokens_response.data)
+                    if existing_tokens_response.data
+                    else 0
+                )
+                if invalidated_count > 0:
+                    logger.info(
+                        f"Invalidated {invalidated_count} existing verification tokens for user {user_id}"
+                    )
+
+            except Exception as e:
+                logger.warning(
+                    f"Error invalidating existing tokens for user {user_id}: {str(e)}"
+                )
+                # Continue with token creation even if invalidation fails
 
             # Generate a secure random token
             alphabet = string.ascii_letters + string.digits
@@ -2123,7 +2150,9 @@ class SupabaseService:
             )
 
             if response.data:
-                logger.info(f"Created verification token for user {user_id}")
+                logger.info(
+                    f"Created verification token for user {user_id} (expires in 24 hours)"
+                )
                 return {"success": True, "token": token, "expires_at": expires_at}
             else:
                 logger.error(f"Failed to create verification token: {response}")
@@ -2164,10 +2193,25 @@ class SupabaseService:
 
             # Check if token has already been used
             if token_data.get("used_at"):
-                return {
-                    "success": False,
-                    "error": "Verification token has already been used",
-                }
+                # Check if it was used for verification or invalidated by a newer token
+                used_at = datetime.fromisoformat(
+                    token_data["used_at"].replace("Z", "+00:00")
+                )
+                expires_at = datetime.fromisoformat(
+                    token_data["expires_at"].replace("Z", "+00:00")
+                )
+
+                # If token was "used" but still within expiry, it was likely invalidated by a newer token
+                if used_at < expires_at.replace(tzinfo=None):
+                    return {
+                        "success": False,
+                        "error": "Verification token has been superseded by a newer one. Please check your email for the latest verification link.",
+                    }
+                else:
+                    return {
+                        "success": False,
+                        "error": "Verification token has already been used",
+                    }
 
             # Check if token has expired
             expires_at = datetime.fromisoformat(
@@ -2218,6 +2262,65 @@ class SupabaseService:
         except Exception as e:
             logger.error(f"Error cleaning up tokens: {str(e)}")
             return 0
+
+    def get_verification_token_stats(self, user_id: str = None) -> Dict[str, Any]:
+        """
+        Get statistics about verification tokens for debugging.
+
+        Args:
+            user_id: Optional user ID to filter by
+
+        Returns:
+            Dictionary with token statistics
+        """
+        try:
+            from datetime import datetime
+
+            query = self.service_client.table("email_verification_tokens").select("*")
+
+            if user_id:
+                query = query.eq("user_id", user_id)
+
+            response = query.execute()
+            tokens = response.data if response.data else []
+
+            now = datetime.utcnow()
+
+            stats = {
+                "total_tokens": len(tokens),
+                "active_tokens": 0,
+                "expired_tokens": 0,
+                "used_tokens": 0,
+                "invalidated_tokens": 0,
+            }
+
+            for token in tokens:
+                expires_at = datetime.fromisoformat(
+                    token["expires_at"].replace("Z", "+00:00")
+                )
+                used_at = token.get("used_at")
+
+                if used_at:
+                    used_at_dt = datetime.fromisoformat(used_at.replace("Z", "+00:00"))
+                    if used_at_dt < expires_at.replace(tzinfo=None):
+                        stats["invalidated_tokens"] += 1
+                    else:
+                        stats["used_tokens"] += 1
+                elif now > expires_at.replace(tzinfo=None):
+                    stats["expired_tokens"] += 1
+                else:
+                    stats["active_tokens"] += 1
+
+            if user_id:
+                logger.info(f"Token stats for user {user_id}: {stats}")
+            else:
+                logger.info(f"Global token stats: {stats}")
+
+            return {"success": True, "stats": stats}
+
+        except Exception as e:
+            logger.error(f"Error getting token stats: {str(e)}")
+            return {"success": False, "error": str(e)}
 
     def send_verification_email(self, user_id: str, email: str) -> Dict[str, Any]:
         """

@@ -683,14 +683,6 @@ def signup():
                             f"User {email} registered with secure verification token - email could not be sent"
                         )
 
-                        # Only show development link when email FAILED to send
-                        if os.getenv("FLASK_ENV") == "development":
-                            flash(
-                                f"Development: Direct verification link: "
-                                f'<a href="{verification_link}" target="_blank">Verify Email</a>',
-                                "info",
-                            )
-
                     logger.info(f"Verification link: {verification_link}")
                 else:
                     # Fallback to manual confirmation if token creation fails
@@ -1218,14 +1210,6 @@ def resend_confirmation():
                     "The link will expire in 24 hours.",
                     "success",
                 )
-
-                # For development, also show the direct link
-                if os.getenv("FLASK_ENV") == "development":
-                    flash(
-                        f"Development: Direct verification link: "
-                        f'<a href="{verification_link}" target="_blank">Verify Email</a>',
-                        "info",
-                    )
             else:
                 # Fallback to manual confirmation if token creation fails
                 site_url = os.getenv("SITE_URL", "http://localhost:5001")
