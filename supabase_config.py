@@ -171,18 +171,16 @@ class SupabaseService:
             Dictionary containing user data or error information
         """
         try:
-            # Create user in auth.users table with email confirmation required
-            response = self.client.auth.sign_up(
+            # Create user in auth.users table without triggering automatic emails
+            # We'll handle email verification with our own custom system
+            response = self.service_client.auth.admin.create_user(
                 {
                     "email": email,
                     "password": password,
-                    "options": {
-                        "data": {
-                            "name": user_data.get("name", ""),
-                            "user_type": user_data.get("user_type", "student"),
-                        },
-                        # This will send a confirmation email
-                        "email_redirect_to": f"{os.getenv('SITE_URL', 'http://localhost:5000')}/auth/confirm",
+                    "email_confirm": False,  # We'll verify with our custom system
+                    "user_metadata": {
+                        "name": user_data.get("name", ""),
+                        "user_type": user_data.get("user_type", "student"),
                     },
                 }
             )
@@ -275,122 +273,44 @@ class SupabaseService:
 
         except Exception as e:
             logger.error(f"Error creating user: {str(e)}")
-            return {"success": False, "error": str(e)}
+            error_message = str(e).lower()
 
-    def create_user_without_email_verification(
-        self, email: str, password: str, user_data: Dict[str, Any]
-    ) -> Dict[str, Any]:
-        """
-        Create a new user account without email verification requirement.
-
-        Args:
-            email: User's email address
-            password: User's password
-            user_data: Additional profile data (name, user_type, etc.)
-
-        Returns:
-            Dictionary containing user data or error information
-        """
-        try:
-            # Create user in auth.users table using service client to bypass email confirmation
-            response = self.service_client.auth.admin.create_user(
-                {
-                    "email": email,
-                    "password": password,
-                    "email_confirm": True,  # Automatically confirm email
-                    "user_metadata": {
-                        "name": user_data.get("name", ""),
-                        "user_type": user_data.get("user_type", "student"),
-                    },
-                }
-            )
-
-            if response.user:
-                logger.info(
-                    f"User created without email verification: {response.user.id}"
-                )
-
-                # Create profile data
-                profile_data = {
-                    "id": response.user.id,
-                    "email": response.user.email,
-                    "name": user_data.get("name", ""),
-                    "user_type": user_data.get("user_type", "student"),
-                    "email_confirmed": True,  # Already confirmed
-                }
-
-                # Add user type-specific fields
-                if user_data.get("user_type") == "student":
-                    profile_data.update(
-                        {
-                            "school": user_data.get("school", ""),
-                            "grade": user_data.get("grade", ""),
-                            "bio": user_data.get("bio", ""),
-                        }
-                    )
-                elif user_data.get("user_type") == "organization":
-                    profile_data.update(
-                        {
-                            "description": user_data.get("description", ""),
-                            "organization_name": user_data.get(
-                                "organization_name", user_data.get("name", "")
-                            ),
-                        }
-                    )
-
-                try:
-                    # Create the profile
-                    profile_response = (
-                        self.service_client.table("profiles")
-                        .insert(profile_data)
-                        .execute()
-                    )
-                    if profile_response.data:
-                        logger.info(f"Profile created successfully: {response.user.id}")
-                    else:
-                        logger.warning(
-                            f"Profile creation may have failed, but user was created: {response.user.id}"
-                        )
-                except Exception as profile_error:
-                    logger.info(
-                        f"Profile creation via insert failed, trying update: {str(profile_error)}"
-                    )
-                    try:
-                        update_data = {
-                            k: v for k, v in profile_data.items() if k != "id"
-                        }
-                        update_response = (
-                            self.service_client.table("profiles")
-                            .update(update_data)
-                            .eq("id", response.user.id)
-                            .execute()
-                        )
-                        if update_response.data:
-                            logger.info(
-                                f"Profile updated with complete data: {response.user.id}"
-                            )
-                    except Exception as update_error:
-                        logger.warning(
-                            f"Could not update profile with complete data: {str(update_error)}"
-                        )
-
+            # Provide more specific error messages based on the error type
+            if "email" in error_message and (
+                "not configured" in error_message or "smtp" in error_message
+            ):
                 return {
-                    "success": True,
-                    "user": {
-                        "id": response.user.id,
-                        "email": response.user.email,
-                        "created_at": response.user.created_at,
-                        "email_confirmed": True,  # Always true for this method
-                    },
-                    "message": "Registration successful! You are now logged in.",
+                    "success": False,
+                    "error": "Email service not configured. Please contact support or try again later.",
+                    "error_type": "email_config",
+                }
+            elif "email" in error_message and "invalid" in error_message:
+                return {
+                    "success": False,
+                    "error": "Invalid email address format. Please check and try again.",
+                    "error_type": "invalid_email",
+                }
+            elif "rate limit" in error_message or "too many" in error_message:
+                return {
+                    "success": False,
+                    "error": "Too many signup attempts. Please wait a few minutes and try again.",
+                    "error_type": "rate_limit",
+                }
+            elif (
+                "already registered" in error_message
+                or "user already exists" in error_message
+            ):
+                return {
+                    "success": False,
+                    "error": "An account with this email already exists. Please try logging in instead.",
+                    "error_type": "user_exists",
                 }
             else:
-                logger.error("Failed to create user - no user returned")
-                return {"success": False, "error": "Failed to create user"}
-
-        except Exception as e:
-            logger.error(f"Error creating user without email verification: {str(e)}")
-            return {"success": False, "error": str(e)}
+                return {
+                    "success": False,
+                    "error": f"Registration failed: {str(e)}",
+                    "error_type": "general",
+                }
 
     def sign_in_user(self, email: str, password: str) -> Dict[str, Any]:
         """
@@ -649,19 +569,12 @@ class SupabaseService:
             Success/error response
         """
         try:
-            print(f"DEBUG - Supabase update_profile called:")
-            print(f"  User ID: {user_id}")
-            print(f"  Profile data to update: {profile_data}")
-
             response = (
                 self.service_client.table("profiles")
                 .update(profile_data)
                 .eq("id", user_id)
                 .execute()
             )
-
-            print(f"DEBUG - Supabase response: {response}")
-            print(f"DEBUG - Response data: {response.data}")
 
             if response.data:
                 logger.info(f"Profile updated successfully for user: {user_id}")
@@ -671,7 +584,6 @@ class SupabaseService:
 
         except Exception as e:
             logger.error(f"Error updating profile: {str(e)}")
-            print(f"DEBUG - Exception in update_profile: {str(e)}")
             return {"success": False, "error": str(e)}
 
     def search_students(
@@ -2140,6 +2052,217 @@ class SupabaseService:
 
         except Exception as e:
             logger.error(f"Error deleting user account: {str(e)}")
+            return {"success": False, "error": str(e)}
+
+    def create_verification_token(self, user_id: str, email: str) -> Dict[str, Any]:
+        """
+        Create a secure email verification token.
+
+        Args:
+            user_id: The user's ID
+            email: The user's email address
+
+        Returns:
+            Dict containing success status and token or error
+        """
+        try:
+            import secrets
+            import string
+            from datetime import datetime, timedelta
+
+            # Generate a secure random token
+            alphabet = string.ascii_letters + string.digits
+            token = "".join(secrets.choice(alphabet) for _ in range(32))
+
+            # Set expiration time (24 hours from now)
+            expires_at = datetime.utcnow() + timedelta(hours=24)
+
+            # Store token in database
+            response = (
+                self.service_client.table("email_verification_tokens")
+                .insert(
+                    {
+                        "user_id": user_id,
+                        "email": email,
+                        "token": token,
+                        "expires_at": expires_at.isoformat(),
+                    }
+                )
+                .execute()
+            )
+
+            if response.data:
+                logger.info(f"Created verification token for user {user_id}")
+                return {"success": True, "token": token, "expires_at": expires_at}
+            else:
+                logger.error(f"Failed to create verification token: {response}")
+                return {
+                    "success": False,
+                    "error": "Failed to create verification token",
+                }
+
+        except Exception as e:
+            logger.error(f"Error creating verification token: {str(e)}")
+            return {"success": False, "error": str(e)}
+
+    def verify_token(self, token: str) -> Dict[str, Any]:
+        """
+        Verify an email verification token.
+
+        Args:
+            token: The verification token to check
+
+        Returns:
+            Dict containing success status and user info or error
+        """
+        try:
+            from datetime import datetime
+
+            # Look up the token
+            response = (
+                self.service_client.table("email_verification_tokens")
+                .select("id, user_id, email, expires_at, used_at")
+                .eq("token", token)
+                .execute()
+            )
+
+            if not response.data:
+                return {"success": False, "error": "Invalid verification token"}
+
+            token_data = response.data[0]
+
+            # Check if token has already been used
+            if token_data.get("used_at"):
+                return {
+                    "success": False,
+                    "error": "Verification token has already been used",
+                }
+
+            # Check if token has expired
+            expires_at = datetime.fromisoformat(
+                token_data["expires_at"].replace("Z", "+00:00")
+            )
+            if datetime.utcnow() > expires_at.replace(tzinfo=None):
+                return {"success": False, "error": "Verification token has expired"}
+
+            # Mark token as used
+            self.service_client.table("email_verification_tokens").update(
+                {"used_at": datetime.utcnow().isoformat()}
+            ).eq("id", token_data["id"]).execute()
+
+            logger.info(f"Verified token for user {token_data['user_id']}")
+            return {
+                "success": True,
+                "user_id": token_data["user_id"],
+                "email": token_data["email"],
+            }
+
+        except Exception as e:
+            logger.error(f"Error verifying token: {str(e)}")
+            return {"success": False, "error": str(e)}
+
+    def cleanup_expired_tokens(self) -> int:
+        """
+        Clean up expired verification tokens.
+
+        Returns:
+            Number of tokens deleted
+        """
+        try:
+            from datetime import datetime
+
+            # Delete expired tokens that haven't been used
+            response = (
+                self.service_client.table("email_verification_tokens")
+                .delete()
+                .lt("expires_at", datetime.utcnow().isoformat())
+                .is_("used_at", "null")
+                .execute()
+            )
+
+            deleted_count = len(response.data) if response.data else 0
+            logger.info(f"Cleaned up {deleted_count} expired verification tokens")
+            return deleted_count
+
+        except Exception as e:
+            logger.error(f"Error cleaning up tokens: {str(e)}")
+            return 0
+
+    def send_verification_email(self, user_id: str, email: str) -> Dict[str, Any]:
+        """
+        Create a verification token and send verification email.
+
+        Args:
+            user_id: The user's ID
+            email: The user's email address
+
+        Returns:
+            Dict containing success status and info or error
+        """
+        try:
+            # Create verification token
+            token_result = self.create_verification_token(user_id, email)
+
+            if not token_result["success"]:
+                return token_result
+
+            token = token_result["token"]
+
+            import os
+
+            site_url = os.getenv("SITE_URL", "http://localhost:5001")
+            verification_link = f"{site_url}/auth/verify?token={token}"
+
+            # Try to send email with custom email service
+            try:
+                from email_service import email_service
+
+                email_result = email_service.send_verification_email(email, token)
+
+                if email_result["success"]:
+                    logger.info(
+                        f"Custom verification email sent successfully to {email}"
+                    )
+                    return {
+                        "success": True,
+                        "token": token,
+                        "verification_link": verification_link,
+                        "expires_at": token_result["expires_at"],
+                        "email_sent": True,
+                        "method": "custom_email_service",
+                    }
+                else:
+                    # Email sending failed - return token but indicate email wasn't sent
+                    logger.warning(
+                        f"Email sending failed for {email}: {email_result.get('error', 'Unknown error')}"
+                    )
+                    return {
+                        "success": True,  # Token created successfully
+                        "token": token,
+                        "verification_link": verification_link,
+                        "expires_at": token_result["expires_at"],
+                        "email_sent": False,
+                        "method": "token_only",
+                        "warning": f"Email sending failed: {email_result.get('error', 'Unknown error')}",
+                    }
+
+            except ImportError:
+                # Email service not available, return token info only
+                logger.info(
+                    f"Email service not configured, returning verification link for {email}"
+                )
+                return {
+                    "success": True,
+                    "token": token,
+                    "verification_link": verification_link,
+                    "expires_at": token_result["expires_at"],
+                    "email_sent": False,
+                    "method": "token_only",
+                    "info": "Email service not configured",
+                }
+
+        except Exception as e:
+            logger.error(f"Error sending verification email: {str(e)}")
             return {"success": False, "error": str(e)}
 
 
