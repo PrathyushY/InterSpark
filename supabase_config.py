@@ -452,14 +452,25 @@ class SupabaseService:
             # Temporarily set Authorization header on client
             # The Python supabase client doesn't expose a simple request header override,
             # so use the REST endpoint directly via service_client.
-            headers = {"Authorization": f"Bearer {access_token}", "apikey": self.public_key}
+            headers = {
+                "Authorization": f"Bearer {access_token}",
+                "apikey": self.public_key,
+            }
             url = f"{self.url}/auth/v1/user"
             import requests
 
             resp = requests.get(url, headers=headers, timeout=10)
             if resp.status_code == 200:
-                return resp.json()
-            logger.warning(f"Failed to fetch user by token: {resp.status_code} {resp.text}")
+                user_data = resp.json()
+                # Log user metadata for debugging Google OAuth profile data
+                logger.info(
+                    f"Retrieved user data for OAuth user: {user_data.get('id')}"
+                )
+                logger.debug(f"User metadata: {user_data.get('user_metadata', {})}")
+                return user_data
+            logger.warning(
+                f"Failed to fetch user by token: {resp.status_code} {resp.text}"
+            )
             return None
         except Exception as e:
             logger.error(f"Error in get_user_by_token: {str(e)}")
@@ -467,7 +478,12 @@ class SupabaseService:
 
     # Profile Management Methods
     def ensure_profile_exists(
-        self, user_id: str, email: str, name: str = "", user_type: str = "student"
+        self,
+        user_id: str,
+        email: str,
+        name: str = "",
+        user_type: str = "student",
+        profile_image: str = None,
     ) -> Dict[str, Any]:
         """
         Ensure a profile exists for a user, create if missing.
@@ -477,6 +493,7 @@ class SupabaseService:
             email: The user's email
             name: The user's name
             user_type: The user type
+            profile_image: The user's profile image URL (optional)
 
         Returns:
             The profile data or error information
@@ -485,6 +502,16 @@ class SupabaseService:
             # First check if profile exists
             existing_profile = self.get_profile(user_id)
             if existing_profile:
+                # If profile exists but doesn't have profile image and we have one, update it
+                if profile_image and not existing_profile.get("profile_image"):
+                    update_result = self.update_profile(
+                        user_id, {"profile_image": profile_image}
+                    )
+                    if update_result["success"]:
+                        existing_profile["profile_image"] = profile_image
+                        logger.info(
+                            f"Updated existing profile with Google profile picture for user: {user_id}"
+                        )
                 return {"success": True, "profile": existing_profile}
 
             # Create missing profile
@@ -494,6 +521,10 @@ class SupabaseService:
                 "name": name or "User",
                 "user_type": user_type,
             }
+
+            # Add profile image if provided
+            if profile_image:
+                profile_data["profile_image"] = profile_image
 
             profile_response = (
                 self.service_client.table("profiles").insert(profile_data).execute()
