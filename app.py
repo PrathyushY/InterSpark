@@ -394,6 +394,130 @@ def login():
     return render_template("login.html")
 
 
+@app.route('/auth/google')
+def auth_google():
+    """Redirect to Supabase OAuth authorize endpoint for Google.
+
+    Accepts optional query param user_type (student|organization) so we can
+    remember which account type the user wants to create.
+    """
+    user_type = request.args.get('user_type', 'student')
+    supabase_url = os.getenv('SUPABASE_URL')
+    site_url = os.getenv('SITE_URL', 'http://localhost:5000')
+    # Supabase authorize endpoint - use redirect_to to our /auth/callback
+    redirect_to = f"{site_url}/auth/callback?user_type={user_type}"
+    authorize_url = f"{supabase_url}/auth/v1/authorize?provider=google&redirect_to={redirect_to}"
+    return redirect(authorize_url)
+
+
+@app.route('/auth/callback')
+def auth_callback():
+    """Simple page that receives the OAuth fragment from Supabase and posts it to the server.
+
+    Supabase returns tokens in the URL fragment (after #). The page will parse them
+    client-side using a small script and POST to /auth/complete where the server
+    will verify the token and create/ensure a profile with the selected user_type.
+    """
+    # user_type is passed in query string from our auth_google redirect
+    user_type = request.args.get('user_type', 'student')
+    return render_template('auth_callback.html', user_type=user_type)
+
+
+@app.route('/auth/complete', methods=['POST'])
+def auth_complete():
+    """Finalize OAuth sign-in: accept access_token from client, verify it with Supabase,
+    ensure a profile exists, set Flask session, and redirect accordingly.
+    """
+    data = request.get_json() or {}
+    access_token = data.get('access_token')
+    user_type = data.get('user_type', 'student')
+
+    if not access_token:
+        return jsonify({'success': False, 'error': 'Missing access_token'}), 400
+
+    try:
+        # Use supabase service helper to get user info from token
+        user_info = supabase_service.get_user_by_token(access_token)
+        if not user_info or not user_info.get('id'):
+            return jsonify({'success': False, 'error': 'Could not validate token'}), 400
+
+        user_id = user_info['id']
+        email = user_info.get('email')
+        name = user_info.get('user_metadata', {}).get('name') or user_info.get('email', '').split('@')[0]
+
+        # Ensure profile exists with the requested user_type
+        supabase_service.ensure_profile_exists(user_id, email, name, user_type)
+
+        # Set Flask session
+        session['user_id'] = user_id
+        session['user_type'] = user_type
+        session['user_name'] = name
+        session['user_email'] = email
+
+        # Check profile completion and redirect accordingly
+        profile = supabase_service.get_profile(user_id)
+        completion = supabase_service.is_profile_complete(profile, user_type)
+        if not completion['complete']:
+            # Send the client to the signup completion page where they can fill
+            # in student/organization specific fields. The client will navigate
+            # to this URL after receiving the JSON response.
+            return jsonify({'success': True, 'redirect': url_for('signup_complete', user_type=user_type)}), 200
+
+        return jsonify({'success': True, 'redirect': url_for('dashboard')}), 200
+
+    except Exception as e:
+        logger.error(f"Error completing OAuth sign-in: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/signup/complete', methods=['GET', 'POST'])
+def signup_complete():
+    """Page to complete profile after OAuth sign-up.
+
+    Renders a student or organization specific form prefilled with info from
+    the authenticated user session (set during OAuth completion).
+    """
+    if 'user_id' not in session:
+        flash('Please sign in first using Google or email/password.', 'warning')
+        return redirect(url_for('login'))
+
+    user_id = session['user_id']
+    user_type = request.args.get('user_type', session.get('user_type', 'student'))
+
+    if request.method == 'POST':
+        # Collect profile updates depending on user_type
+        profile_updates = {}
+        profile_updates['name'] = request.form.get('name')
+        # Email should already be set from OAuth, but allow override
+        profile_updates['email'] = request.form.get('email')
+
+        if user_type == 'student':
+            profile_updates['school'] = request.form.get('school')
+            profile_updates['grade'] = request.form.get('grade')
+            profile_updates['bio'] = request.form.get('bio')
+        else:
+            profile_updates['description'] = request.form.get('description')
+            profile_updates['organization_name'] = request.form.get('organization_name')
+
+        profile_updates['user_type'] = user_type
+
+        try:
+            res = supabase_service.update_profile(user_id, profile_updates)
+            flash('Profile updated successfully.', 'success')
+            return redirect(url_for('dashboard'))
+        except Exception as e:
+            flash(f'Error updating profile: {e}', 'error')
+
+    # GET: render form prefilled from profile
+    profile = supabase_service.get_profile(user_id) or {}
+    # Prefill from session if available
+    prefill = {
+        'name': session.get('user_name') or profile.get('name', ''),
+        'email': session.get('user_email') or profile.get('email', ''),
+    }
+    return render_template('signup_complete.html', user_type=user_type, profile=profile, prefill=prefill)
+
+
 @app.route("/signup", methods=["GET", "POST"])
 def signup():
     if request.method == "POST":

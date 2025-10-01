@@ -101,10 +101,33 @@
                         Create Account
                     </button>
                 </div>
+                <div class="mt-4">
+                    <p class="text-center text-sm text-gray-600">Or sign up with</p>
+                    <div class="mt-2 flex gap-2">
+                        <button id="google-signup-student" type="button"
+                                class="w-1/2 inline-flex justify-center items-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white hover:bg-gray-50">
+                            <img src="https://www.svgrepo.com/show/355037/google.svg" alt="Google"
+                                 class="h-5 w-5 mr-2"> Student
+                        </button>
+                        <button id="google-signup-org" type="button"
+                                class="w-1/2 inline-flex justify-center items-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white hover:bg-gray-50">
+                            <img src="https://www.svgrepo.com/show/355037/google.svg" alt="Google"
+                                 class="h-5 w-5 mr-2"> Organization
+                        </button>
+                    </div>
+                </div>
             </form>
         </div>
     </div>
 </div>
 
 <script src="{{ url_for('static', filename='js/signup.js') }}"></script>
+<script>
+    document.getElementById('google-signup-student').addEventListener('click', function(){
+        window.location = '/auth/google?user_type=student';
+    });
+    document.getElementById('google-signup-org').addEventListener('click', function(){
+        window.location = '/auth/google?user_type=organization';
+    });
+</script>
 {% endblock %}

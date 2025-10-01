@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block title %}Complete your profile{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto py-8">
+    <div class="bg-white shadow rounded-lg p-6">
+        <h2 class="text-xl font-semibold mb-4">Complete your {{ user_type }} profile</h2>
+        <form method="POST">
+            <div class="grid grid-cols-1 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Full name</label>
+                    <input name="name" value="{{ prefill.name }}" class="mt-1 block w-full border rounded px-3 py-2" required />
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Email</label>
+                    <input name="email" value="{{ prefill.email }}" class="mt-1 block w-full border rounded px-3 py-2" required />
+                </div>
+                {% if user_type == 'student' %}
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">School</label>
+                    <input name="school" value="{{ profile.school or '' }}" class="mt-1 block w-full border rounded px-3 py-2" />
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Grade</label>
+                    <input name="grade" value="{{ profile.grade or '' }}" class="mt-1 block w-full border rounded px-3 py-2" />
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Bio</label>
+                    <textarea name="bio" class="mt-1 block w-full border rounded px-3 py-2">{{ profile.bio or '' }}</textarea>
+                </div>
+                {% else %}
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Organization name</label>
+                    <input name="organization_name" value="{{ profile.organization_name or prefill.name }}" class="mt-1 block w-full border rounded px-3 py-2" />
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Description</label>
+                    <textarea name="description" class="mt-1 block w-full border rounded px-3 py-2">{{ profile.description or '' }}</textarea>
+                </div>
+                {% endif %}
+                <div>
+                    <button type="submit" class="mt-4 px-4 py-2 bg-blue-600 text-white rounded">Save</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

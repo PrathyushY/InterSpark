@@ -522,6 +522,29 @@ class SupabaseService:
             logger.error(f"Error getting current user: {str(e)}")
             return None
 
+    def get_user_by_token(self, access_token: str) -> Optional[Dict[str, Any]]:
+        """Retrieve user info using a Supabase access token.
+
+        This method uses the public client but sets the Authorization header to the
+        provided access_token so Supabase returns the user associated with that token.
+        """
+        try:
+            # Temporarily set Authorization header on client
+            # The Python supabase client doesn't expose a simple request header override,
+            # so use the REST endpoint directly via service_client.
+            headers = {"Authorization": f"Bearer {access_token}", "apikey": self.public_key}
+            url = f"{self.url}/auth/v1/user"
+            import requests
+
+            resp = requests.get(url, headers=headers, timeout=10)
+            if resp.status_code == 200:
+                return resp.json()
+            logger.warning(f"Failed to fetch user by token: {resp.status_code} {resp.text}")
+            return None
+        except Exception as e:
+            logger.error(f"Error in get_user_by_token: {str(e)}")
+            return None
+
     # Profile Management Methods
     def ensure_profile_exists(
         self, user_id: str, email: str, name: str = "", user_type: str = "student"

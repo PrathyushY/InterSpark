@@ -47,7 +47,24 @@
                         </button>
                     </div>
                 </form>
+                <div class="mt-4">
+                    <p class="text-center text-sm text-gray-600">Or sign in with</p>
+                    <div class="mt-2 flex gap-2">
+                        <button id="google-signin" type="button"
+                                class="w-full inline-flex justify-center items-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white hover:bg-gray-50">
+                            <img src="https://www.svgrepo.com/show/355037/google.svg" alt="Google"
+                                 class="h-5 w-5 mr-2"> Sign in with Google
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
+    <script>
+        document.getElementById('google-signin').addEventListener('click', function(){
+            // Default to student sign-in; if you want to allow selecting org vs student here,
+            // add a small selector and pass ?user_type=organization when needed.
+            window.location = '/auth/google?user_type=student';
+        })
+    </script>
 {% endblock %}
