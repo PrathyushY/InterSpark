@@ -320,72 +320,22 @@
         updateHiddenInput();
     }
 
-    async function addSkillWithCreation(skillName) {
+    function addSkillWithCreation(skillName) {
         if (!skillName || currentSkills.includes(skillName)) return;
 
-        // If skill is in allowed skills, just add it
+        // Only allow skills that are in the allowed skills list
         if (allowedSkills.includes(skillName)) {
             addSkill(skillName);
             return;
         }
 
-        // Try to create new skill
-        try {
-            const response = await fetch('/add_skill', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ skill: skillName })
-            });
-
-            const result = await response.json();
-
-            if (result.success) {
-                // Add to local allowed skills list
-                const formattedSkill = result.skill.name;
-                if (!allowedSkills.includes(formattedSkill)) {
-                    allowedSkills.push(formattedSkill);
-                    allowedSkills.sort();
-                }
-
-                // Add the skill
-                addSkill(formattedSkill);
-
-                // Show success message
-                const input = document.getElementById('skills-bubble-input');
-                if (input) {
-                    input.placeholder = "Skill added successfully!";
-                    setTimeout(() => {
-                        input.placeholder = "Type a skill and press Enter...";
-                    }, 2000);
-                }
-
-            } else {
-                // Handle errors
-                if (result.error === "Skill already exists") {
-                    // If skill exists, use the existing one
-                    const existingSkill = result.existing_skill || skillName;
-                    if (!allowedSkills.includes(existingSkill)) {
-                        allowedSkills.push(existingSkill);
-                        allowedSkills.sort();
-                    }
-                    addSkill(existingSkill);
-
-                    const input = document.getElementById('skills-bubble-input');
-                    if (input) {
-                        input.placeholder = "Used existing skill";
-                        setTimeout(() => {
-                            input.placeholder = "Type a skill and press Enter...";
-                        }, 2000);
-                    }
-                } else {
-                    alert('Error adding skill: ' + result.error);
-                }
-            }
-        } catch (error) {
-            console.error('Error adding skill:', error);
-            alert('Error adding skill. Please try again.');
+        // Show error message for skills not in the allowed list
+        const input = document.getElementById('skills-bubble-input');
+        if (input) {
+            input.placeholder = "Skill not found. Please select from existing skills.";
+            setTimeout(() => {
+                input.placeholder = "Start typing to see available skills...";
+            }, 3000);
         }
     }
 
@@ -445,18 +395,14 @@
             autocompleteList.appendChild(item);
         });
 
-        // Add "Create new skill" option if no exact match exists
-        const exactMatch = allowedSkills.some(skill => skill.toLowerCase() === queryLower);
-        if (!exactMatch && query.length > 0) {
-            const createItem = document.createElement('div');
-            createItem.className = 'px-4 py-2 cursor-pointer hover:bg-green-50 text-sm text-green-700 border-t border-gray-200 font-medium';
-            createItem.innerHTML = `<i class="fas fa-plus mr-2"></i>Create "${query}"`;
-            createItem.addEventListener('click', () => {
-                addSkillWithCreation(query);
-                e.target.value = '';
-                hideAutocomplete();
-            });
-            autocompleteList.appendChild(createItem);
+        // Skills can only be selected from existing options - no new skill creation allowed
+
+        // If no matches but user has typed something, show "not found" message
+        if (matches.length === 0 && query.length > 0) {
+            const notFoundItem = document.createElement('div');
+            notFoundItem.className = 'px-4 py-2 text-sm text-gray-500 italic';
+            notFoundItem.textContent = `"${query}" - Skill not found. Please select from existing skills.`;
+            autocompleteList.appendChild(notFoundItem);
         }
 
         if (autocompleteList.children.length > 0) {
@@ -499,11 +445,11 @@
     function deleteAccount() {
         const confirmBtn = document.getElementById('confirm-delete-btn');
         const cancelBtn = document.getElementById('cancel-delete-btn');
-        
+
         // Disable buttons to prevent double-clicks
         if (confirmBtn) confirmBtn.disabled = true;
         if (cancelBtn) cancelBtn.disabled = true;
-        
+
         // Show loading state
         if (confirmBtn) {
             confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Deleting...';
@@ -515,39 +461,39 @@
                 'Content-Type': 'application/json',
             }
         })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                // Show success message briefly before redirect
-                showAlert('Account deleted successfully. Redirecting...', 'success');
-                // Redirect to home page after a short delay
-                setTimeout(() => {
-                    window.location.href = '/';
-                }, 2000);
-            } else {
-                showAlert(data.error || 'Failed to delete account', 'error');
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Show success message briefly before redirect
+                    showAlert('Account deleted successfully. Redirecting...', 'success');
+                    // Redirect to home page after a short delay
+                    setTimeout(() => {
+                        window.location.href = '/';
+                    }, 2000);
+                } else {
+                    showAlert(data.error || 'Failed to delete account', 'error');
+                    // Re-enable buttons
+                    if (confirmBtn) {
+                        confirmBtn.disabled = false;
+                        confirmBtn.innerHTML = 'Delete Account';
+                    }
+                    if (cancelBtn) cancelBtn.disabled = false;
+                }
+            })
+            .catch(error => {
+                console.error('Delete account error:', error);
+                showAlert('Error deleting account. Please try again.', 'error');
                 // Re-enable buttons
                 if (confirmBtn) {
                     confirmBtn.disabled = false;
                     confirmBtn.innerHTML = 'Delete Account';
                 }
                 if (cancelBtn) cancelBtn.disabled = false;
-            }
-        })
-        .catch(error => {
-            console.error('Delete account error:', error);
-            showAlert('Error deleting account. Please try again.', 'error');
-            // Re-enable buttons
-            if (confirmBtn) {
-                confirmBtn.disabled = false;
-                confirmBtn.innerHTML = 'Delete Account';
-            }
-            if (cancelBtn) cancelBtn.disabled = false;
-        });
+            });
     }
 
     // Event listeners for delete account functionality
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', function () {
         const deleteBtn = document.getElementById('delete-account-btn');
         const cancelDeleteBtn = document.getElementById('cancel-delete-btn');
         const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
@@ -567,7 +513,7 @@
 
         // Close modal when clicking outside
         if (modal) {
-            modal.addEventListener('click', function(e) {
+            modal.addEventListener('click', function (e) {
                 if (e.target === modal) {
                     hideDeleteAccountModal();
                 }
@@ -575,7 +521,7 @@
         }
 
         // Close modal with Escape key
-        document.addEventListener('keydown', function(e) {
+        document.addEventListener('keydown', function (e) {
             if (e.key === 'Escape' && modal && !modal.classList.contains('hidden')) {
                 hideDeleteAccountModal();
             }

@@ -191,7 +191,7 @@
                         <div class="mt-1">
                             <div id="skills-needed-bubble-container" class="flex flex-wrap gap-2 mb-2"></div>
                             <input type="text" id="skills-needed-bubble-input" name="skills-needed-bubble-input"
-                                autocomplete="off" placeholder="Type a skill and press Enter..."
+                                autocomplete="off" placeholder="Start typing to see available skills..."
                                 class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">
                             <input type="hidden" name="skills_needed" id="skills-needed-hidden-input"
                                 value="{% if opportunity and opportunity.get('skills_needed') %}{{ opportunity.skills_needed|tojson }}{% else %}[]{% endif %}">
@@ -199,9 +199,8 @@
                                 class="absolute z-10 bg-white border border-gray-300 rounded-md mt-1 w-full"
                                 style="display:none;"></div>
                         </div>
-                        <p class="mt-2 text-sm text-gray-500">Add required skills as bubbles. Start typing for
-                            suggestions, or add new skills by typing them and pressing Enter. This helps students find
-                            relevant opportunities.</p>
+                        <p class="mt-2 text-sm text-gray-500">Add required skills as bubbles. Start typing to search
+                            for existing skills from our database. This helps students find relevant opportunities.</p>
                     </div>
                 </div>
             </div>
