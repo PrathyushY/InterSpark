@@ -218,46 +218,53 @@
                 <i class="fas fa-chevron-left"></i>
             </a>
             {% else %}
-            <span class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-gray-100 text-sm font-medium text-gray-400 cursor-not-allowed">
+            <span
+                class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-gray-100 text-sm font-medium text-gray-400 cursor-not-allowed">
                 <i class="fas fa-chevron-left"></i>
             </span>
             {% endif %}
-            
+
             <!-- Page Numbers -->
             {% for page_num in range(1, total_pages + 1) %}
-                {% if page_num == current_page %}
-                <span class="relative inline-flex items-center px-4 py-2 border border-blue-300 bg-blue-50 text-sm font-medium text-blue-600">
-                    {{ page_num }}
-                </span>
-                {% elif page_num <= 3 or page_num > total_pages - 3 or (page_num >= current_page - 1 and page_num <= current_page + 1) %}
-                <a href="{{ url_for('talent_search', search=search_query, skills=selected_skills|tojson|safe, school=selected_school, grade=selected_grade, location=selected_location, page=page_num) }}"
+            {% if page_num == current_page %}
+            <span
+                class="relative inline-flex items-center px-4 py-2 border border-blue-300 bg-blue-50 text-sm font-medium text-blue-600">
+                {{ page_num }}
+            </span>
+            {% elif page_num <= 3 or page_num> total_pages - 3 or (page_num >= current_page - 1 and page_num <=
+                    current_page + 1) %} <a
+                    href="{{ url_for('talent_search', search=search_query, skills=selected_skills|tojson|safe, school=selected_school, grade=selected_grade, location=selected_location, page=page_num) }}"
                     class="relative inline-flex items-center px-4 py-2 border border-blue-300 bg-white text-sm font-medium text-blue-700 hover:bg-blue-50">
                     {{ page_num }}
-                </a>
-                {% elif page_num == 4 and current_page > 5 %}
-                <span class="relative inline-flex items-center px-4 py-2 border border-blue-300 bg-white text-sm font-medium text-gray-500">...</span>
-                {% elif page_num == total_pages - 3 and current_page < total_pages - 4 %}
-                <span class="relative inline-flex items-center px-4 py-2 border border-blue-300 bg-white text-sm font-medium text-gray-500">...</span>
-                {% endif %}
-            {% endfor %}
-            
-            <!-- Next Page -->
-            {% if current_page < total_pages %}
-            <a href="{{ url_for('talent_search', search=search_query, skills=selected_skills|tojson|safe, school=selected_school, grade=selected_grade, location=selected_location, page=current_page+1) }}"
-                class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-blue-300 bg-white text-sm font-medium text-blue-500 hover:bg-blue-50">
-                <i class="fas fa-chevron-right"></i>
-            </a>
-            {% else %}
-            <span class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-gray-100 text-sm font-medium text-gray-400 cursor-not-allowed">
-                <i class="fas fa-chevron-right"></i>
-            </span>
-            {% endif %}
+                    </a>
+                    {% elif page_num == 4 and current_page > 5 %}
+                    <span
+                        class="relative inline-flex items-center px-4 py-2 border border-blue-300 bg-white text-sm font-medium text-gray-500">...</span>
+                    {% elif page_num == total_pages - 3 and current_page < total_pages - 4 %} <span
+                        class="relative inline-flex items-center px-4 py-2 border border-blue-300 bg-white text-sm font-medium text-gray-500">
+                        ...</span>
+                        {% endif %}
+                        {% endfor %}
+
+                        <!-- Next Page -->
+                        {% if current_page < total_pages %} <a
+                            href="{{ url_for('talent_search', search=search_query, skills=selected_skills|tojson|safe, school=selected_school, grade=selected_grade, location=selected_location, page=current_page+1) }}"
+                            class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-blue-300 bg-white text-sm font-medium text-blue-500 hover:bg-blue-50">
+                            <i class="fas fa-chevron-right"></i>
+                            </a>
+                            {% else %}
+                            <span
+                                class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-gray-100 text-sm font-medium text-gray-400 cursor-not-allowed">
+                                <i class="fas fa-chevron-right"></i>
+                            </span>
+                            {% endif %}
         </nav>
-        
-        <!-- Results info -->
-        <div class="mt-4 text-center text-sm text-gray-600">
-            Showing {{ ((current_page - 1) * 9) + 1 }} to {{ [current_page * 9, total_students]|min }} of {{ total_students }} students
-        </div>
+    </div>
+
+    <!-- Results info -->
+    <div class="mt-4 text-center text-sm text-gray-600">
+        Showing {{ ((current_page - 1) * 9) + 1 }} to {{ [current_page * 9, total_students]|min }} of {{ total_students
+        }} students
     </div>
     {% endif %}
     {% else %}
