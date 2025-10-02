@@ -1921,7 +1921,13 @@ class SupabaseService:
 
     def add_new_skill(self, skill_name: str, user_id: str = None) -> Dict[str, Any]:
         """
-        Add a new skill to the skills table.
+        DEPRECATED: Add a new skill to the skills table.
+
+        Note: Custom skill creation has been disabled. This method is kept
+        for backward compatibility but should not be used in new code.
+
+        DEPRECATED: Custom skill creation has been disabled for regular users.
+        This method is kept for potential administrative use only.
 
         Args:
             skill_name: The name of the skill to add

@@ -218,22 +218,15 @@
 
     container.innerHTML = '';
     skills.forEach((skill) => {
-      // Don't filter out skills for drafts - allow all skills to be displayed
-      const bubble = document.createElement('span');
-      // Add different styling for skills not in database vs existing skills
+      // Only display skills that exist in the database
       const isInDatabase = allowedSkills.includes(skill);
-      bubble.className = isInDatabase
-        ? 'skill-bubble inline-flex items-center px-3 py-1 rounded-full bg-blue-100 text-blue-800 text-sm font-medium mr-2 mb-2'
-        : 'skill-bubble inline-flex items-center px-3 py-1 rounded-full bg-orange-100 text-orange-800 text-sm font-medium mr-2 mb-2';
-      bubble.textContent = skill;
-      // Add a small indicator for new skills
       if (!isInDatabase) {
-        const newIndicator = document.createElement('span');
-        newIndicator.className = 'ml-1 text-xs';
-        newIndicator.textContent = '(new)';
-        newIndicator.title = 'This is a new skill that will be added to the database when you publish';
-        bubble.appendChild(newIndicator);
+        return; // Skip skills not in database
       }
+
+      const bubble = document.createElement('span');
+      bubble.className = 'skill-bubble inline-flex items-center px-3 py-1 rounded-full bg-blue-100 text-blue-800 text-sm font-medium mr-2 mb-2';
+      bubble.textContent = skill;
       const removeBtn = document.createElement('button');
       removeBtn.type = 'button';
       removeBtn.className = 'ml-2 text-blue-500 hover:text-red-600 focus:outline-none';
@@ -268,22 +261,17 @@
         autocompleteList.appendChild(item);
       });
 
-      // If no matches and user has typed something, show "Add new skill" option
-      if (matches.length === 0 && val.length >= 2) {
-        // Check if the skill already exists (case-insensitive)
-        const existsAlready = allowedSkills.some(s => s.toLowerCase() === val.toLowerCase());
-        if (!existsAlready) {
-          const newSkillItem = document.createElement('div');
-          newSkillItem.className = 'px-3 py-2 cursor-pointer hover:bg-green-50 text-green-700 border-t border-gray-200';
-          newSkillItem.innerHTML = `<i class="fas fa-plus mr-2"></i>Add "${val}" as a new skill`;
-          newSkillItem.onclick = () => {
-            addNewSkillToDatabase(val, container, input, autocompleteList);
-          };
-          autocompleteList.appendChild(newSkillItem);
-        }
+      // Skills can only be selected from existing options - no new skill creation allowed
+
+      // If no matches but user has typed something, show "not found" message
+      if (matches.length === 0 && val.length > 0) {
+        const notFoundItem = document.createElement('div');
+        notFoundItem.className = 'px-3 py-2 text-sm text-gray-500 italic';
+        notFoundItem.textContent = `"${val}" - Skill not found. Please select from existing skills.`;
+        autocompleteList.appendChild(notFoundItem);
       }
 
-      autocompleteList.style.display = (matches.length > 0 || (matches.length === 0 && val.length >= 2)) ? 'block' : 'none';
+      autocompleteList.style.display = autocompleteList.children.length > 0 ? 'block' : 'none';
       const inputRect = input.getBoundingClientRect();
       autocompleteList.style.position = 'absolute';
       autocompleteList.style.maxHeight = '180px';
@@ -310,8 +298,12 @@
             input.value = '';
             document.getElementById('skills-needed-autocomplete-list').style.display = 'none';
           } else {
-            // Add as new skill via backend
-            addNewSkillToDatabase(skill, container, input, document.getElementById('skills-needed-autocomplete-list'));
+            // Show error for non-existent skills
+            input.placeholder = "Skill not found. Please select from existing skills.";
+            input.value = '';
+            setTimeout(() => {
+              input.placeholder = "Start typing to see available skills...";
+            }, 3000);
           }
         }
         e.preventDefault();
@@ -321,21 +313,16 @@
 
   function addSkillBubble(skill, container) {
     if (getCurrentSkills(container).includes(skill)) return;
-    const bubble = document.createElement('span');
-    // Add different styling for skills not in database vs existing skills
+
+    // Only allow skills that exist in database
     const isInDatabase = allowedSkills.includes(skill);
-    bubble.className = isInDatabase
-      ? 'skill-bubble inline-flex items-center px-3 py-1 rounded-full bg-blue-100 text-blue-800 text-sm font-medium mr-2 mb-2'
-      : 'skill-bubble inline-flex items-center px-3 py-1 rounded-full bg-orange-100 text-orange-800 text-sm font-medium mr-2 mb-2';
-    bubble.textContent = skill;
-    // Add a small indicator for new skills
     if (!isInDatabase) {
-      const newIndicator = document.createElement('span');
-      newIndicator.className = 'ml-1 text-xs';
-      newIndicator.textContent = '(new)';
-      newIndicator.title = 'This is a new skill that will be added to the database when you publish';
-      bubble.appendChild(newIndicator);
+      return; // Don't add skills not in database
     }
+
+    const bubble = document.createElement('span');
+    bubble.className = 'skill-bubble inline-flex items-center px-3 py-1 rounded-full bg-blue-100 text-blue-800 text-sm font-medium mr-2 mb-2';
+    bubble.textContent = skill;
     const removeBtn = document.createElement('button');
     removeBtn.type = 'button';
     removeBtn.className = 'ml-2 text-blue-500 hover:text-red-600 focus:outline-none';
@@ -351,17 +338,13 @@
 
   function getCurrentSkills(container) {
     return Array.from(container.children).map(bubble => {
-      // Get the skill name from the bubble, excluding the "(new)" indicator and remove button
+      // Get the skill name from the bubble, excluding the remove button
       const skillNodes = Array.from(bubble.childNodes);
       let skillText = '';
 
-      // Get text from text nodes and skip the "(new)" indicator and remove button
+      // Get text from text nodes and skip the remove button
       for (let node of skillNodes) {
         if (node.nodeType === Node.TEXT_NODE) {
-          skillText += node.textContent;
-        } else if (node.nodeType === Node.ELEMENT_NODE &&
-          node.tagName === 'SPAN' &&
-          node.textContent !== '(new)') {
           skillText += node.textContent;
         }
       }
@@ -376,75 +359,6 @@
     // Trigger auto-save when skills are updated
     if (window.CO && window.CO.saveFormLocally) {
       window.CO.saveFormLocally();
-    }
-  }
-
-  async function addNewSkillToDatabase(skillName, container, input, autocompleteList) {
-    try {
-      // Show loading state
-      input.disabled = true;
-      input.placeholder = "Adding skill...";
-
-      const response = await fetch('/add_skill', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ skill: skillName })
-      });
-
-      const result = await response.json();
-
-      if (result.success) {
-        // Add to local allowed skills list
-        const formattedSkill = result.skill.name;
-        if (!allowedSkills.includes(formattedSkill)) {
-          allowedSkills.push(formattedSkill);
-          allowedSkills.sort(); // Keep it sorted
-        }
-
-        // Add the skill bubble
-        addSkillBubble(formattedSkill, container);
-
-        // Clear input and hide dropdown
-        input.value = '';
-        autocompleteList.style.display = 'none';
-
-        // Show success message briefly
-        input.placeholder = "Skill added successfully!";
-        setTimeout(() => {
-          input.placeholder = "Type a skill and press Enter...";
-        }, 2000);
-
-      } else {
-        // Handle errors
-        if (result.error === "Skill already exists") {
-          // If skill exists, use the existing one
-          const existingSkill = result.existing_skill || skillName;
-          if (!allowedSkills.includes(existingSkill)) {
-            allowedSkills.push(existingSkill);
-            allowedSkills.sort();
-          }
-          addSkillBubble(existingSkill, container);
-          input.value = '';
-          autocompleteList.style.display = 'none';
-          input.placeholder = "Used existing skill";
-          setTimeout(() => {
-            input.placeholder = "Type a skill and press Enter...";
-          }, 2000);
-        } else {
-          alert('Error adding skill: ' + result.error);
-        }
-      }
-    } catch (error) {
-      console.error('Error adding skill:', error);
-      alert('Error adding skill. Please try again.');
-    } finally {
-      // Re-enable input
-      input.disabled = false;
-      if (input.placeholder === "Adding skill...") {
-        input.placeholder = "Type a skill and press Enter...";
-      }
     }
   }
 
@@ -493,7 +407,6 @@
     addSkillBubble,
     getCurrentSkills,
     updateHiddenInput,
-    addNewSkillToDatabase,
     initializeSkillsUI
   };
 

@@ -79,30 +79,6 @@ def normalize_and_validate_skills(value):
     return []
 
 
-def normalize_skills_for_draft(value):
-    """
-    Normalize skills input for drafts - accepts all skills without validation against database.
-    This allows saving new skills in drafts before they're added to the database.
-    """
-    if value is None:
-        return []
-    if isinstance(value, list):
-        return [s.strip() for s in value if isinstance(s, str) and s.strip()]
-    if isinstance(value, str):
-        try:
-            loaded = json.loads(value)
-            if isinstance(loaded, list):
-                return [s.strip() for s in loaded if isinstance(s, str) and s.strip()]
-        except Exception:
-            pass
-        # Comma-separated string
-        if "," in value:
-            return [s.strip() for s in value.split(",") if s.strip()]
-        val = value.strip()
-        return [val] if val else []
-    return []
-
-
 app = Flask(__name__)
 app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "2a15f8283ab2353f15089e80d8acf104")
 
@@ -1852,15 +1828,10 @@ def create_opportunity(opportunity_id=None):
         # Get form data and map to database fields
         status = request.form.get("status", "active")
 
-        # For drafts, allow any skills without validation. For active opportunities, validate against database
-        if status == "draft":
-            skills_needed_json = normalize_skills_for_draft(
-                request.form.get("skills_needed")
-            )
-        else:
-            skills_needed_json = normalize_and_validate_skills(
-                request.form.get("skills_needed")
-            )
+        # Validate skills against database for both drafts and active opportunities
+        skills_needed_json = normalize_and_validate_skills(
+            request.form.get("skills_needed")
+        )
 
         # Handle image upload to Supabase Storage
         image_url = None
@@ -2007,8 +1978,8 @@ def create_opportunity(opportunity_id=None):
             elif is_editing:
                 # Regular update, redirect back to referrer
                 opportunity_data["status"] = "draft"
-                # Re-normalize skills for draft since status changed
-                opportunity_data["skills_needed"] = normalize_skills_for_draft(
+                # Validate skills against database
+                opportunity_data["skills_needed"] = normalize_and_validate_skills(
                     request.form.get("skills_needed")
                 )
                 result = supabase_service.update_opportunity(
@@ -2037,8 +2008,8 @@ def create_opportunity(opportunity_id=None):
             else:
                 # Creating a new draft
                 opportunity_data["status"] = "draft"
-                # Re-normalize skills for draft since status is draft
-                opportunity_data["skills_needed"] = normalize_skills_for_draft(
+                # Validate skills against database
+                opportunity_data["skills_needed"] = normalize_and_validate_skills(
                     request.form.get("skills_needed")
                 )
                 result = supabase_service.create_opportunity(opportunity_data)
@@ -2298,45 +2269,6 @@ def delete_profile_picture():
 
     except Exception as e:
         logger.error(f"Error in delete_profile_picture: {str(e)}")
-        return {"success": False, "error": str(e)}, 500
-
-
-@app.route("/add_skill", methods=["POST"])
-def add_skill():
-    """Add a new skill to the skills database."""
-    if "user_id" not in session:
-        return {"success": False, "error": "Authentication required"}, 401
-
-    try:
-        data = request.get_json()
-        if not data or "skill" not in data:
-            return {"success": False, "error": "Skill name is required"}, 400
-
-        skill_name = data["skill"].strip()
-        if not skill_name:
-            return {"success": False, "error": "Skill name cannot be empty"}, 400
-
-        # Validate skill name (no special characters, reasonable length)
-        if len(skill_name) > 100:
-            return {"success": False, "error": "Skill name too long"}, 400
-
-        if not skill_name.replace(" ", "").replace("-", "").replace(".", "").isalnum():
-            return {
-                "success": False,
-                "error": "Skill name contains invalid characters",
-            }, 400
-
-        # Add the skill to the database
-        result = supabase_service.add_new_skill(skill_name, session.get("user_id"))
-
-        if result["success"]:
-            # No need to maintain in-memory list - always fetch from database
-            return {"success": True, "skill": result["skill"]}
-        else:
-            return {"success": False, "error": result["error"]}, 400
-
-    except Exception as e:
-        logger.error(f"Error adding skill: {str(e)}")
         return {"success": False, "error": str(e)}, 500
 
 

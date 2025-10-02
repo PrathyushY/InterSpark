@@ -211,7 +211,7 @@
                             <div id="skills-bubble-container" class="flex flex-wrap gap-2 mb-2"></div>
                             <div class="relative">
                                 <input type="text" id="skills-bubble-input" name="skills-bubble-input"
-                                    autocomplete="off" placeholder="Type a skill and press Enter..."
+                                    autocomplete="off" placeholder="Start typing to see available skills..."
                                     class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">
                                 <div id="skills-autocomplete-list"
                                     class="absolute z-10 bg-white border border-gray-300 rounded-md mt-1 w-full shadow-lg"
@@ -233,8 +233,8 @@
                             {% endif %}
                         </div>
                         {% if is_own_profile %}
-                        <p class="mt-2 text-sm text-gray-500">Add your skills as bubbles. Start typing for suggestions,
-                            or add new skills by typing them and pressing Enter. This helps organizations find students
+                        <p class="mt-2 text-sm text-gray-500">Add your skills as bubbles. Start typing to search
+                            for existing skills from our database. This helps organizations find students
                             with relevant skills.</p>
                         {% endif %}
                     </div>
@@ -467,7 +467,8 @@
 
 <!-- Delete Account Confirmation Modal -->
 {% if is_own_profile %}
-<div id="delete-account-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+<div id="delete-account-modal"
+    class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
     <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
         <div class="mt-3 text-center">
             <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100">
@@ -476,7 +477,8 @@
             <h3 class="text-lg font-medium text-gray-900 mt-4">Delete Account</h3>
             <div class="mt-2 px-7 py-3">
                 <p class="text-sm text-gray-500">
-                    Are you sure you want to delete your account? This action cannot be undone and will permanently remove:
+                    Are you sure you want to delete your account? This action cannot be undone and will permanently
+                    remove:
                 </p>
                 <ul class="text-sm text-gray-500 mt-3 text-left list-disc list-inside">
                     <li>Your profile and all personal information</li>
