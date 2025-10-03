@@ -109,7 +109,7 @@ class SupabaseService:
         else:
             self.service_client = self.client  # Fallback to public client
 
-        logger.info("Supabase client initialized successfully")
+        logger.debug("Supabase client initialized successfully")
 
     def is_profile_complete(
         self, profile: Dict[str, Any], user_type: str = None

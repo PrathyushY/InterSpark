@@ -26,6 +26,13 @@ load_dotenv()
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Reduce verbosity of third-party libraries in production
+# This helps prevent Vercel from flagging routine logs as errors
+if os.getenv("FLASK_ENV") != "development":
+    logging.getLogger("httpx").setLevel(logging.WARNING)
+    logging.getLogger("supabase_config").setLevel(logging.WARNING)
+    logging.getLogger("supabase").setLevel(logging.WARNING)
+
 
 def get_all_available_skills():
     """Get all available skills from database only."""
