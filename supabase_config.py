@@ -89,7 +89,9 @@ class SupabaseService:
 
     def __init__(self):
         """Initialize Supabase client with environment variables."""
-        self.url = os.getenv("SUPABASE_URL")
+        self.url = (
+            os.getenv("SUPABASE_URL").rstrip("/") if os.getenv("SUPABASE_URL") else None
+        )
         self.public_key = os.getenv("SUPABASE_PUBLIC_KEY")
         self.service_key = os.getenv("SUPABASE_SECRET_KEY")
 
