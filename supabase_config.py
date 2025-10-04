@@ -1332,16 +1332,20 @@ class SupabaseService:
         """
         try:
             # Try to save the profile - if it already exists, handle gracefully
+            logger.info(f"Attempting to insert into saved_profiles: user_id={user_id}, profile_id={profile_id}")
             response = (
                 self.service_client.table("saved_profiles")
                 .insert({"user_id": user_id, "profile_id": profile_id})
                 .execute()
             )
 
+            logger.debug(f"Supabase insert response: {response}")
+
             if response.data:
                 logger.info(f"Profile {profile_id} saved by user {user_id}")
                 return {"success": True, "message": "Profile saved successfully"}
             else:
+                logger.warning(f"Insert to saved_profiles returned no data: {response}")
                 return {"success": False, "error": "Failed to save profile"}
 
         except Exception as e:
@@ -1373,6 +1377,7 @@ class SupabaseService:
             Success/error response
         """
         try:
+            logger.info(f"Attempting to delete from saved_profiles: user_id={user_id}, profile_id={profile_id}")
             response = (
                 self.service_client.table("saved_profiles")
                 .delete()
@@ -1381,6 +1386,7 @@ class SupabaseService:
                 .execute()
             )
 
+            logger.debug(f"Supabase delete response: {response}")
             logger.info(f"Profile {profile_id} removed from saved by user {user_id}")
             return {"success": True, "message": "Profile removed from saved items"}
 

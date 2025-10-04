@@ -2141,8 +2141,10 @@ def save_profile(profile_id):
     user_type = session.get("user_type")
 
     try:
+        logger.info(f"Received save_profile request: session_user_id={user_id}, profile_id={profile_id}")
         result = supabase_service.save_profile(user_id, profile_id)
 
+        logger.info(f"save_profile result: {result}")
         if result["success"]:
             return jsonify({"success": True, "message": "Profile saved successfully"})
         else:
@@ -2167,10 +2169,25 @@ def unsave_profile(profile_id):
     user_id = session.get("user_id")
 
     try:
+        logger.info(f"Received unsave_profile request: session_user_id={user_id}, profile_id={profile_id}")
         result = supabase_service.unsave_profile(user_id, profile_id)
+        logger.info(f"unsave_profile result: {result}")
         return jsonify({"success": True, "message": "Profile removed from saved"})
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route('/debug/my_saved_profiles')
+def debug_my_saved_profiles():
+    """Debug endpoint: return saved_profiles for current session user (dev only)."""
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'error': 'Not authenticated'}), 401
+    try:
+        user_id = session.get('user_id')
+        saved_profiles = supabase_service.get_saved_profiles(user_id)
+        return jsonify({'success': True, 'saved_profiles': saved_profiles})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 
 @app.route("/profile_details/<profile>")

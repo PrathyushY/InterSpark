@@ -1,32 +1,51 @@
 // profile.js - handles profile page interactions
 (function () {
     function toggleSaveProfile() {
-        const state = window.PROFILE_STATE;
-        if (!state) return;
+        const state = window.PROFILE_STATE || {};
         const btn = document.getElementById('save-profile-btn');
         if (!btn) return;
         const icon = btn.querySelector('i');
         const textSpan = document.getElementById('save-profile-text');
+        // Derive current saved state from DOM (icon class) to avoid mismatches
+        const isSavedFromDom = icon && icon.classList.contains('fas');
+        const profileId = state.profileId;
+        if (!profileId) {
+            console.debug('toggleSaveProfile: missing profileId in window.PROFILE_STATE', state);
+            return;
+        }
+
+        const url = isSavedFromDom ? `/unsave_profile/${profileId}` : `/save_profile/${profileId}`;
         btn.disabled = true;
-        const url = state.isSaved ? `/unsave_profile/${state.profileId}` : `/save_profile/${state.profileId}`;
-        fetch(url, { method: 'POST' }).then(r => r.json()).then(data => {
-            if (data.success) {
-                state.isSaved = !state.isSaved;
-                if (state.isSaved) {
-                    icon.className = 'fas fa-bookmark mr-2';
-                    textSpan.textContent = 'Saved';
-                    btn.className = btn.className.replace('bg-white border-gray-300 text-gray-700', 'bg-blue-50 border-blue-300 text-blue-700');
-                    showAlert('Profile saved successfully!', 'success');
+        console.debug(`toggleSaveProfile: action=${isSavedFromDom ? 'unsave' : 'save'} url=${url}`);
+
+        fetch(url, { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' } })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    // Update both DOM and state to reflect new value
+                    const nowSaved = !isSavedFromDom;
+                    state.isSaved = nowSaved;
+                    if (nowSaved) {
+                        if (icon) icon.className = 'fas fa-bookmark mr-2';
+                        if (textSpan) textSpan.textContent = 'Saved';
+                        btn.className = btn.className.replace('bg-white border-gray-300 text-gray-700', 'bg-blue-50 border-blue-300 text-blue-700');
+                        showAlert(data.message || 'Profile saved successfully!', 'success');
+                    } else {
+                        if (icon) icon.className = 'far fa-bookmark mr-2';
+                        if (textSpan) textSpan.textContent = 'Save Profile';
+                        btn.className = btn.className.replace('bg-blue-50 border-blue-300 text-blue-700', 'bg-white border-gray-300 text-gray-700');
+                        showAlert(data.message || 'Profile removed from saved list', 'info');
+                    }
                 } else {
-                    icon.className = 'far fa-bookmark mr-2';
-                    textSpan.textContent = 'Save Profile';
-                    btn.className = btn.className.replace('bg-blue-50 border-blue-300 text-blue-700', 'bg-white border-gray-300 text-gray-700');
-                    showAlert('Profile removed from saved list', 'info');
+                    showAlert(data.error || 'Failed to update profile', 'error');
+                    console.error('toggleSaveProfile error response:', data);
                 }
-            } else {
-                showAlert(data.error || 'Failed to update profile', 'error');
-            }
-        }).catch(() => showAlert('Error updating profile', 'error')).finally(() => btn.disabled = false);
+            })
+            .catch(err => {
+                console.error('toggleSaveProfile fetch error:', err);
+                showAlert('Error updating profile', 'error');
+            })
+            .finally(() => { btn.disabled = false; });
     }
 
     window.toggleSaveProfile = toggleSaveProfile;
