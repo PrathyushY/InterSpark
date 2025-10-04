@@ -669,6 +669,19 @@ class SupabaseService:
             response = query.execute()
             students = response.data if response.data else []
 
+            # Remove unverified email accounts: support both a boolean flag
+            # `email_confirmed` or an `email_confirmed_at` timestamp field.
+            def is_verified(profile):
+                if not profile:
+                    return False
+                if profile.get('email_confirmed'):
+                    return True
+                if profile.get('email_confirmed_at'):
+                    return True
+                return False
+
+            students = [s for s in students if is_verified(s)]
+
             # Robustly parse skills filter
             def parse_skills(val):
                 if not val:
@@ -761,6 +774,19 @@ class SupabaseService:
 
             response = query.execute()
             students = response.data if response.data else []
+
+            # Remove unverified email accounts: support both a boolean flag
+            # `email_confirmed` or an `email_confirmed_at` timestamp field.
+            def is_verified(profile):
+                if not profile:
+                    return False
+                if profile.get('email_confirmed'):
+                    return True
+                if profile.get('email_confirmed_at'):
+                    return True
+                return False
+
+            students = [s for s in students if is_verified(s)]
 
             # Enhanced skills filtering - use ANY match instead of ALL match
             def parse_skills(val):
