@@ -634,7 +634,7 @@ def signup():
                 user = result["user"]
                 user_id = user["id"]
 
-                # Send our custom verification email
+                # Send our custom verification email (with rate limiting)
                 logger.info(
                     f"User created successfully: {user_id}, sending custom verification email"
                 )
@@ -668,25 +668,42 @@ def signup():
 
                     logger.info(f"Verification link: {verification_link}")
                 else:
-                    # Fallback to manual confirmation if token creation fails
-                    site_url = os.getenv("SITE_URL", "http://localhost:5001")
-                    manual_confirmation_link = (
-                        f"{site_url}/auth/confirm-manual?email={email}"
-                    )
+                    error_type = email_result.get("error_type", "general")
+                    if error_type == "rate_limit":
+                        flash(
+                            f"Registration successful! However, {email_result['error']} "
+                            "You can try requesting a verification email again from the login page.",
+                            "warning"
+                        )
+                    else:
+                        # Fallback to manual confirmation if token creation fails
+                        site_url = os.getenv("SITE_URL", "http://localhost:5001")
+                        manual_confirmation_link = (
+                            f"{site_url}/auth/confirm-manual?email={email}"
+                        )
 
-                    flash(
-                        "Registration successful! Email verification system is temporarily unavailable. "
-                        f'You can confirm manually here: <a href="{manual_confirmation_link}" target="_blank">Confirm Email</a>',
-                        "warning",
-                    )
-                    logger.warning(
-                        f"Failed to create verification token for {email}, using manual fallback"
-                    )
+                        flash(
+                            "Registration successful! Email verification system is temporarily unavailable. "
+                            f'You can confirm manually here: <a href="{manual_confirmation_link}" target="_blank">Confirm Email</a>',
+                            "warning",
+                        )
+                        logger.warning(
+                            f"Failed to create verification token for {email}, using manual fallback"
+                        )
 
                 return redirect(url_for("login"))
             else:
                 error_message = result.get("error", "Registration failed")
-                flash(error_message, "error")
+                error_type = result.get("error_type", "general")
+                
+                # Handle different error types with appropriate flash categories
+                if error_type in ["user_exists_verified", "user_exists_unverified"]:
+                    flash(error_message, "info")
+                elif error_type == "rate_limit":
+                    flash(error_message, "warning")
+                else:
+                    flash(error_message, "error")
+                    
                 logger.error(f"User creation failed for {email}: {error_message}")
 
         except Exception as e:
@@ -1157,7 +1174,7 @@ def manual_confirm_page():
 
 @app.route("/auth/resend-confirmation", methods=["POST"])
 def resend_confirmation():
-    """Resend email confirmation link."""
+    """Resend email confirmation link with rate limiting."""
     try:
         email = request.form.get("email")
         if not email:
@@ -1175,6 +1192,12 @@ def resend_confirmation():
             flash("Your email is already confirmed. Please try logging in.", "info")
             return redirect(url_for("login"))
 
+        # Check rate limit before attempting to send
+        rate_limit_check = supabase_service.check_verification_email_rate_limit(email)
+        if not rate_limit_check["allowed"]:
+            flash(rate_limit_check["error"], "warning")
+            return redirect(url_for("login"))
+
         # Resend verification email with secure token
         try:
             user_id = profile.get("id")
@@ -1184,28 +1207,40 @@ def resend_confirmation():
 
             if email_result["success"]:
                 verification_link = email_result["verification_link"]
+                email_sent = email_result.get("email_sent", False)
 
                 logger.info(f"Secure verification email resent to: {email}")
                 logger.info(f"Verification link: {verification_link}")
 
-                flash(
-                    "Verification email resent! Please check your email and click the verification link. "
-                    "The link will expire in 24 hours.",
-                    "success",
-                )
+                if email_sent:
+                    flash(
+                        "Verification email resent! Please check your email and click the verification link. "
+                        "The link will expire in 24 hours.",
+                        "success",
+                    )
+                else:
+                    flash(
+                        "Verification system temporarily unavailable, but a verification token has been created. "
+                        "Please try again later or contact support.",
+                        "warning",
+                    )
             else:
-                # Fallback to manual confirmation if token creation fails
-                site_url = os.getenv("SITE_URL", "http://localhost:5001")
-                confirmation_link = f"{site_url}/auth/confirm-manual?email={email}"
+                error_type = email_result.get("error_type", "general")
+                if error_type == "rate_limit":
+                    flash(email_result["error"], "warning")
+                else:
+                    # Fallback to manual confirmation if token creation fails
+                    site_url = os.getenv("SITE_URL", "http://localhost:5001")
+                    confirmation_link = f"{site_url}/auth/confirm-manual?email={email}"
 
-                flash(
-                    "Verification system temporarily unavailable. "
-                    f'You can confirm manually here: <a href="{confirmation_link}" target="_blank">Confirm Email</a>',
-                    "warning",
-                )
-                logger.warning(
-                    f"Failed to create verification token for resend: {email}"
-                )
+                    flash(
+                        "Verification system temporarily unavailable. "
+                        f'You can confirm manually here: <a href="{confirmation_link}" target="_blank">Confirm Email</a>',
+                        "warning",
+                    )
+                    logger.warning(
+                        f"Failed to create verification token for resend: {email}"
+                    )
 
         except Exception as e:
             logger.error(f"Error resending verification email: {str(e)}")

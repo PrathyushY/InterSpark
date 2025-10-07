@@ -163,6 +163,7 @@ class SupabaseService:
     ) -> Dict[str, Any]:
         """
         Create a new user account with profile data and email verification.
+        Checks for existing accounts before attempting creation.
 
         Args:
             email: User's email address
@@ -173,6 +174,23 @@ class SupabaseService:
             Dictionary containing user data or error information
         """
         try:
+            # First, check if a user with this email already exists
+            existing_profile = self.get_profile_by_email(email)
+            if existing_profile:
+                # Account already exists - provide helpful message regardless of verification status
+                if existing_profile.get("email_confirmed", True):
+                    return {
+                        "success": False,
+                        "error": "An account with this email address already exists. Please try signing in instead.",
+                        "error_type": "user_exists_verified"
+                    }
+                else:
+                    return {
+                        "success": False,
+                        "error": "An account with this email address already exists but hasn't been verified. Please check your email for the verification link, or request a new verification email on the login page.",
+                        "error_type": "user_exists_unverified"
+                    }
+
             # Create user in auth.users table without triggering automatic emails
             # We'll handle email verification with our own custom system
             response = self.service_client.auth.admin.create_user(
@@ -2125,6 +2143,56 @@ class SupabaseService:
             logger.error(f"Error deleting user account: {str(e)}")
             return {"success": False, "error": str(e)}
 
+    def check_verification_email_rate_limit(self, email: str) -> Dict[str, Any]:
+        """
+        Check if it's allowed to send another verification email to this address.
+        Prevents spam by enforcing a 5-minute cooldown between emails to the same address.
+
+        Args:
+            email: The email address to check
+
+        Returns:
+            Dict with 'allowed' boolean and optional error message
+        """
+        try:
+            from datetime import datetime, timedelta
+
+            # Check for recent verification emails sent to this email address
+            five_minutes_ago = datetime.utcnow() - timedelta(minutes=5)
+            
+            response = (
+                self.service_client.table("email_verification_tokens")
+                .select("created_at")
+                .eq("email", email)
+                .gte("created_at", five_minutes_ago.isoformat())
+                .order("created_at", desc=True)
+                .limit(1)
+                .execute()
+            )
+
+            if response.data and len(response.data) > 0:
+                # Found a recent verification email
+                last_sent = datetime.fromisoformat(
+                    response.data[0]["created_at"].replace("Z", "+00:00")
+                )
+                next_allowed = last_sent.replace(tzinfo=None) + timedelta(minutes=5)
+                seconds_remaining = int((next_allowed - datetime.utcnow()).total_seconds())
+                
+                if seconds_remaining > 0:
+                    minutes_remaining = max(1, (seconds_remaining + 59) // 60)  # Round up to next minute
+                    return {
+                        "allowed": False,
+                        "error": f"Please wait {minutes_remaining} minute(s) before requesting another verification email.",
+                        "retry_after_seconds": seconds_remaining
+                    }
+
+            return {"allowed": True}
+
+        except Exception as e:
+            logger.error(f"Error checking verification email rate limit: {str(e)}")
+            # On error, allow the request to proceed (fail open)
+            return {"allowed": True}
+
     def create_verification_token(self, user_id: str, email: str) -> Dict[str, Any]:
         """
         Create a secure email verification token.
@@ -2364,7 +2432,7 @@ class SupabaseService:
 
     def send_verification_email(self, user_id: str, email: str) -> Dict[str, Any]:
         """
-        Create a verification token and send verification email.
+        Create a verification token and send verification email with rate limiting.
 
         Args:
             user_id: The user's ID
@@ -2374,6 +2442,16 @@ class SupabaseService:
             Dict containing success status and info or error
         """
         try:
+            # Check rate limit first (5 minutes between requests to same email)
+            rate_limit_check = self.check_verification_email_rate_limit(email)
+            if not rate_limit_check["allowed"]:
+                return {
+                    "success": False,
+                    "error": rate_limit_check["error"],
+                    "error_type": "rate_limit",
+                    "retry_after_seconds": rate_limit_check.get("retry_after_seconds", 300)
+                }
+
             # Create verification token
             token_result = self.create_verification_token(user_id, email)
 
