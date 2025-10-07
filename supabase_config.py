@@ -182,13 +182,13 @@ class SupabaseService:
                     return {
                         "success": False,
                         "error": "An account with this email address already exists. Please try signing in instead.",
-                        "error_type": "user_exists_verified"
+                        "error_type": "user_exists_verified",
                     }
                 else:
                     return {
                         "success": False,
                         "error": "An account with this email address already exists but hasn't been verified. Please check your email for the verification link, or request a new verification email on the login page.",
-                        "error_type": "user_exists_unverified"
+                        "error_type": "user_exists_unverified",
                     }
 
             # Create user in auth.users table without triggering automatic emails
@@ -692,9 +692,9 @@ class SupabaseService:
             def is_verified(profile):
                 if not profile:
                     return False
-                if profile.get('email_confirmed'):
+                if profile.get("email_confirmed"):
                     return True
-                if profile.get('email_confirmed_at'):
+                if profile.get("email_confirmed_at"):
                     return True
                 return False
 
@@ -798,9 +798,9 @@ class SupabaseService:
             def is_verified(profile):
                 if not profile:
                     return False
-                if profile.get('email_confirmed'):
+                if profile.get("email_confirmed"):
                     return True
-                if profile.get('email_confirmed_at'):
+                if profile.get("email_confirmed_at"):
                     return True
                 return False
 
@@ -1350,7 +1350,9 @@ class SupabaseService:
         """
         try:
             # Try to save the profile - if it already exists, handle gracefully
-            logger.info(f"Attempting to insert into saved_profiles: user_id={user_id}, profile_id={profile_id}")
+            logger.info(
+                f"Attempting to insert into saved_profiles: user_id={user_id}, profile_id={profile_id}"
+            )
             response = (
                 self.service_client.table("saved_profiles")
                 .insert({"user_id": user_id, "profile_id": profile_id})
@@ -1395,7 +1397,9 @@ class SupabaseService:
             Success/error response
         """
         try:
-            logger.info(f"Attempting to delete from saved_profiles: user_id={user_id}, profile_id={profile_id}")
+            logger.info(
+                f"Attempting to delete from saved_profiles: user_id={user_id}, profile_id={profile_id}"
+            )
             response = (
                 self.service_client.table("saved_profiles")
                 .delete()
@@ -2159,7 +2163,7 @@ class SupabaseService:
 
             # Check for recent verification emails sent to this email address
             five_minutes_ago = datetime.utcnow() - timedelta(minutes=5)
-            
+
             response = (
                 self.service_client.table("email_verification_tokens")
                 .select("created_at")
@@ -2176,14 +2180,18 @@ class SupabaseService:
                     response.data[0]["created_at"].replace("Z", "+00:00")
                 )
                 next_allowed = last_sent.replace(tzinfo=None) + timedelta(minutes=5)
-                seconds_remaining = int((next_allowed - datetime.utcnow()).total_seconds())
-                
+                seconds_remaining = int(
+                    (next_allowed - datetime.utcnow()).total_seconds()
+                )
+
                 if seconds_remaining > 0:
-                    minutes_remaining = max(1, (seconds_remaining + 59) // 60)  # Round up to next minute
+                    minutes_remaining = max(
+                        1, (seconds_remaining + 59) // 60
+                    )  # Round up to next minute
                     return {
                         "allowed": False,
                         "error": f"Please wait {minutes_remaining} minute(s) before requesting another verification email.",
-                        "retry_after_seconds": seconds_remaining
+                        "retry_after_seconds": seconds_remaining,
                     }
 
             return {"allowed": True}
@@ -2449,7 +2457,9 @@ class SupabaseService:
                     "success": False,
                     "error": rate_limit_check["error"],
                     "error_type": "rate_limit",
-                    "retry_after_seconds": rate_limit_check.get("retry_after_seconds", 300)
+                    "retry_after_seconds": rate_limit_check.get(
+                        "retry_after_seconds", 300
+                    ),
                 }
 
             # Create verification token
