@@ -1554,6 +1554,8 @@ def view_profile(user_id):
         selected_grade=grade,
         skills_json=skills_json,
         skills_master=get_all_available_skills(),
+        # If this is an organization profile, include their opportunities
+        organization_opportunities=(supabase_service.get_organization_opportunities(user_id) if profile.get('user_type') == 'organization' else []),
     )
 
 
@@ -1656,7 +1658,6 @@ def opportunity_details(id):
 def talent_search():
     if "user_id" not in session:
         return redirect(url_for("login"))
-
     try:
         user_id = session.get("user_id")
 
@@ -1666,26 +1667,39 @@ def talent_search():
         school = request.args.get("school", "")
         grade = request.args.get("grade", "")
         location = request.args.get("location", "")
+        # Optional type filter: 'student' or 'organization'
+        profile_type = request.args.get("type", "student")
 
         # Get pagination parameters
         page = int(request.args.get("page", 1))
         per_page = 9  # 9 profiles per page
 
-        # Search all students with filters first
-        all_students = supabase_service.search_students(
-            search_query=search_query,
-            skills=skills,
-            school=school,
-            grade=grade,
-            location=location,
-        )
+        # Branch by requested profile_type
+        if profile_type == 'organization':
+            all_orgs = supabase_service.search_organizations(
+                search_query=search_query,
+                location=location,
+            )
+            total_students = len(all_orgs)
+            total_pages = (total_students + per_page - 1) // per_page
+            start_idx = (page - 1) * per_page
+            end_idx = start_idx + per_page
+            students = all_orgs[start_idx:end_idx]
+        else:
+            # Search all students with filters first
+            all_students = supabase_service.search_students(
+                search_query=search_query,
+                skills=skills,
+                school=school,
+                grade=grade,
+                location=location,
+            )
 
-        # Calculate pagination
-        total_students = len(all_students)
-        total_pages = (total_students + per_page - 1) // per_page
-        start_idx = (page - 1) * per_page
-        end_idx = start_idx + per_page
-        students = all_students[start_idx:end_idx]
+            total_students = len(all_students)
+            total_pages = (total_students + per_page - 1) // per_page
+            start_idx = (page - 1) * per_page
+            end_idx = start_idx + per_page
+            students = all_students[start_idx:end_idx]
 
         # Get saved profiles to determine which ones are bookmarked
         saved_profiles = supabase_service.get_saved_profiles(user_id)
@@ -1697,11 +1711,10 @@ def talent_search():
                 elif "profile_id" in saved_profile:
                     saved_profile_ids.add(saved_profile["profile_id"])
 
-        # Add is_saved flag to each student
+        # Add is_saved flag to each student/org
         for student in students:
-            student["is_saved"] = student["id"] in saved_profile_ids
+            student["is_saved"] = student.get("id") in saved_profile_ids
 
-        # Pass allowed skills for dropdown
         # Parse selected_skills robustly (list or string)
         def parse_skills(val):
             import json
@@ -1735,6 +1748,7 @@ def talent_search():
             current_page=page,
             total_pages=total_pages,
             total_students=total_students,
+            profile_type=profile_type,
         )
     except Exception as e:
         flash(f"Error searching talent: {str(e)}", "error")

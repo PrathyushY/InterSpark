@@ -883,6 +883,58 @@ class SupabaseService:
             logger.error(f"Error in enhanced student search: {str(e)}")
             return []
 
+    def search_organizations(
+        self,
+        search_query: str = "",
+        location: str = "",
+    ) -> List[Dict[str, Any]]:
+        """
+        Search for organization profiles with simple text and location filters.
+
+        Args:
+            search_query: Text to search in name, organization_name, and description
+            location: Filter by location
+
+        Returns:
+            List of matching organization profiles
+        """
+        try:
+            query = self.client.table("profiles").select("*").eq("user_type", "organization")
+
+            # Apply text search if provided
+            if search_query:
+                # search organization_name, name, and description
+                query = query.or_(
+                    f"organization_name.ilike.%{search_query}%,name.ilike.%{search_query}%,description.ilike.%{search_query}%"
+                )
+
+            # Apply location filter
+            if location:
+                query = query.ilike("location", f"%{location}%")
+
+            # Order by creation date, newest first
+            query = query.order("created_at", desc=True)
+
+            response = query.execute()
+            orgs = response.data if response.data else []
+
+            # Remove unverified email accounts similar to student search
+            def is_verified(profile):
+                if not profile:
+                    return False
+                if profile.get('email_confirmed'):
+                    return True
+                if profile.get('email_confirmed_at'):
+                    return True
+                return False
+
+            orgs = [o for o in orgs if is_verified(o)]
+
+            return orgs
+        except Exception as e:
+            logger.error(f"Error searching organizations: {str(e)}")
+            return []
+
     # Opportunities Management Methods
     def get_opportunities(
         self, filters: Optional[Dict[str, Any]] = None, limit: Optional[int] = None

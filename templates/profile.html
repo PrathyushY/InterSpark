@@ -508,6 +508,32 @@
 </div>
 {% endif %}
 
+    {% if user_type == 'organization' %}
+    <!-- Organization's Opportunities -->
+    <div class="mt-8 bg-white rounded-lg shadow-md p-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">Opportunities by this Organization</h3>
+        {% if organization_opportunities and organization_opportunities|length > 0 %}
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {% for opp in organization_opportunities %}
+            <div class="border rounded-md p-4 hover:shadow-md">
+                <h4 class="font-medium text-blue-700 text-md">{{ opp.title }}</h4>
+                <p class="text-sm text-gray-600">{{ opp.location or '' }} • {{ opp.type or '' }}</p>
+                <p class="text-gray-700 text-sm mt-2 line-clamp-3">{{ (opp.description or '')[:140] }}{% if (opp.description or '')|length > 140 %}...{% endif %}</p>
+                <div class="mt-3 flex space-x-2">
+                    <a href="{{ url_for('opportunity_details', id=opp.id) }}" class="text-sm text-blue-600 hover:underline inline-flex items-center"><i class="fas fa-eye mr-2"></i>View</a>
+                    {% if session.user_id and session.user_type == 'organization' and session.user_id == profile.id %}
+                    <a href="{{ url_for('create_opportunity', opportunity_id=opp.id) }}" class="text-sm text-gray-700 hover:underline inline-flex items-center"><i class="fas fa-edit mr-2"></i>Edit</a>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-gray-600">This organization has not posted any opportunities yet.</p>
+        {% endif %}
+    </div>
+    {% endif %}
+
 {% if not is_own_profile %}
 {% set skills_json = profile.skills|default([], true) %}
 <script>
