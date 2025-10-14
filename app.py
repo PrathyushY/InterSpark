@@ -422,12 +422,22 @@ def auth_google():
     """
     user_type = request.args.get("user_type", "student")
     supabase_url = os.getenv("SUPABASE_URL")
-    site_url = os.getenv("SITE_URL", "http://localhost:5000")
+
+    # If SUPABASE_URL is not configured, fail gracefully and inform developer/user
+    if not supabase_url:
+        logger.error("SUPABASE_URL environment variable is not set. Cannot perform Google OAuth.")
+        flash("Google sign-in is not configured on this server.", "error")
+        return redirect(url_for("login"))
+
+    # Use the actual host where the request arrived so redirect_to matches the running server
+    host_base = request.host_url.rstrip('/')
+    redirect_to = f"{host_base}/auth/callback?user_type={user_type}"
+
     # Supabase authorize endpoint - use redirect_to to our /auth/callback
-    redirect_to = f"{site_url}/auth/callback?user_type={user_type}"
-    authorize_url = (
-        f"{supabase_url}/auth/v1/authorize?provider=google&redirect_to={redirect_to}"
-    )
+    # Add prompt=select_account to ensure the user can pick which Google account to use
+    authorize_url = f"{supabase_url.rstrip('/')}/auth/v1/authorize?provider=google&redirect_to={redirect_to}&prompt=select_account"
+
+    logger.info(f"Redirecting to Supabase OAuth authorize URL: {authorize_url}")
     return redirect(authorize_url)
 
 
@@ -495,15 +505,30 @@ def auth_complete():
             user_id, email, name, user_type, profile_image
         )
 
-        # Set Flask session
+        # Load the profile and prefer the stored profile.user_type (don't silently overwrite)
+        profile = supabase_service.get_profile(user_id)
+        final_user_type = (
+            profile.get("user_type") if profile and profile.get("user_type") else user_type
+        )
+
+        # If the existing profile type differs from the requested one, inform the user
+        if profile and profile.get("user_type") and profile.get("user_type") != user_type:
+            logger.info(
+                f"OAuth requested user_type={user_type} but existing profile has user_type={profile.get('user_type')} for user {user_id}"
+            )
+            flash(
+                f"An account already exists for this Google email as a {profile.get('user_type')}. Signing into that account.",
+                "info",
+            )
+
+        # Set Flask session using the resolved/actual profile user_type
         session["user_id"] = user_id
-        session["user_type"] = user_type
-        session["user_name"] = name
-        session["user_email"] = email
+        session["user_type"] = final_user_type
+        session["user_name"] = profile.get("name", name) if profile else name
+        session["user_email"] = profile.get("email", email) if profile else email
 
         # Check profile completion and redirect accordingly
-        profile = supabase_service.get_profile(user_id)
-        completion = supabase_service.is_profile_complete(profile, user_type)
+        completion = supabase_service.is_profile_complete(profile, final_user_type)
         if not completion["complete"]:
             # Send the client to the signup completion page where they can fill
             # in student/organization specific fields. The client will navigate
@@ -512,7 +537,7 @@ def auth_complete():
                 jsonify(
                     {
                         "success": True,
-                        "redirect": url_for("signup_complete", user_type=user_type),
+                        "redirect": url_for("signup_complete", user_type=final_user_type),
                     }
                 ),
                 200,

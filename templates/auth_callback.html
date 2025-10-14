@@ -28,6 +28,7 @@
         fetch('/auth/complete', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
+            credentials: 'same-origin',
             body: JSON.stringify({access_token: access_token, user_type: user_type})
         }).then(r=>r.json()).then(function(json){
             if(json.success && json.redirect){
