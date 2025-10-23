@@ -486,6 +486,7 @@ class SupabaseService:
         name: str = "",
         user_type: str = "student",
         profile_image: str = None,
+        email_confirmed: Optional[bool] = None,
     ) -> Dict[str, Any]:
         """
         Ensure a profile exists for a user, create if missing.
@@ -505,15 +506,22 @@ class SupabaseService:
             existing_profile = self.get_profile(user_id)
             if existing_profile:
                 # If profile exists but doesn't have profile image and we have one, update it
+                update_fields = {}
                 if profile_image and not existing_profile.get("profile_image"):
-                    update_result = self.update_profile(
-                        user_id, {"profile_image": profile_image}
-                    )
+                    update_fields["profile_image"] = profile_image
+
+                # If caller indicates email_confirmed=True (e.g., OAuth), ensure profile flag is set
+                if email_confirmed is True and not existing_profile.get("email_confirmed"):
+                    update_fields["email_confirmed"] = True
+
+                if update_fields:
+                    update_result = self.update_profile(user_id, update_fields)
                     if update_result["success"]:
-                        existing_profile["profile_image"] = profile_image
+                        existing_profile.update(update_fields)
                         logger.info(
-                            f"Updated existing profile with Google profile picture for user: {user_id}"
+                            f"Updated existing profile for user {user_id} with fields: {list(update_fields.keys())}"
                         )
+
                 return {"success": True, "profile": existing_profile}
 
             # Create missing profile
@@ -527,6 +535,10 @@ class SupabaseService:
             # Add profile image if provided
             if profile_image:
                 profile_data["profile_image"] = profile_image
+
+            # If caller indicates this is an OAuth-created account, mark email as confirmed
+            if email_confirmed is True:
+                profile_data["email_confirmed"] = True
 
             profile_response = (
                 self.service_client.table("profiles").insert(profile_data).execute()

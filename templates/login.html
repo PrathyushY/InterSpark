@@ -77,9 +77,9 @@
     </div>
     <script>
         document.getElementById('google-signin').addEventListener('click', function(){
-            // Default to student sign-in; if you want to allow selecting org vs student here,
-            // add a small selector and pass ?user_type=organization when needed.
-            window.location = '/auth/google?user_type=student';
+            // For login flows we don't pass user_type so the server will not force a default.
+            // Signup buttons explicitly pass user_type when creating a new account.
+            window.location = '/auth/google';
         })
     </script>
 {% endblock %}

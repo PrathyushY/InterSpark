@@ -420,7 +420,10 @@ def auth_google():
     Accepts optional query param user_type (student|organization) so we can
     remember which account type the user wants to create.
     """
-    user_type = request.args.get("user_type", "student")
+    # Only include user_type if explicitly provided by the caller (signup buttons pass it).
+    # For login flows we don't want to force a default user_type which could overwrite
+    # or be incorrectly applied to existing accounts.
+    user_type = request.args.get("user_type")
     supabase_url = os.getenv("SUPABASE_URL")
 
     # If SUPABASE_URL is not configured, fail gracefully and inform developer/user
@@ -431,7 +434,11 @@ def auth_google():
 
     # Use the actual host where the request arrived so redirect_to matches the running server
     host_base = request.host_url.rstrip('/')
-    redirect_to = f"{host_base}/auth/callback?user_type={user_type}"
+    # Only append user_type to the callback URL when it was provided by the caller
+    if user_type:
+        redirect_to = f"{host_base}/auth/callback?user_type={user_type}"
+    else:
+        redirect_to = f"{host_base}/auth/callback"
 
     # Supabase authorize endpoint - use redirect_to to our /auth/callback
     # Add prompt=select_account to ensure the user can pick which Google account to use
@@ -461,7 +468,9 @@ def auth_complete():
     """
     data = request.get_json() or {}
     access_token = data.get("access_token")
-    user_type = data.get("user_type", "student")
+    # user_type may be omitted for login flows; keep it None when not provided so
+    # we can distinguish login vs signup intent.
+    requested_user_type = data.get("user_type")
 
     if not access_token:
         return jsonify({"success": False, "error": "Missing access_token"}), 400
@@ -500,26 +509,57 @@ def auth_complete():
             logger.info(f"No profile picture found in user metadata for user {user_id}")
             logger.debug(f"User metadata: {user_metadata}")
 
-        # Ensure profile exists with the requested user_type and profile image
+        # Ensure profile exists. If the caller requested a specific user_type (signup flow),
+        # pass it through; otherwise don't force a default here.
+        effective_user_type = requested_user_type if requested_user_type else None
+        # Mark OAuth-created profiles as email-confirmed
         supabase_service.ensure_profile_exists(
-            user_id, email, name, user_type, profile_image
+            user_id,
+            email,
+            name,
+            effective_user_type or "student",
+            profile_image,
+            email_confirmed=True,
         )
 
-        # Load the profile and prefer the stored profile.user_type (don't silently overwrite)
+        # Load the profile
         profile = supabase_service.get_profile(user_id)
-        final_user_type = (
-            profile.get("user_type") if profile and profile.get("user_type") else user_type
-        )
 
-        # If the existing profile type differs from the requested one, inform the user
-        if profile and profile.get("user_type") and profile.get("user_type") != user_type:
-            logger.info(
-                f"OAuth requested user_type={user_type} but existing profile has user_type={profile.get('user_type')} for user {user_id}"
-            )
-            flash(
-                f"An account already exists for this Google email as a {profile.get('user_type')}. Signing into that account.",
-                "info",
-            )
+        # Decide the final user_type:
+        # - If this was a signup intent (requested_user_type provided), prefer that type
+        #   when the existing profile is missing or appears incomplete.
+        # - Otherwise (login intent), prefer the stored profile.user_type to avoid overwriting.
+        final_user_type = None
+        if requested_user_type:
+            # Signup flow: if profile exists but is clearly incomplete, update its type
+            if profile and profile.get("user_type") and profile.get("user_type") != requested_user_type:
+                # Consider profile incomplete if is_profile_complete returns false or default name
+                completion = supabase_service.is_profile_complete(profile, profile.get("user_type"))
+                is_default_name = profile.get("name") in (None, "", "User")
+                if not completion["complete"] or is_default_name:
+                    try:
+                        supabase_service.update_profile(user_id, {"user_type": requested_user_type})
+                        logger.info(f"Updated profile user_type to {requested_user_type} for user {user_id}")
+                        final_user_type = requested_user_type
+                    except Exception as e:
+                        logger.warning(f"Failed to update profile user_type for {user_id}: {e}")
+                        final_user_type = profile.get("user_type")
+                else:
+                    # Existing complete profile has a different type; sign into existing
+                    logger.info(
+                        f"OAuth requested user_type={requested_user_type} but existing profile has user_type={profile.get('user_type')} for user {user_id}"
+                    )
+                    flash(
+                        f"An account already exists for this Google email as a {profile.get('user_type')}. Signing into that account.",
+                        "info",
+                    )
+                    final_user_type = profile.get("user_type")
+            else:
+                # No conflict or no existing type: use requested
+                final_user_type = requested_user_type
+        else:
+            # Login flow: prefer stored profile type; fallback to student
+            final_user_type = profile.get("user_type") if profile and profile.get("user_type") else "student"
 
         # Set Flask session using the resolved/actual profile user_type
         session["user_id"] = user_id

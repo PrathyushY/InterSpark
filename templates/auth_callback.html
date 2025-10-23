@@ -23,13 +23,17 @@
     }
     var frag = parseFragment(window.location.hash);
     var access_token = frag['access_token'];
-    var user_type = '{{ user_type }}' || 'student';
+    var user_type = '{{ user_type|default("") }}';
     if(access_token){
+        var body = { access_token: access_token };
+        if(user_type && user_type.length > 0){
+            body.user_type = user_type;
+        }
         fetch('/auth/complete', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             credentials: 'same-origin',
-            body: JSON.stringify({access_token: access_token, user_type: user_type})
+            body: JSON.stringify(body)
         }).then(r=>r.json()).then(function(json){
             if(json.success && json.redirect){
                 window.location = json.redirect;
