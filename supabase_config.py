@@ -504,6 +504,7 @@ class SupabaseService:
         name: str = "",
         user_type: str = "student",
         profile_image: str = None,
+        email_confirmed: Optional[bool] = None,
     ) -> Dict[str, Any]:
         """
         Ensure a profile exists for a user, create if missing.
@@ -523,15 +524,22 @@ class SupabaseService:
             existing_profile = self.get_profile(user_id)
             if existing_profile:
                 # If profile exists but doesn't have profile image and we have one, update it
+                update_fields = {}
                 if profile_image and not existing_profile.get("profile_image"):
-                    update_result = self.update_profile(
-                        user_id, {"profile_image": profile_image}
-                    )
+                    update_fields["profile_image"] = profile_image
+
+                # If caller indicates email_confirmed=True (e.g., OAuth), ensure profile flag is set
+                if email_confirmed is True and not existing_profile.get("email_confirmed"):
+                    update_fields["email_confirmed"] = True
+
+                if update_fields:
+                    update_result = self.update_profile(user_id, update_fields)
                     if update_result["success"]:
-                        existing_profile["profile_image"] = profile_image
+                        existing_profile.update(update_fields)
                         logger.info(
-                            f"Updated existing profile with Google profile picture for user: {user_id}"
+                            f"Updated existing profile for user {user_id} with fields: {list(update_fields.keys())}"
                         )
+
                 return {"success": True, "profile": existing_profile}
 
             # Create missing profile
@@ -545,6 +553,10 @@ class SupabaseService:
             # Add profile image if provided
             if profile_image:
                 profile_data["profile_image"] = profile_image
+
+            # If caller indicates this is an OAuth-created account, mark email as confirmed
+            if email_confirmed is True:
+                profile_data["email_confirmed"] = True
 
             profile_response = (
                 self.service_client.table("profiles").insert(profile_data).execute()
@@ -899,6 +911,58 @@ class SupabaseService:
 
         except Exception as e:
             logger.error(f"Error in enhanced student search: {str(e)}")
+            return []
+
+    def search_organizations(
+        self,
+        search_query: str = "",
+        location: str = "",
+    ) -> List[Dict[str, Any]]:
+        """
+        Search for organization profiles with simple text and location filters.
+
+        Args:
+            search_query: Text to search in name, organization_name, and description
+            location: Filter by location
+
+        Returns:
+            List of matching organization profiles
+        """
+        try:
+            query = self.client.table("profiles").select("*").eq("user_type", "organization")
+
+            # Apply text search if provided
+            if search_query:
+                # search organization_name, name, and description
+                query = query.or_(
+                    f"organization_name.ilike.%{search_query}%,name.ilike.%{search_query}%,description.ilike.%{search_query}%"
+                )
+
+            # Apply location filter
+            if location:
+                query = query.ilike("location", f"%{location}%")
+
+            # Order by creation date, newest first
+            query = query.order("created_at", desc=True)
+
+            response = query.execute()
+            orgs = response.data if response.data else []
+
+            # Remove unverified email accounts similar to student search
+            def is_verified(profile):
+                if not profile:
+                    return False
+                if profile.get('email_confirmed'):
+                    return True
+                if profile.get('email_confirmed_at'):
+                    return True
+                return False
+
+            orgs = [o for o in orgs if is_verified(o)]
+
+            return orgs
+        except Exception as e:
+            logger.error(f"Error searching organizations: {str(e)}")
             return []
 
     # Opportunities Management Methods

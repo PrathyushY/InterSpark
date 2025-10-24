@@ -420,14 +420,31 @@ def auth_google():
     Accepts optional query param user_type (student|organization) so we can
     remember which account type the user wants to create.
     """
-    user_type = request.args.get("user_type", "student")
+    # Only include user_type if explicitly provided by the caller (signup buttons pass it).
+    # For login flows we don't want to force a default user_type which could overwrite
+    # or be incorrectly applied to existing accounts.
+    user_type = request.args.get("user_type")
     supabase_url = os.getenv("SUPABASE_URL")
-    site_url = os.getenv("SITE_URL", "http://localhost:5000")
+
+    # If SUPABASE_URL is not configured, fail gracefully and inform developer/user
+    if not supabase_url:
+        logger.error("SUPABASE_URL environment variable is not set. Cannot perform Google OAuth.")
+        flash("Google sign-in is not configured on this server.", "error")
+        return redirect(url_for("login"))
+
+    # Use the actual host where the request arrived so redirect_to matches the running server
+    host_base = request.host_url.rstrip('/')
+    # Only append user_type to the callback URL when it was provided by the caller
+    if user_type:
+        redirect_to = f"{host_base}/auth/callback?user_type={user_type}"
+    else:
+        redirect_to = f"{host_base}/auth/callback"
+
     # Supabase authorize endpoint - use redirect_to to our /auth/callback
-    redirect_to = f"{site_url}/auth/callback?user_type={user_type}"
-    authorize_url = (
-        f"{supabase_url}/auth/v1/authorize?provider=google&redirect_to={redirect_to}"
-    )
+    # Add prompt=select_account to ensure the user can pick which Google account to use
+    authorize_url = f"{supabase_url.rstrip('/')}/auth/v1/authorize?provider=google&redirect_to={redirect_to}&prompt=select_account"
+
+    logger.info(f"Redirecting to Supabase OAuth authorize URL: {authorize_url}")
     return redirect(authorize_url)
 
 
@@ -451,7 +468,9 @@ def auth_complete():
     """
     data = request.get_json() or {}
     access_token = data.get("access_token")
-    user_type = data.get("user_type", "student")
+    # user_type may be omitted for login flows; keep it None when not provided so
+    # we can distinguish login vs signup intent.
+    requested_user_type = data.get("user_type")
 
     if not access_token:
         return jsonify({"success": False, "error": "Missing access_token"}), 400
@@ -490,20 +509,66 @@ def auth_complete():
             logger.info(f"No profile picture found in user metadata for user {user_id}")
             logger.debug(f"User metadata: {user_metadata}")
 
-        # Ensure profile exists with the requested user_type and profile image
+        # Ensure profile exists. If the caller requested a specific user_type (signup flow),
+        # pass it through; otherwise don't force a default here.
+        effective_user_type = requested_user_type if requested_user_type else None
+        # Mark OAuth-created profiles as email-confirmed
         supabase_service.ensure_profile_exists(
-            user_id, email, name, user_type, profile_image
+            user_id,
+            email,
+            name,
+            effective_user_type or "student",
+            profile_image,
+            email_confirmed=True,
         )
 
-        # Set Flask session
+        # Load the profile
+        profile = supabase_service.get_profile(user_id)
+
+        # Decide the final user_type:
+        # - If this was a signup intent (requested_user_type provided), prefer that type
+        #   when the existing profile is missing or appears incomplete.
+        # - Otherwise (login intent), prefer the stored profile.user_type to avoid overwriting.
+        final_user_type = None
+        if requested_user_type:
+            # Signup flow: if profile exists but is clearly incomplete, update its type
+            if profile and profile.get("user_type") and profile.get("user_type") != requested_user_type:
+                # Consider profile incomplete if is_profile_complete returns false or default name
+                completion = supabase_service.is_profile_complete(profile, profile.get("user_type"))
+                is_default_name = profile.get("name") in (None, "", "User")
+                if not completion["complete"] or is_default_name:
+                    try:
+                        supabase_service.update_profile(user_id, {"user_type": requested_user_type})
+                        logger.info(f"Updated profile user_type to {requested_user_type} for user {user_id}")
+                        final_user_type = requested_user_type
+                    except Exception as e:
+                        logger.warning(f"Failed to update profile user_type for {user_id}: {e}")
+                        final_user_type = profile.get("user_type")
+                else:
+                    # Existing complete profile has a different type; sign into existing
+                    logger.info(
+                        f"OAuth requested user_type={requested_user_type} but existing profile has user_type={profile.get('user_type')} for user {user_id}"
+                    )
+                    flash(
+                        f"An account already exists for this Google email as a {profile.get('user_type')}. Signing into that account.",
+                        "info",
+                    )
+                    final_user_type = profile.get("user_type")
+            else:
+                # No conflict or no existing type: use requested
+                final_user_type = requested_user_type
+        else:
+            # Login flow: prefer stored profile type; fallback to student
+            final_user_type = profile.get("user_type") if profile and profile.get("user_type") else "student"
+
+        # Set Flask session using the resolved/actual profile user_type
         session["user_id"] = user_id
-        session["user_type"] = user_type
-        session["user_name"] = name
-        session["user_email"] = email
+        session["user_type"] = final_user_type
+        session["user_name"] = profile.get("name", name) if profile else name
+        session["user_email"] = profile.get("email", email) if profile else email
 
         # Check profile completion and redirect accordingly
-        profile = supabase_service.get_profile(user_id)
-        completion = supabase_service.is_profile_complete(profile, user_type)
+        completion = supabase_service.is_profile_complete(profile, final_user_type)
         if not completion["complete"]:
             # Send the client to the signup completion page where they can fill
             # in student/organization specific fields. The client will navigate
@@ -512,7 +577,7 @@ def auth_complete():
                 jsonify(
                     {
                         "success": True,
-                        "redirect": url_for("signup_complete", user_type=user_type),
+                        "redirect": url_for("signup_complete", user_type=final_user_type),
                     }
                 ),
                 200,
@@ -1589,6 +1654,8 @@ def view_profile(user_id):
         selected_grade=grade,
         skills_json=skills_json,
         skills_master=get_all_available_skills(),
+        # If this is an organization profile, include their opportunities
+        organization_opportunities=(supabase_service.get_organization_opportunities(user_id) if profile.get('user_type') == 'organization' else []),
     )
 
 
@@ -1691,7 +1758,6 @@ def opportunity_details(id):
 def talent_search():
     if "user_id" not in session:
         return redirect(url_for("login"))
-
     try:
         user_id = session.get("user_id")
 
@@ -1701,26 +1767,39 @@ def talent_search():
         school = request.args.get("school", "")
         grade = request.args.get("grade", "")
         location = request.args.get("location", "")
+        # Optional type filter: 'student' or 'organization'
+        profile_type = request.args.get("type", "student")
 
         # Get pagination parameters
         page = int(request.args.get("page", 1))
         per_page = 9  # 9 profiles per page
 
-        # Search all students with filters first
-        all_students = supabase_service.search_students(
-            search_query=search_query,
-            skills=skills,
-            school=school,
-            grade=grade,
-            location=location,
-        )
+        # Branch by requested profile_type
+        if profile_type == 'organization':
+            all_orgs = supabase_service.search_organizations(
+                search_query=search_query,
+                location=location,
+            )
+            total_students = len(all_orgs)
+            total_pages = (total_students + per_page - 1) // per_page
+            start_idx = (page - 1) * per_page
+            end_idx = start_idx + per_page
+            students = all_orgs[start_idx:end_idx]
+        else:
+            # Search all students with filters first
+            all_students = supabase_service.search_students(
+                search_query=search_query,
+                skills=skills,
+                school=school,
+                grade=grade,
+                location=location,
+            )
 
-        # Calculate pagination
-        total_students = len(all_students)
-        total_pages = (total_students + per_page - 1) // per_page
-        start_idx = (page - 1) * per_page
-        end_idx = start_idx + per_page
-        students = all_students[start_idx:end_idx]
+            total_students = len(all_students)
+            total_pages = (total_students + per_page - 1) // per_page
+            start_idx = (page - 1) * per_page
+            end_idx = start_idx + per_page
+            students = all_students[start_idx:end_idx]
 
         # Get saved profiles to determine which ones are bookmarked
         saved_profiles = supabase_service.get_saved_profiles(user_id)
@@ -1732,11 +1811,10 @@ def talent_search():
                 elif "profile_id" in saved_profile:
                     saved_profile_ids.add(saved_profile["profile_id"])
 
-        # Add is_saved flag to each student
+        # Add is_saved flag to each student/org
         for student in students:
-            student["is_saved"] = student["id"] in saved_profile_ids
+            student["is_saved"] = student.get("id") in saved_profile_ids
 
-        # Pass allowed skills for dropdown
         # Parse selected_skills robustly (list or string)
         def parse_skills(val):
             import json
@@ -1770,6 +1848,7 @@ def talent_search():
             current_page=page,
             total_pages=total_pages,
             total_students=total_students,
+            profile_type=profile_type,
         )
     except Exception as e:
         flash(f"Error searching talent: {str(e)}", "error")
