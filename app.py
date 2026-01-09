@@ -1867,25 +1867,30 @@ def talent_search():
         location = request.args.get("location", "")
         # Optional type filter: 'student' or 'organization'
         profile_type = request.args.get("type", "student")
+        # Sort parameter: relevance, recent, or name
+        sort_by = request.args.get("sort_by", "relevance")
 
         # Get pagination parameters
         page = int(request.args.get("page", 1))
         per_page = 9  # 9 profiles per page
 
+        # Get viewer's profile for relevance scoring
+        viewer_profile = None
+        if sort_by == "relevance":
+            try:
+                viewer_profile = supabase_service.get_profile(user_id)
+            except Exception as e:
+                logger.warning(f"Could not load viewer profile for relevance: {e}")
+
         # Branch by requested profile_type
         if profile_type == "organization":
-            all_orgs = supabase_service.search_organizations(
+            all_results = supabase_service.search_organizations(
                 search_query=search_query,
                 location=location,
             )
-            total_students = len(all_orgs)
-            total_pages = (total_students + per_page - 1) // per_page
-            start_idx = (page - 1) * per_page
-            end_idx = start_idx + per_page
-            students = all_orgs[start_idx:end_idx]
         else:
             # Search all students with filters first
-            all_students = supabase_service.search_students(
+            all_results = supabase_service.search_students(
                 search_query=search_query,
                 skills=skills,
                 school=school,
@@ -1893,11 +1898,34 @@ def talent_search():
                 location=location,
             )
 
-            total_students = len(all_students)
-            total_pages = (total_students + per_page - 1) // per_page
-            start_idx = (page - 1) * per_page
-            end_idx = start_idx + per_page
-            students = all_students[start_idx:end_idx]
+        # Apply relevance ranking if requested and viewer profile available
+        if sort_by == "relevance" and viewer_profile and all_results:
+            try:
+                relevance_service = get_relevance_service()
+                all_results = relevance_service.rank_people(
+                    viewer_profile=viewer_profile,
+                    candidates=all_results,
+                )
+                logger.info(f"Ranked {len(all_results)} profiles by relevance")
+            except Exception as e:
+                logger.error(f"Error ranking people by relevance: {e}")
+                # Fall back to default order
+        elif sort_by == "name":
+            # Sort alphabetically by name (student.name or organization_name)
+            all_results = sorted(
+                all_results,
+                key=lambda x: (
+                    x.get("name", "") or x.get("organization_name", "")
+                ).lower(),
+            )
+        # Default/recent: keep database order (most recent first)
+
+        # Pagination
+        total_students = len(all_results)
+        total_pages = (total_students + per_page - 1) // per_page
+        start_idx = (page - 1) * per_page
+        end_idx = start_idx + per_page
+        students = all_results[start_idx:end_idx]
 
         # Get saved profiles to determine which ones are bookmarked
         saved_profiles = supabase_service.get_saved_profiles(user_id)
@@ -1947,6 +1975,7 @@ def talent_search():
             total_pages=total_pages,
             total_students=total_students,
             profile_type=profile_type,
+            sort_by=sort_by,
         )
     except Exception as e:
         flash(f"Error searching talent: {str(e)}", "error")

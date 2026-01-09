@@ -105,23 +105,6 @@
                         class="block px-4 py-2 border border-blue-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-sm">
                 </div>
 
-                <!-- Sort dropdown -->
-                <div class="relative">
-                    <select id="sort" name="sort"
-                        class="block px-4 py-2 border border-blue-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-white text-gray-900 text-sm">
-                        <option value="relevance" {% if selected_sort=='relevance' or not selected_sort %}selected{%
-                            endif %}>
-                            <i class="fas fa-star"></i> Best Match
-                        </option>
-                        <option value="recent" {% if selected_sort=='recent' %}selected{% endif %}>
-                            Most Recent
-                        </option>
-                        <option value="deadline" {% if selected_sort=='deadline' %}selected{% endif %}>
-                            Deadline (Soonest)
-                        </option>
-                    </select>
-                </div>
-
                 <div class="flex items-center gap-2">
                     <button type="submit"
                         class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors font-medium inline-flex items-center text-sm">
@@ -147,6 +130,27 @@
             </div>
         </form>
     </div>
+
+    <!-- Results header with sort dropdown -->
+    {% if opportunities %}
+    <div class="flex items-center justify-between mb-6">
+        <div class="text-sm text-gray-600">
+            <span class="font-medium">{{ total_opportunities }}</span> result{{ 's' if total_opportunities != 1 else ''
+            }} found
+        </div>
+        <div class="flex items-center gap-2">
+            <label for="sort-select" class="text-sm text-gray-700 font-medium">Sort by:</label>
+            <select id="sort-select" name="sort"
+                class="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white">
+                <option value="relevance" {% if selected_sort=='relevance' or not selected_sort %}selected{% endif %}>
+                    Relevance</option>
+                <option value="recent" {% if selected_sort=='recent' %}selected{% endif %}>Most Recent</option>
+                <option value="deadline" {% if selected_sort=='deadline' %}selected{% endif %}>Deadline (Soonest)
+                </option>
+            </select>
+        </div>
+    </div>
+    {% endif %}
 
     <!-- Opportunities Grid -->
 
@@ -620,6 +624,26 @@
             originalUpdate(container);
             updatePlaceholder();
         };
+
+        // Handle sort dropdown change
+        const sortSelect = document.getElementById('sort-select');
+        if (sortSelect) {
+            sortSelect.addEventListener('change', function () {
+                const selectedSort = this.value;
+
+                // Get current URL parameters
+                const urlParams = new URLSearchParams(window.location.search);
+
+                // Update or add sort parameter
+                urlParams.set('sort', selectedSort);
+
+                // Reset to page 1 when changing sort order
+                urlParams.set('page', '1');
+
+                // Reload page with new parameters
+                window.location.search = urlParams.toString();
+            });
+        }
     });
 </script>
 {% endblock %}

@@ -769,6 +769,358 @@ class RelevanceService:
 
         logger.info(f"Precomputed embeddings for {len(texts)} texts")
 
+    # ========================================================================
+    # PEOPLE/TALENT RANKING METHODS
+    # ========================================================================
+
+    def _compute_skill_overlap_score(
+        self, viewer_skills: List[str], candidate_skills: List[str]
+    ) -> float:
+        """
+        Compute skill overlap and complementarity score.
+
+        For talent search, we want both similar skills (collaboration potential)
+        and complementary skills (learning opportunities).
+
+        Args:
+            viewer_skills: Skills of the person viewing talent search
+            candidate_skills: Skills of the candidate profile
+
+        Returns:
+            Score between 0 and 1
+        """
+        if not candidate_skills:
+            return 0.3  # Neutral-low if no skills listed
+
+        if not viewer_skills:
+            return 0.5  # Neutral if viewer has no skills
+
+        viewer_skills_lower = [s.lower() for s in viewer_skills]
+        candidate_skills_lower = [s.lower() for s in candidate_skills]
+
+        overlap_score = 0.0
+        complementary_score = 0.0
+
+        # Calculate overlap (shared skills indicate collaboration potential)
+        overlap_count = len(
+            set(viewer_skills_lower).intersection(set(candidate_skills_lower))
+        )
+        overlap_score = min(overlap_count / max(len(viewer_skills_lower), 1), 1.0)
+
+        # Calculate complementarity (different but related skills)
+        if self._ensure_model_loaded():
+            # For each candidate skill not in viewer skills, check semantic similarity
+            for candidate_skill in candidate_skills_lower:
+                if candidate_skill not in viewer_skills_lower:
+                    candidate_embedding = self._get_embedding(candidate_skill)
+                    best_similarity = 0.0
+
+                    for viewer_skill in viewer_skills_lower:
+                        if viewer_skill != candidate_skill:
+                            viewer_embedding = self._get_embedding(viewer_skill)
+                            if (
+                                candidate_embedding is not None
+                                and viewer_embedding is not None
+                            ):
+                                similarity = self._cosine_similarity(
+                                    candidate_embedding, viewer_embedding
+                                )
+                                best_similarity = max(best_similarity, similarity)
+
+                    # Related but different skills (0.4-0.7 similarity)
+                    if 0.4 < best_similarity < 0.7:
+                        complementary_score += 0.5
+
+            # Normalize complementary score
+            if candidate_skills_lower:
+                complementary_score = min(
+                    complementary_score / len(candidate_skills_lower), 1.0
+                )
+
+        # Combine: 60% overlap (teamwork), 40% complementarity (learning)
+        return 0.6 * overlap_score + 0.4 * complementary_score
+
+    def _compute_bio_similarity_people(
+        self, viewer_bio: str, candidate_bio: str
+    ) -> float:
+        """
+        Compute semantic similarity between two user bios.
+
+        Similar interests and backgrounds suggest good connection potential.
+
+        Args:
+            viewer_bio: Bio of the person viewing profiles
+            candidate_bio: Bio of the candidate profile
+
+        Returns:
+            Similarity score between 0 and 1
+        """
+        if not viewer_bio or not candidate_bio:
+            return 0.3  # Neutral-low if missing bio
+
+        # Use embeddings if available
+        if self._ensure_model_loaded():
+            viewer_embedding = self._get_embedding(viewer_bio[:1000])
+            candidate_embedding = self._get_embedding(candidate_bio[:1000])
+            return self._cosine_similarity(viewer_embedding, candidate_embedding)
+
+        # Fallback: keyword overlap
+        return self._fallback_text_similarity(viewer_bio, candidate_bio)
+
+    def _compute_interest_overlap_score(
+        self, viewer_interests: List[str], candidate_interests: List[str]
+    ) -> float:
+        """
+        Compute overlap in interests/tags between viewer and candidate.
+
+        Args:
+            viewer_interests: Interests of the viewer
+            candidate_interests: Interests of the candidate
+
+        Returns:
+            Score between 0 and 1
+        """
+        if not viewer_interests and not candidate_interests:
+            return 0.5  # Neutral
+
+        if not viewer_interests or not candidate_interests:
+            return 0.3  # Slight penalty if one has no interests
+
+        viewer_lower = [i.lower() for i in viewer_interests if i]
+        candidate_lower = [i.lower() for i in candidate_interests if i]
+
+        # Exact matches
+        overlap = len(set(viewer_lower).intersection(set(candidate_lower)))
+        overlap_score = min(overlap / max(len(viewer_lower), 1), 1.0)
+
+        # Semantic matches if embeddings available
+        if self._ensure_model_loaded():
+            semantic_matches = 0
+            for candidate_interest in candidate_lower:
+                if candidate_interest not in viewer_lower:
+                    candidate_embedding = self._get_embedding(candidate_interest)
+                    for viewer_interest in viewer_lower:
+                        viewer_embedding = self._get_embedding(viewer_interest)
+                        if (
+                            candidate_embedding is not None
+                            and viewer_embedding is not None
+                        ):
+                            similarity = self._cosine_similarity(
+                                candidate_embedding, viewer_embedding
+                            )
+                            if similarity > 0.7:
+                                semantic_matches += 0.5
+                                break
+
+            semantic_score = min(semantic_matches / len(candidate_lower), 1.0)
+            return 0.7 * overlap_score + 0.3 * semantic_score
+
+        return overlap_score
+
+    def _compute_experience_compatibility_score(
+        self, viewer_profile: Dict[str, Any], candidate_profile: Dict[str, Any]
+    ) -> float:
+        """
+        Compute experience level compatibility.
+
+        Consider grade level, experience description, role preferences.
+
+        Args:
+            viewer_profile: Profile of the viewer
+            candidate_profile: Profile of the candidate
+
+        Returns:
+            Score between 0 and 1
+        """
+        score = 0.5  # Start neutral
+
+        # Grade/year compatibility (same or adjacent years work better)
+        viewer_grade = viewer_profile.get("grade", "")
+        candidate_grade = candidate_profile.get("grade", "")
+
+        if viewer_grade and candidate_grade:
+            # Parse grade numbers (e.g., "9th" -> 9, "12th" -> 12)
+            try:
+                viewer_year = int("".join(filter(str.isdigit, str(viewer_grade))))
+                candidate_year = int("".join(filter(str.isdigit, str(candidate_grade))))
+
+                year_diff = abs(viewer_year - candidate_year)
+                if year_diff == 0:
+                    score += 0.3  # Same year
+                elif year_diff == 1:
+                    score += 0.2  # Adjacent year
+                elif year_diff == 2:
+                    score += 0.1  # 2 years apart
+            except (ValueError, TypeError):
+                pass  # Can't parse, keep neutral
+
+        # School match (same school is a strong signal)
+        viewer_school = viewer_profile.get("school", "")
+        candidate_school = candidate_profile.get("school", "")
+
+        if viewer_school and candidate_school:
+            if viewer_school.lower() == candidate_school.lower():
+                score += 0.2
+
+        return min(score, 1.0)
+
+    def _parse_profile_interests(self, profile: Dict[str, Any]) -> List[str]:
+        """
+        Extract interests from a profile.
+
+        Combines skills and any explicit interests/tags.
+
+        Args:
+            profile: User profile data
+
+        Returns:
+            List of interests
+        """
+        interests = []
+
+        # Add skills as interests
+        skills = self._parse_skills(profile.get("skills", []))
+        interests.extend(skills)
+
+        # Add any explicit interests if available
+        if "interests" in profile:
+            profile_interests = profile["interests"]
+            if isinstance(profile_interests, list):
+                interests.extend(profile_interests)
+            elif isinstance(profile_interests, str):
+                interests.extend(
+                    [i.strip() for i in profile_interests.split(",") if i.strip()]
+                )
+
+        return interests
+
+    def compute_people_relevance_score(
+        self,
+        viewer_profile: Dict[str, Any],
+        candidate_profile: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        """
+        Compute relevance score between two users for talent search.
+
+        Scoring components:
+        - Skill overlap/complementarity (35%)
+        - Bio similarity (30%)
+        - Interest overlap (20%)
+        - Experience compatibility (15%)
+
+        Args:
+            viewer_profile: Profile of person viewing talent search
+            candidate_profile: Profile being evaluated
+
+        Returns:
+            Dictionary with total_score and component breakdown
+        """
+        # Don't rank self
+        if viewer_profile.get("id") == candidate_profile.get("id"):
+            return {
+                "total_score": 0.0,
+                "components": {},
+                "should_exclude": True,
+            }
+
+        # Extract viewer data
+        viewer_skills = self._parse_skills(viewer_profile.get("skills", []))
+        viewer_bio = viewer_profile.get("bio", "") or viewer_profile.get(
+            "description", ""
+        )
+        viewer_interests = self._parse_profile_interests(viewer_profile)
+
+        # Extract candidate data
+        candidate_skills = self._parse_skills(candidate_profile.get("skills", []))
+        candidate_bio = candidate_profile.get("bio", "") or candidate_profile.get(
+            "description", ""
+        )
+        candidate_interests = self._parse_profile_interests(candidate_profile)
+
+        # Compute component scores
+        skill_score = self._compute_skill_overlap_score(viewer_skills, candidate_skills)
+        bio_score = self._compute_bio_similarity_people(viewer_bio, candidate_bio)
+        interest_score = self._compute_interest_overlap_score(
+            viewer_interests, candidate_interests
+        )
+        experience_score = self._compute_experience_compatibility_score(
+            viewer_profile, candidate_profile
+        )
+
+        # Weighted total
+        total_score = (
+            0.35 * skill_score
+            + 0.30 * bio_score
+            + 0.20 * interest_score
+            + 0.15 * experience_score
+        )
+
+        return {
+            "total_score": total_score,
+            "components": {
+                "skill_overlap": skill_score,
+                "bio_similarity": bio_score,
+                "interest_overlap": interest_score,
+                "experience_compatibility": experience_score,
+            },
+            "should_exclude": False,
+        }
+
+    def rank_people(
+        self,
+        viewer_profile: Dict[str, Any],
+        candidates: List[Dict[str, Any]],
+        limit: Optional[int] = None,
+    ) -> List[Dict[str, Any]]:
+        """
+        Rank candidate profiles by relevance to the viewer.
+
+        Args:
+            viewer_profile: Profile of person viewing talent search
+            candidates: List of candidate profiles to rank
+            limit: Maximum number of results to return
+
+        Returns:
+            Sorted list of candidates with relevance scores
+        """
+        if not candidates:
+            return []
+
+        if not viewer_profile:
+            # No viewer profile - return candidates as-is
+            return candidates[:limit] if limit else candidates
+
+        scored_candidates = []
+
+        for candidate in candidates:
+            score_result = self.compute_people_relevance_score(
+                viewer_profile, candidate
+            )
+
+            # Skip self
+            if score_result["should_exclude"]:
+                continue
+
+            # Add score to candidate
+            candidate_with_score = candidate.copy()
+            candidate_with_score["relevance_score"] = score_result["total_score"]
+            candidate_with_score["score_components"] = score_result["components"]
+
+            scored_candidates.append(candidate_with_score)
+
+        # Sort by relevance score (descending)
+        sorted_candidates = sorted(
+            scored_candidates,
+            key=lambda x: x.get("relevance_score", 0),
+            reverse=True,
+        )
+
+        # Apply limit if specified
+        if limit:
+            sorted_candidates = sorted_candidates[:limit]
+
+        return sorted_candidates
+
 
 # Singleton instance for use across the application
 _relevance_service_instance: Optional[RelevanceService] = None

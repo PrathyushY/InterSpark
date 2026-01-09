@@ -50,4 +50,24 @@ document.addEventListener('DOMContentLoaded', function () {
                 button.disabled = false;
             });
     };
+
+    // Handle sort dropdown change
+    const sortSelect = document.getElementById('sort-select');
+    if (sortSelect) {
+        sortSelect.addEventListener('change', function () {
+            const selectedSort = this.value;
+
+            // Get current URL parameters
+            const urlParams = new URLSearchParams(window.location.search);
+
+            // Update or add sort_by parameter
+            urlParams.set('sort_by', selectedSort);
+
+            // Reset to page 1 when changing sort order
+            urlParams.set('page', '1');
+
+            // Reload page with new parameters
+            window.location.search = urlParams.toString();
+        });
+    }
 });
