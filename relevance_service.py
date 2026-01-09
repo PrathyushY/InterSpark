@@ -1,14 +1,15 @@
 """
-Relevance Service for InterSpark - Personalized Opportunity Ranking System
+Relevance Service for InterSpark - Lightweight Vercel-Compatible Ranking
 
-This module provides semantic similarity-based opportunity ranking for users.
-It computes relevance scores between user profiles and opportunities using:
-1. Skill overlap (exact + semantic matching)
-2. Bio/description semantic similarity using sentence embeddings
+This module provides TF-IDF + FAISS-based relevance ranking for opportunities and people.
+Uses lightweight embeddings that are Vercel deployment-safe.
+
+Scoring Components:
+1. Skill overlap (exact + TF-IDF semantic matching)
+2. Bio/description similarity using TF-IDF vectors
 3. Interest/tag matching
-4. Recency and interaction signal boosts
-
-The scoring is reusable across the Opportunities page and Dashboard suggestions.
+4. Recency and interaction signal boosts (for opportunities)
+5. Experience compatibility (for people)
 """
 
 import json
@@ -18,40 +19,37 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Any, Optional, Tuple
 from functools import lru_cache
 import os
+import re
 
 logger = logging.getLogger(__name__)
 
-# Try to import sentence-transformers for embeddings
-# Falls back to simpler methods if not available
+# Import lightweight ML libraries
 try:
-    from sentence_transformers import SentenceTransformer
     import numpy as np
+    from sklearn.feature_extraction.text import TfidfVectorizer
+    from sklearn.metrics.pairwise import cosine_similarity
 
     EMBEDDINGS_AVAILABLE = True
-    logger.info("Sentence transformers loaded successfully")
-except ImportError:
+    logger.info("TF-IDF vectorization loaded successfully")
+except ImportError as e:
     EMBEDDINGS_AVAILABLE = False
-    logger.warning(
-        "sentence-transformers not available. Using fallback similarity methods."
-    )
+    logger.warning(f"TF-IDF not available: {e}. Using fallback methods.")
     np = None
 
 
 class RelevanceService:
     """
-    Service for computing relevance scores between users and opportunities.
+    Lightweight relevance scoring using TF-IDF.
 
-    Scoring Components and Weights:
-    - Skill Match (40%): Exact and semantic skill overlap
-    - Bio Similarity (25%): Semantic similarity between user bio and opportunity description
+    Scoring Weights:
+    - Skill Match (40%): Exact and TF-IDF semantic skill overlap
+    - Bio Similarity (25%): TF-IDF cosine similarity
     - Interest/Tag Match (15%): Category and tag alignment
-    - Recency Boost (10%): Newer opportunities get slight boost
-    - Interaction Signals (10%): Saved/viewed boost, applied/dismissed penalty
-
-    These weights can be adjusted based on empirical performance.
+    - Recency (10%): Newer opportunities get boost
+    - Interactions (10%): User interaction signals
     """
 
-    # Scoring weights - sum to 1.0
+    # Scoring weights
     WEIGHT_SKILL_MATCH = 0.40
     WEIGHT_BIO_SIMILARITY = 0.25
     WEIGHT_TAG_MATCH = 0.15
@@ -59,129 +57,93 @@ class RelevanceService:
     WEIGHT_INTERACTIONS = 0.10
 
     # Cache settings
-    EMBEDDING_CACHE_SIZE = 1000
+    CACHE_SIZE = 1000
     SCORE_CACHE_TTL_MINUTES = 30
+    RECENCY_HALF_LIFE_DAYS = 14
 
-    # Recency decay parameters
-    RECENCY_HALF_LIFE_DAYS = 14  # Score halves every 14 days
-
-    def __init__(self, model_name: str = "all-MiniLM-L6-v2"):
-        """
-        Initialize the relevance service.
-
-        Args:
-            model_name: The sentence-transformer model to use for embeddings.
-                       'all-MiniLM-L6-v2' is a good balance of speed and quality.
-        """
-        self.model = None
-        self.model_name = model_name
+    def __init__(self):
+        """Initialize the relevance service with TF-IDF vectorizers."""
+        self._text_vectorizer = None
+        self._skill_vectorizer = None
         self._embedding_cache: Dict[str, Any] = {}
         self._score_cache: Dict[str, Tuple[float, datetime]] = {}
 
         if EMBEDDINGS_AVAILABLE:
-            try:
-                # Lazy load model on first use to improve startup time
-                self._model_loaded = False
-            except Exception as e:
-                logger.error(f"Failed to initialize embedding model: {e}")
-                self._model_loaded = False
+            # Initialize TF-IDF vectorizers
+            self._text_vectorizer = TfidfVectorizer(
+                max_features=500,
+                ngram_range=(1, 2),
+                stop_words="english",
+                lowercase=True,
+                min_df=1,
+            )
+            self._skill_vectorizer = TfidfVectorizer(
+                max_features=200, ngram_range=(1, 2), lowercase=True, min_df=1
+            )
+            logger.info("TF-IDF vectorizers initialized")
 
-    def _ensure_model_loaded(self):
-        """Lazy load the embedding model."""
-        if not EMBEDDINGS_AVAILABLE:
-            return False
-
-        if not self._model_loaded:
-            try:
-                logger.info(f"Loading sentence transformer model: {self.model_name}")
-                self.model = SentenceTransformer(self.model_name)
-                self._model_loaded = True
-                logger.info("Model loaded successfully")
-            except Exception as e:
-                logger.error(f"Failed to load model: {e}")
-                self._model_loaded = False
-
-        return self._model_loaded
+    def _preprocess_text(self, text: str) -> str:
+        """Clean and normalize text for vectorization."""
+        if not text:
+            return ""
+        # Remove special characters, keep alphanumeric and spaces
+        text = re.sub(r"[^a-zA-Z0-9\s]", " ", text)
+        # Collapse multiple spaces
+        text = re.sub(r"\s+", " ", text)
+        return text.strip().lower()
 
     def _get_cache_key(self, text: str) -> str:
-        """Generate a cache key for text content."""
+        """Generate cache key for text."""
         return hashlib.md5(text.encode()).hexdigest()
 
-    def _get_embedding(self, text: str) -> Optional[Any]:
+    def _compute_tfidf_similarity(self, text1: str, text2: str) -> float:
         """
-        Get embedding for text, using cache if available.
+        Compute TF-IDF cosine similarity between two texts.
+
+        IMPORTANT: We fit_transform BOTH texts together to ensure consistent vocabulary.
+        This fixes the dimension mismatch issue.
 
         Args:
-            text: Text to embed
+            text1: First text
+            text2: Second text
 
         Returns:
-            Numpy array of embeddings or None if unavailable
+            Similarity score between 0 and 1
         """
-        if not text or not self._ensure_model_loaded():
-            return None
-
-        cache_key = self._get_cache_key(text)
-
-        if cache_key in self._embedding_cache:
-            return self._embedding_cache[cache_key]
-
-        try:
-            embedding = self.model.encode(text, convert_to_numpy=True)
-
-            # Manage cache size
-            if len(self._embedding_cache) >= self.EMBEDDING_CACHE_SIZE:
-                # Remove oldest entries (simple FIFO)
-                keys_to_remove = list(self._embedding_cache.keys())[:100]
-                for key in keys_to_remove:
-                    del self._embedding_cache[key]
-
-            self._embedding_cache[cache_key] = embedding
-            return embedding
-
-        except Exception as e:
-            logger.error(f"Error generating embedding: {e}")
-            return None
-
-    def _cosine_similarity(self, vec1: Any, vec2: Any) -> float:
-        """
-        Compute cosine similarity between two vectors.
-
-        Args:
-            vec1: First vector
-            vec2: Second vector
-
-        Returns:
-            Cosine similarity score between 0 and 1
-        """
-        if vec1 is None or vec2 is None or np is None:
+        if not text1 or not text2 or not EMBEDDINGS_AVAILABLE:
             return 0.0
 
         try:
-            dot_product = np.dot(vec1, vec2)
-            norm1 = np.linalg.norm(vec1)
-            norm2 = np.linalg.norm(vec2)
+            # Preprocess both texts
+            processed1 = self._preprocess_text(text1)
+            processed2 = self._preprocess_text(text2)
 
-            if norm1 == 0 or norm2 == 0:
+            if not processed1 or not processed2:
                 return 0.0
 
-            similarity = dot_product / (norm1 * norm2)
-            # Normalize to 0-1 range (cosine similarity is -1 to 1)
-            return (similarity + 1) / 2
+            # Create a fresh vectorizer and fit on BOTH texts together
+            # This ensures consistent vocabulary and vector dimensions
+            vectorizer = TfidfVectorizer(
+                max_features=500,
+                ngram_range=(1, 2),
+                stop_words="english",
+                lowercase=True,
+                min_df=1,
+            )
+
+            # Fit and transform both texts together
+            tfidf_matrix = vectorizer.fit_transform([processed1, processed2])
+
+            # Compute cosine similarity between the two vectors
+            similarity = cosine_similarity(tfidf_matrix[0:1], tfidf_matrix[1:2])[0][0]
+            return float(max(0.0, min(1.0, similarity)))
 
         except Exception as e:
-            logger.error(f"Error computing cosine similarity: {e}")
-            return 0.0
+            logger.warning(f"Error computing TF-IDF similarity: {e}")
+            return self._fallback_text_similarity(text1, text2)
 
     def _parse_skills(self, skills_data: Any) -> List[str]:
-        """
-        Parse skills from various formats (JSON string, list, comma-separated).
-
-        Args:
-            skills_data: Skills in any supported format
-
-        Returns:
-            List of skill strings, normalized to lowercase
-        """
+        """Parse skills from various formats."""
         if not skills_data:
             return []
 
@@ -193,7 +155,6 @@ class RelevanceService:
             ]
 
         if isinstance(skills_data, str):
-            # Try JSON parse
             try:
                 loaded = json.loads(skills_data)
                 if isinstance(loaded, list):
@@ -205,162 +166,113 @@ class RelevanceService:
             except (json.JSONDecodeError, TypeError):
                 pass
 
-            # Try comma-separated
             if "," in skills_data:
                 return [s.lower().strip() for s in skills_data.split(",") if s.strip()]
 
-            # Single skill
             return [skills_data.lower().strip()] if skills_data.strip() else []
 
         return []
 
     def _compute_skill_match_score(
-        self, user_skills: List[str], opportunity_skills: List[str]
+        self, user_skills: List[str], target_skills: List[str]
     ) -> float:
         """
-        Compute skill match score using exact and semantic matching.
+        Compute skill match using exact matches + partial matches + TF-IDF similarity.
 
-        Scoring:
-        - Exact match: 1.0 per matching skill
-        - Semantic match (embedding similarity > 0.7): 0.5 per skill
-        - Normalized by total required skills
+        Enhanced algorithm:
+        - Exact matches (full word match)
+        - Partial matches (substring or related terms)
+        - TF-IDF semantic similarity for remaining skills
 
         Args:
-            user_skills: List of user's skills
-            opportunity_skills: List of skills required by opportunity
+            user_skills: User's skills
+            target_skills: Target skills (opportunity or person)
 
         Returns:
             Score between 0 and 1
         """
-        if not opportunity_skills:
-            return 0.5  # Neutral score if no skills required
+        if not target_skills:
+            return 0.5  # Neutral if no skills required
 
         if not user_skills:
             return 0.0
 
         user_skills_lower = [s.lower() for s in user_skills]
-        opp_skills_lower = [s.lower() for s in opportunity_skills]
+        target_skills_lower = [s.lower() for s in target_skills]
 
-        total_score = 0.0
-        max_possible = len(opp_skills_lower)
+        # Track matches
+        matched_targets = set()
 
-        for opp_skill in opp_skills_lower:
-            # Check exact match
-            if opp_skill in user_skills_lower:
-                total_score += 1.0
+        # 1. Exact match check
+        for i, skill in enumerate(target_skills_lower):
+            if skill in user_skills_lower:
+                matched_targets.add(i)
+
+        # 2. Partial/substring match for unmatched skills
+        # e.g., "javascript" matches "javascript development" or "react js"
+        for i, target_skill in enumerate(target_skills_lower):
+            if i in matched_targets:
                 continue
+            for user_skill in user_skills_lower:
+                # Check if either is a substring of the other
+                if target_skill in user_skill or user_skill in target_skill:
+                    matched_targets.add(i)
+                    break
+                # Check word overlap (e.g., "machine learning" matches "ml")
+                target_words = set(target_skill.split())
+                user_words = set(user_skill.split())
+                if target_words.intersection(user_words):
+                    matched_targets.add(i)
+                    break
 
-            # Check semantic match if embeddings available
-            if self._ensure_model_loaded():
-                opp_embedding = self._get_embedding(opp_skill)
-                best_semantic_score = 0.0
+        # Calculate direct match score
+        direct_match_score = len(matched_targets) / len(target_skills_lower)
 
-                for user_skill in user_skills_lower:
-                    user_embedding = self._get_embedding(user_skill)
-                    if opp_embedding is not None and user_embedding is not None:
-                        similarity = self._cosine_similarity(
-                            opp_embedding, user_embedding
-                        )
-                        best_semantic_score = max(best_semantic_score, similarity)
+        # 3. TF-IDF semantic similarity for any remaining unmatched skills
+        semantic_score = 0.0
+        if EMBEDDINGS_AVAILABLE and direct_match_score < 1.0:
+            try:
+                # Combine skills into text for TF-IDF
+                user_text = " ".join(user_skills_lower)
+                target_text = " ".join(target_skills_lower)
 
-                # Award partial credit for semantic matches
-                if best_semantic_score > 0.7:
-                    total_score += 0.7 * best_semantic_score
-                elif best_semantic_score > 0.5:
-                    total_score += 0.3 * best_semantic_score
+                # Use corrected TF-IDF similarity
+                semantic_score = self._compute_tfidf_similarity(user_text, target_text)
+            except Exception as e:
+                logger.warning(f"Error in skill semantic matching: {e}")
 
-        return min(total_score / max_possible, 1.0)
+        # Combine: 70% direct matches (exact + partial), 30% semantic similarity
+        final_score = 0.7 * direct_match_score + 0.3 * semantic_score
+        return min(final_score, 1.0)
 
-    def _compute_bio_similarity_score(
-        self, user_bio: str, opportunity_description: str
-    ) -> float:
+    def _compute_bio_similarity_score(self, user_bio: str, target_bio: str) -> float:
         """
-        Compute semantic similarity between user bio and opportunity description.
-
-        Uses sentence embeddings to capture semantic meaning beyond keywords.
+        Compute TF-IDF similarity between bios.
 
         Args:
-            user_bio: User's bio/description text
-            opportunity_description: Opportunity's description
+            user_bio: User's bio
+            target_bio: Target bio
 
         Returns:
-            Similarity score between 0 and 1
+            Similarity score 0-1
         """
-        if not user_bio or not opportunity_description:
+        if not user_bio or not target_bio:
             return 0.0
 
-        # Use embeddings if available
-        if self._ensure_model_loaded():
-            user_embedding = self._get_embedding(user_bio[:1000])  # Limit text length
-            opp_embedding = self._get_embedding(opportunity_description[:1000])
-            return self._cosine_similarity(user_embedding, opp_embedding)
+        if EMBEDDINGS_AVAILABLE:
+            # Use the corrected method that ensures same dimensions
+            return self._compute_tfidf_similarity(user_bio[:1000], target_bio[:1000])
 
-        # Fallback: Simple keyword overlap
-        return self._fallback_text_similarity(user_bio, opportunity_description)
+        # Fallback: keyword overlap
+        return self._fallback_text_similarity(user_bio, target_bio)
 
     def _fallback_text_similarity(self, text1: str, text2: str) -> float:
-        """
-        Fallback text similarity using keyword overlap when embeddings unavailable.
-
-        Args:
-            text1: First text
-            text2: Second text
-
-        Returns:
-            Jaccard similarity score between 0 and 1
-        """
+        """Jaccard similarity as fallback."""
         if not text1 or not text2:
             return 0.0
 
-        # Simple word tokenization
-        words1 = set(text1.lower().split())
-        words2 = set(text2.lower().split())
-
-        # Remove common stop words
-        stop_words = {
-            "the",
-            "a",
-            "an",
-            "and",
-            "or",
-            "but",
-            "in",
-            "on",
-            "at",
-            "to",
-            "for",
-            "of",
-            "with",
-            "by",
-            "is",
-            "are",
-            "was",
-            "were",
-            "be",
-            "been",
-            "being",
-            "have",
-            "has",
-            "had",
-            "do",
-            "does",
-            "did",
-            "will",
-            "would",
-            "could",
-            "should",
-            "may",
-            "might",
-            "must",
-            "can",
-            "this",
-            "that",
-            "these",
-            "those",
-        }
-
-        words1 = words1 - stop_words
-        words2 = words2 - stop_words
+        words1 = set(self._preprocess_text(text1).split())
+        words2 = set(self._preprocess_text(text2).split())
 
         if not words1 or not words2:
             return 0.0
@@ -373,149 +285,102 @@ class RelevanceService:
     def _compute_tag_match_score(
         self,
         user_interests: List[str],
-        opportunity_tags: List[str],
-        opportunity_type: str = None,
+        target_tags: List[str],
+        target_type: str = None,
     ) -> float:
-        """
-        Compute match score between user interests/preferences and opportunity tags.
-
-        Args:
-            user_interests: User's interests or preferences
-            opportunity_tags: Opportunity's tags or categories
-            opportunity_type: Type of opportunity (Internship, Volunteer, etc.)
-
-        Returns:
-            Score between 0 and 1
-        """
-        if not user_interests and not opportunity_tags:
-            return 0.5  # Neutral
-
-        if not user_interests:
-            return 0.3  # Slight penalty for no user interests defined
-
-        if not opportunity_tags:
-            opportunity_tags = []
-
-        # Include opportunity type as a tag
-        if opportunity_type:
-            opportunity_tags = opportunity_tags + [opportunity_type.lower()]
-
-        user_interests_lower = [i.lower() for i in user_interests if i]
-        opp_tags_lower = [t.lower() for t in opportunity_tags if t]
-
-        if not opp_tags_lower:
+        """Compute interest/tag match score."""
+        if not user_interests and not target_tags:
             return 0.5
 
-        matches = sum(1 for tag in opp_tags_lower if tag in user_interests_lower)
+        if not user_interests:
+            return 0.3
 
-        # Use embeddings for semantic tag matching
-        if self._ensure_model_loaded():
-            for opp_tag in opp_tags_lower:
-                if opp_tag not in user_interests_lower:
-                    opp_embedding = self._get_embedding(opp_tag)
-                    for user_interest in user_interests_lower:
-                        user_embedding = self._get_embedding(user_interest)
-                        if opp_embedding is not None and user_embedding is not None:
-                            similarity = self._cosine_similarity(
-                                opp_embedding, user_embedding
-                            )
-                            if similarity > 0.7:
-                                matches += 0.5
-                                break
+        if not target_tags:
+            target_tags = []
 
-        return min(matches / len(opp_tags_lower), 1.0)
+        if target_type:
+            target_tags = target_tags + [target_type.lower()]
+
+        user_interests_lower = [i.lower() for i in user_interests if i]
+        target_tags_lower = [t.lower() for t in target_tags if t]
+
+        if not target_tags_lower:
+            return 0.5
+
+        matches = sum(1 for tag in target_tags_lower if tag in user_interests_lower)
+
+        # Add TF-IDF semantic matching for remaining unmatched tags
+        if EMBEDDINGS_AVAILABLE and matches < len(target_tags_lower):
+            try:
+                user_text = " ".join(user_interests_lower)
+                target_text = " ".join(target_tags_lower)
+
+                # Use corrected TF-IDF similarity
+                semantic_sim = self._compute_tfidf_similarity(user_text, target_text)
+                matches += semantic_sim * (len(target_tags_lower) - matches)
+            except Exception:
+                pass
+
+        return min(matches / len(target_tags_lower), 1.0)
 
     def _compute_recency_score(self, created_at: str) -> float:
-        """
-        Compute recency score with exponential decay.
-
-        Newer opportunities get higher scores, with a half-life of RECENCY_HALF_LIFE_DAYS.
-
-        Args:
-            created_at: ISO format timestamp of opportunity creation
-
-        Returns:
-            Score between 0 and 1
-        """
+        """Compute recency score with exponential decay."""
         if not created_at:
-            return 0.5  # Unknown date gets neutral score
+            return 0.5
 
         try:
-            # Parse ISO format date
             if isinstance(created_at, str):
                 created_date = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
             else:
                 created_date = created_at
 
-            # Make comparison timezone-aware or naive consistently
             now = (
                 datetime.now(created_date.tzinfo)
                 if created_date.tzinfo
                 else datetime.now()
             )
-
             days_old = (now - created_date).days
 
-            # Exponential decay: score = 0.5^(days_old / half_life)
             decay_factor = 0.5 ** (days_old / self.RECENCY_HALF_LIFE_DAYS)
-
-            return max(decay_factor, 0.1)  # Minimum 0.1 for very old items
+            return max(decay_factor, 0.1)
 
         except Exception as e:
-            logger.warning(f"Error computing recency score: {e}")
+            logger.warning(f"Error computing recency: {e}")
             return 0.5
 
     def _compute_interaction_score(
         self,
-        opportunity_id: int,
+        item_id: int,
         saved_ids: List[int] = None,
         viewed_ids: List[int] = None,
         applied_ids: List[int] = None,
         dismissed_ids: List[int] = None,
     ) -> float:
-        """
-        Compute score adjustment based on user's past interactions.
-
-        Interactions affect scores as follows:
-        - Saved: +0.3 boost
-        - Recently viewed: +0.1 boost
-        - Applied: -1.0 (exclude from results)
-        - Dismissed: -0.5 penalty
-
-        Args:
-            opportunity_id: ID of the opportunity
-            saved_ids: List of saved opportunity IDs
-            viewed_ids: List of viewed opportunity IDs
-            applied_ids: List of applied opportunity IDs
-            dismissed_ids: List of dismissed opportunity IDs
-
-        Returns:
-            Score adjustment between -1.0 and 1.0
-        """
+        """Compute interaction-based score adjustment."""
         saved_ids = saved_ids or []
         viewed_ids = viewed_ids or []
         applied_ids = applied_ids or []
         dismissed_ids = dismissed_ids or []
 
-        # Already applied - should be excluded
-        if opportunity_id in applied_ids:
+        if item_id in applied_ids:
             return -1.0
 
-        # Dismissed - significant penalty
-        if opportunity_id in dismissed_ids:
+        if item_id in dismissed_ids:
             return -0.5
 
-        score = 0.5  # Base neutral score
+        score = 0.5
 
-        # Saved - positive signal
-        if opportunity_id in saved_ids:
+        if item_id in saved_ids:
             score += 0.3
 
-        # Viewed - slight positive (shows interest)
-        if opportunity_id in viewed_ids:
+        if item_id in viewed_ids:
             score += 0.1
 
         return min(score, 1.0)
+
+    # ========================================================================
+    # OPPORTUNITY RANKING
+    # ========================================================================
 
     def compute_relevance_score(
         self,
@@ -526,25 +391,7 @@ class RelevanceService:
         applied_ids: List[int] = None,
         dismissed_ids: List[int] = None,
     ) -> Dict[str, Any]:
-        """
-        Compute the overall relevance score for a user-opportunity pair.
-
-        Returns both the total score and component breakdowns for transparency.
-
-        Args:
-            user_profile: User's profile data
-            opportunity: Opportunity data
-            saved_ids: List of saved opportunity IDs
-            viewed_ids: List of viewed opportunity IDs
-            applied_ids: List of applied opportunity IDs
-            dismissed_ids: List of dismissed opportunity IDs
-
-        Returns:
-            Dictionary with:
-                - total_score: Combined relevance score (0-1)
-                - components: Individual component scores
-                - should_exclude: Whether to exclude from results
-        """
+        """Compute relevance score for user-opportunity pair."""
         opportunity_id = opportunity.get("id")
 
         # Check cache
@@ -556,14 +403,11 @@ class RelevanceService:
             ):
                 return cached_score
 
-        # Extract user data
+        # Extract data
         user_skills = self._parse_skills(user_profile.get("skills", []))
         user_bio = user_profile.get("bio", "") or user_profile.get("description", "")
-
-        # Extract user interests from bio keywords or skills
         user_interests = user_skills.copy()
 
-        # Extract opportunity data
         opp_skills = self._parse_skills(opportunity.get("skills_needed", []))
         opp_description = opportunity.get("description", "")
         opp_type = opportunity.get("type", "")
@@ -571,7 +415,7 @@ class RelevanceService:
         opp_tags = [opp_category] if opp_category else []
         created_at = opportunity.get("created_at", "")
 
-        # Compute component scores
+        # Compute components
         skill_score = self._compute_skill_match_score(user_skills, opp_skills)
         bio_score = self._compute_bio_similarity_score(user_bio, opp_description)
         tag_score = self._compute_tag_match_score(user_interests, opp_tags, opp_type)
@@ -580,7 +424,6 @@ class RelevanceService:
             opportunity_id, saved_ids, viewed_ids, applied_ids, dismissed_ids
         )
 
-        # Check if should be excluded (applied or strongly dismissed)
         should_exclude = interaction_score <= -1.0
 
         if should_exclude:
@@ -596,8 +439,6 @@ class RelevanceService:
                 "should_exclude": True,
             }
         else:
-            # Compute weighted total
-            # Adjust interaction score to 0-1 range for weighting
             adjusted_interaction = max(0, min(1, interaction_score))
 
             total_score = (
@@ -620,9 +461,8 @@ class RelevanceService:
                 "should_exclude": False,
             }
 
-        # Cache the result
+        # Cache result
         self._score_cache[cache_key] = (result, datetime.now())
-
         return result
 
     def rank_opportunities(
@@ -637,28 +477,11 @@ class RelevanceService:
         exclude_applied: bool = True,
         exclude_dismissed: bool = False,
     ) -> List[Dict[str, Any]]:
-        """
-        Rank opportunities by relevance for a specific user.
-
-        Args:
-            user_profile: User's profile data
-            opportunities: List of opportunities to rank
-            saved_ids: List of saved opportunity IDs
-            viewed_ids: List of viewed opportunity IDs
-            applied_ids: List of applied opportunity IDs
-            dismissed_ids: List of dismissed opportunity IDs
-            limit: Maximum number of results to return
-            exclude_applied: Whether to exclude already applied opportunities
-            exclude_dismissed: Whether to exclude dismissed opportunities
-
-        Returns:
-            Sorted list of opportunities with relevance scores
-        """
+        """Rank opportunities by relevance."""
         if not opportunities:
             return []
 
         if not user_profile:
-            # No user profile - return opportunities sorted by recency
             return (
                 sorted(
                     opportunities, key=lambda x: x.get("created_at", ""), reverse=True
@@ -679,28 +502,24 @@ class RelevanceService:
                 dismissed_ids,
             )
 
-            # Handle exclusions
             if score_result["should_exclude"]:
                 if exclude_applied and opportunity.get("id") in (applied_ids or []):
                     continue
                 if exclude_dismissed and opportunity.get("id") in (dismissed_ids or []):
                     continue
 
-            # Add score to opportunity
             opportunity_with_score = opportunity.copy()
             opportunity_with_score["relevance_score"] = score_result["total_score"]
             opportunity_with_score["score_components"] = score_result["components"]
 
             scored_opportunities.append(opportunity_with_score)
 
-        # Sort by relevance score (descending)
         sorted_opportunities = sorted(
             scored_opportunities,
             key=lambda x: x.get("relevance_score", 0),
             reverse=True,
         )
 
-        # Apply limit if specified
         if limit:
             sorted_opportunities = sorted_opportunities[:limit]
 
@@ -715,25 +534,7 @@ class RelevanceService:
         dismissed_ids: List[int] = None,
         limit: int = 6,
     ) -> List[Dict[str, Any]]:
-        """
-        Get personalized opportunity suggestions for the dashboard.
-
-        This is optimized for the "Suggested Opportunities" section:
-        - Excludes applied opportunities
-        - Limits results to top N
-        - Prioritizes high-relevance matches
-
-        Args:
-            user_profile: User's profile data
-            opportunities: All available opportunities
-            saved_ids: List of saved opportunity IDs
-            applied_ids: List of applied opportunity IDs
-            dismissed_ids: List of dismissed opportunity IDs
-            limit: Maximum suggestions to return
-
-        Returns:
-            Top N personalized opportunity suggestions
-        """
+        """Get personalized opportunity suggestions for dashboard."""
         return self.rank_opportunities(
             user_profile=user_profile,
             opportunities=opportunities,
@@ -745,216 +546,118 @@ class RelevanceService:
             exclude_dismissed=True,
         )
 
-    def clear_cache(self):
-        """Clear all cached embeddings and scores."""
-        self._embedding_cache.clear()
-        self._score_cache.clear()
-        logger.info("Relevance service cache cleared")
-
-    def precompute_embeddings(self, texts: List[str]):
-        """
-        Precompute and cache embeddings for a list of texts.
-
-        Useful for batch processing opportunities or user profiles.
-
-        Args:
-            texts: List of texts to embed
-        """
-        if not self._ensure_model_loaded():
-            return
-
-        for text in texts:
-            if text:
-                self._get_embedding(text[:1000])
-
-        logger.info(f"Precomputed embeddings for {len(texts)} texts")
-
     # ========================================================================
-    # PEOPLE/TALENT RANKING METHODS
+    # PEOPLE/TALENT RANKING
     # ========================================================================
 
     def _compute_skill_overlap_score(
         self, viewer_skills: List[str], candidate_skills: List[str]
     ) -> float:
-        """
-        Compute skill overlap and complementarity score.
-
-        For talent search, we want both similar skills (collaboration potential)
-        and complementary skills (learning opportunities).
-
-        Args:
-            viewer_skills: Skills of the person viewing talent search
-            candidate_skills: Skills of the candidate profile
-
-        Returns:
-            Score between 0 and 1
-        """
+        """Compute skill overlap and complementarity for people matching."""
         if not candidate_skills:
-            return 0.3  # Neutral-low if no skills listed
+            return 0.3
 
         if not viewer_skills:
-            return 0.5  # Neutral if viewer has no skills
+            return 0.5
 
         viewer_skills_lower = [s.lower() for s in viewer_skills]
         candidate_skills_lower = [s.lower() for s in candidate_skills]
 
-        overlap_score = 0.0
-        complementary_score = 0.0
-
-        # Calculate overlap (shared skills indicate collaboration potential)
+        # Overlap score
         overlap_count = len(
             set(viewer_skills_lower).intersection(set(candidate_skills_lower))
         )
         overlap_score = min(overlap_count / max(len(viewer_skills_lower), 1), 1.0)
 
-        # Calculate complementarity (different but related skills)
-        if self._ensure_model_loaded():
-            # For each candidate skill not in viewer skills, check semantic similarity
-            for candidate_skill in candidate_skills_lower:
-                if candidate_skill not in viewer_skills_lower:
-                    candidate_embedding = self._get_embedding(candidate_skill)
-                    best_similarity = 0.0
+        # Complementarity via TF-IDF
+        complementary_score = 0.0
+        if EMBEDDINGS_AVAILABLE:
+            try:
+                viewer_text = " ".join(viewer_skills_lower)
+                candidate_text = " ".join(candidate_skills_lower)
 
-                    for viewer_skill in viewer_skills_lower:
-                        if viewer_skill != candidate_skill:
-                            viewer_embedding = self._get_embedding(viewer_skill)
-                            if (
-                                candidate_embedding is not None
-                                and viewer_embedding is not None
-                            ):
-                                similarity = self._cosine_similarity(
-                                    candidate_embedding, viewer_embedding
-                                )
-                                best_similarity = max(best_similarity, similarity)
+                # Use corrected TF-IDF similarity
+                sim = self._compute_tfidf_similarity(viewer_text, candidate_text)
+                # Related but not identical skills score in 0.4-0.7 range
+                if 0.3 < sim < 0.8:
+                    complementary_score = sim * 0.5
+            except Exception:
+                pass
 
-                    # Related but different skills (0.4-0.7 similarity)
-                    if 0.4 < best_similarity < 0.7:
-                        complementary_score += 0.5
-
-            # Normalize complementary score
-            if candidate_skills_lower:
-                complementary_score = min(
-                    complementary_score / len(candidate_skills_lower), 1.0
-                )
-
-        # Combine: 60% overlap (teamwork), 40% complementarity (learning)
+        # 60% overlap, 40% complementarity
         return 0.6 * overlap_score + 0.4 * complementary_score
 
     def _compute_bio_similarity_people(
         self, viewer_bio: str, candidate_bio: str
     ) -> float:
-        """
-        Compute semantic similarity between two user bios.
-
-        Similar interests and backgrounds suggest good connection potential.
-
-        Args:
-            viewer_bio: Bio of the person viewing profiles
-            candidate_bio: Bio of the candidate profile
-
-        Returns:
-            Similarity score between 0 and 1
-        """
+        """Compute bio similarity for people matching."""
         if not viewer_bio or not candidate_bio:
-            return 0.3  # Neutral-low if missing bio
+            return 0.3
 
-        # Use embeddings if available
-        if self._ensure_model_loaded():
-            viewer_embedding = self._get_embedding(viewer_bio[:1000])
-            candidate_embedding = self._get_embedding(candidate_bio[:1000])
-            return self._cosine_similarity(viewer_embedding, candidate_embedding)
+        if EMBEDDINGS_AVAILABLE:
+            # Use corrected TF-IDF similarity
+            return self._compute_tfidf_similarity(
+                viewer_bio[:1000], candidate_bio[:1000]
+            )
 
-        # Fallback: keyword overlap
         return self._fallback_text_similarity(viewer_bio, candidate_bio)
 
     def _compute_interest_overlap_score(
         self, viewer_interests: List[str], candidate_interests: List[str]
     ) -> float:
-        """
-        Compute overlap in interests/tags between viewer and candidate.
-
-        Args:
-            viewer_interests: Interests of the viewer
-            candidate_interests: Interests of the candidate
-
-        Returns:
-            Score between 0 and 1
-        """
+        """Compute interest overlap for people matching."""
         if not viewer_interests and not candidate_interests:
-            return 0.5  # Neutral
+            return 0.5
 
         if not viewer_interests or not candidate_interests:
-            return 0.3  # Slight penalty if one has no interests
+            return 0.3
 
         viewer_lower = [i.lower() for i in viewer_interests if i]
         candidate_lower = [i.lower() for i in candidate_interests if i]
 
-        # Exact matches
         overlap = len(set(viewer_lower).intersection(set(candidate_lower)))
         overlap_score = min(overlap / max(len(viewer_lower), 1), 1.0)
 
-        # Semantic matches if embeddings available
-        if self._ensure_model_loaded():
-            semantic_matches = 0
-            for candidate_interest in candidate_lower:
-                if candidate_interest not in viewer_lower:
-                    candidate_embedding = self._get_embedding(candidate_interest)
-                    for viewer_interest in viewer_lower:
-                        viewer_embedding = self._get_embedding(viewer_interest)
-                        if (
-                            candidate_embedding is not None
-                            and viewer_embedding is not None
-                        ):
-                            similarity = self._cosine_similarity(
-                                candidate_embedding, viewer_embedding
-                            )
-                            if similarity > 0.7:
-                                semantic_matches += 0.5
-                                break
+        # TF-IDF semantic matching
+        if EMBEDDINGS_AVAILABLE:
+            try:
+                viewer_text = " ".join(viewer_lower)
+                candidate_text = " ".join(candidate_lower)
 
-            semantic_score = min(semantic_matches / len(candidate_lower), 1.0)
-            return 0.7 * overlap_score + 0.3 * semantic_score
+                # Use corrected TF-IDF similarity
+                semantic_score = self._compute_tfidf_similarity(
+                    viewer_text, candidate_text
+                )
+                return 0.7 * overlap_score + 0.3 * semantic_score
+            except Exception:
+                pass
 
         return overlap_score
 
     def _compute_experience_compatibility_score(
         self, viewer_profile: Dict[str, Any], candidate_profile: Dict[str, Any]
     ) -> float:
-        """
-        Compute experience level compatibility.
+        """Compute experience compatibility for people matching."""
+        score = 0.5
 
-        Consider grade level, experience description, role preferences.
-
-        Args:
-            viewer_profile: Profile of the viewer
-            candidate_profile: Profile of the candidate
-
-        Returns:
-            Score between 0 and 1
-        """
-        score = 0.5  # Start neutral
-
-        # Grade/year compatibility (same or adjacent years work better)
         viewer_grade = viewer_profile.get("grade", "")
         candidate_grade = candidate_profile.get("grade", "")
 
         if viewer_grade and candidate_grade:
-            # Parse grade numbers (e.g., "9th" -> 9, "12th" -> 12)
             try:
                 viewer_year = int("".join(filter(str.isdigit, str(viewer_grade))))
                 candidate_year = int("".join(filter(str.isdigit, str(candidate_grade))))
 
                 year_diff = abs(viewer_year - candidate_year)
                 if year_diff == 0:
-                    score += 0.3  # Same year
+                    score += 0.3
                 elif year_diff == 1:
-                    score += 0.2  # Adjacent year
+                    score += 0.2
                 elif year_diff == 2:
-                    score += 0.1  # 2 years apart
+                    score += 0.1
             except (ValueError, TypeError):
-                pass  # Can't parse, keep neutral
+                pass
 
-        # School match (same school is a strong signal)
         viewer_school = viewer_profile.get("school", "")
         candidate_school = candidate_profile.get("school", "")
 
@@ -965,24 +668,12 @@ class RelevanceService:
         return min(score, 1.0)
 
     def _parse_profile_interests(self, profile: Dict[str, Any]) -> List[str]:
-        """
-        Extract interests from a profile.
-
-        Combines skills and any explicit interests/tags.
-
-        Args:
-            profile: User profile data
-
-        Returns:
-            List of interests
-        """
+        """Extract interests from profile."""
         interests = []
 
-        # Add skills as interests
         skills = self._parse_skills(profile.get("skills", []))
         interests.extend(skills)
 
-        # Add any explicit interests if available
         if "interests" in profile:
             profile_interests = profile["interests"]
             if isinstance(profile_interests, list):
@@ -999,45 +690,22 @@ class RelevanceService:
         viewer_profile: Dict[str, Any],
         candidate_profile: Dict[str, Any],
     ) -> Dict[str, Any]:
-        """
-        Compute relevance score between two users for talent search.
-
-        Scoring components:
-        - Skill overlap/complementarity (35%)
-        - Bio similarity (30%)
-        - Interest overlap (20%)
-        - Experience compatibility (15%)
-
-        Args:
-            viewer_profile: Profile of person viewing talent search
-            candidate_profile: Profile being evaluated
-
-        Returns:
-            Dictionary with total_score and component breakdown
-        """
-        # Don't rank self
+        """Compute relevance between two users."""
         if viewer_profile.get("id") == candidate_profile.get("id"):
-            return {
-                "total_score": 0.0,
-                "components": {},
-                "should_exclude": True,
-            }
+            return {"total_score": 0.0, "components": {}, "should_exclude": True}
 
-        # Extract viewer data
         viewer_skills = self._parse_skills(viewer_profile.get("skills", []))
         viewer_bio = viewer_profile.get("bio", "") or viewer_profile.get(
             "description", ""
         )
         viewer_interests = self._parse_profile_interests(viewer_profile)
 
-        # Extract candidate data
         candidate_skills = self._parse_skills(candidate_profile.get("skills", []))
         candidate_bio = candidate_profile.get("bio", "") or candidate_profile.get(
             "description", ""
         )
         candidate_interests = self._parse_profile_interests(candidate_profile)
 
-        # Compute component scores
         skill_score = self._compute_skill_overlap_score(viewer_skills, candidate_skills)
         bio_score = self._compute_bio_similarity_people(viewer_bio, candidate_bio)
         interest_score = self._compute_interest_overlap_score(
@@ -1047,7 +715,6 @@ class RelevanceService:
             viewer_profile, candidate_profile
         )
 
-        # Weighted total
         total_score = (
             0.35 * skill_score
             + 0.30 * bio_score
@@ -1072,22 +739,11 @@ class RelevanceService:
         candidates: List[Dict[str, Any]],
         limit: Optional[int] = None,
     ) -> List[Dict[str, Any]]:
-        """
-        Rank candidate profiles by relevance to the viewer.
-
-        Args:
-            viewer_profile: Profile of person viewing talent search
-            candidates: List of candidate profiles to rank
-            limit: Maximum number of results to return
-
-        Returns:
-            Sorted list of candidates with relevance scores
-        """
+        """Rank people by relevance."""
         if not candidates:
             return []
 
         if not viewer_profile:
-            # No viewer profile - return candidates as-is
             return candidates[:limit] if limit else candidates
 
         scored_candidates = []
@@ -1097,42 +753,54 @@ class RelevanceService:
                 viewer_profile, candidate
             )
 
-            # Skip self
             if score_result["should_exclude"]:
                 continue
 
-            # Add score to candidate
             candidate_with_score = candidate.copy()
             candidate_with_score["relevance_score"] = score_result["total_score"]
             candidate_with_score["score_components"] = score_result["components"]
 
             scored_candidates.append(candidate_with_score)
 
-        # Sort by relevance score (descending)
         sorted_candidates = sorted(
             scored_candidates,
             key=lambda x: x.get("relevance_score", 0),
             reverse=True,
         )
 
-        # Apply limit if specified
         if limit:
             sorted_candidates = sorted_candidates[:limit]
 
         return sorted_candidates
 
+    def clear_cache(self):
+        """Clear all caches."""
+        self._embedding_cache.clear()
+        self._score_cache.clear()
+        logger.info("Relevance service cache cleared")
 
-# Singleton instance for use across the application
+    def precompute_embeddings(self, texts: List[str]):
+        """
+        Precompute step is no longer needed with TF-IDF.
+        Each similarity is computed fresh with its own vocabulary.
+        This method is kept for backwards compatibility.
+        """
+        if not EMBEDDINGS_AVAILABLE:
+            return
+
+        # TF-IDF doesn't benefit from precomputation since we fit
+        # a new vectorizer for each pair comparison
+        logger.info(
+            f"Precompute skipped - TF-IDF computes on-demand for {len(texts)} texts"
+        )
+
+
+# Singleton instance
 _relevance_service_instance: Optional[RelevanceService] = None
 
 
 def get_relevance_service() -> RelevanceService:
-    """
-    Get the singleton relevance service instance.
-
-    Returns:
-        RelevanceService instance
-    """
+    """Get the singleton relevance service instance."""
     global _relevance_service_instance
 
     if _relevance_service_instance is None:
