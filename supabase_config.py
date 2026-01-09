@@ -529,7 +529,9 @@ class SupabaseService:
                     update_fields["profile_image"] = profile_image
 
                 # If caller indicates email_confirmed=True (e.g., OAuth), ensure profile flag is set
-                if email_confirmed is True and not existing_profile.get("email_confirmed"):
+                if email_confirmed is True and not existing_profile.get(
+                    "email_confirmed"
+                ):
                     update_fields["email_confirmed"] = True
 
                 if update_fields:
@@ -929,7 +931,11 @@ class SupabaseService:
             List of matching organization profiles
         """
         try:
-            query = self.client.table("profiles").select("*").eq("user_type", "organization")
+            query = (
+                self.client.table("profiles")
+                .select("*")
+                .eq("user_type", "organization")
+            )
 
             # Apply text search if provided
             if search_query:
@@ -952,9 +958,9 @@ class SupabaseService:
             def is_verified(profile):
                 if not profile:
                     return False
-                if profile.get('email_confirmed'):
+                if profile.get("email_confirmed"):
                     return True
-                if profile.get('email_confirmed_at'):
+                if profile.get("email_confirmed_at"):
                     return True
                 return False
 
@@ -1583,6 +1589,353 @@ class SupabaseService:
         except Exception as e:
             logger.error(f"Error checking saved profile: {str(e)}")
             return False
+
+    # Opportunity Interaction Tracking Methods
+    def record_opportunity_interaction(
+        self, user_id: str, opportunity_id: int, interaction_type: str
+    ) -> Dict[str, Any]:
+        """
+        Record a user's interaction with an opportunity.
+
+        Args:
+            user_id: The user's ID
+            opportunity_id: The opportunity's ID
+            interaction_type: Type of interaction ('view', 'dismiss', 'click', 'share')
+
+        Returns:
+            Success/error response
+        """
+        try:
+            valid_types = ["view", "dismiss", "click", "share"]
+            if interaction_type not in valid_types:
+                return {
+                    "success": False,
+                    "error": f"Invalid interaction type. Must be one of: {valid_types}",
+                }
+
+            # Use upsert to handle duplicate entries gracefully
+            response = (
+                self.service_client.table("opportunity_interactions")
+                .upsert(
+                    {
+                        "user_id": user_id,
+                        "opportunity_id": opportunity_id,
+                        "interaction_type": interaction_type,
+                    },
+                    on_conflict="user_id,opportunity_id,interaction_type",
+                )
+                .execute()
+            )
+
+            if response.data:
+                logger.info(
+                    f"Recorded {interaction_type} interaction for user {user_id} on opportunity {opportunity_id}"
+                )
+                return {"success": True, "data": response.data[0]}
+            else:
+                return {"success": False, "error": "Failed to record interaction"}
+
+        except Exception as e:
+            logger.error(f"Error recording opportunity interaction: {str(e)}")
+            return {"success": False, "error": str(e)}
+
+    def get_user_viewed_opportunities(self, user_id: str) -> List[int]:
+        """
+        Get list of opportunity IDs the user has viewed.
+
+        Args:
+            user_id: The user's ID
+
+        Returns:
+            List of viewed opportunity IDs
+        """
+        try:
+            response = (
+                self.service_client.table("opportunity_interactions")
+                .select("opportunity_id")
+                .eq("user_id", user_id)
+                .eq("interaction_type", "view")
+                .execute()
+            )
+
+            if response.data:
+                return [item["opportunity_id"] for item in response.data]
+            return []
+
+        except Exception as e:
+            logger.error(f"Error getting viewed opportunities: {str(e)}")
+            return []
+
+    def get_user_dismissed_opportunities(self, user_id: str) -> List[int]:
+        """
+        Get list of opportunity IDs the user has dismissed.
+
+        Args:
+            user_id: The user's ID
+
+        Returns:
+            List of dismissed opportunity IDs
+        """
+        try:
+            response = (
+                self.service_client.table("opportunity_interactions")
+                .select("opportunity_id")
+                .eq("user_id", user_id)
+                .eq("interaction_type", "dismiss")
+                .execute()
+            )
+
+            if response.data:
+                return [item["opportunity_id"] for item in response.data]
+            return []
+
+        except Exception as e:
+            logger.error(f"Error getting dismissed opportunities: {str(e)}")
+            return []
+
+    def get_user_applied_opportunities(self, user_id: str) -> List[int]:
+        """
+        Get list of opportunity IDs the user has applied to.
+
+        Args:
+            user_id: The user's ID
+
+        Returns:
+            List of applied opportunity IDs
+        """
+        try:
+            response = (
+                self.service_client.table("applications")
+                .select("opportunity_id")
+                .eq("student_id", user_id)
+                .execute()
+            )
+
+            if response.data:
+                return [item["opportunity_id"] for item in response.data]
+            return []
+
+        except Exception as e:
+            logger.error(f"Error getting applied opportunities: {str(e)}")
+            return []
+
+    def get_user_saved_opportunity_ids(self, user_id: str) -> List[int]:
+        """
+        Get list of opportunity IDs the user has saved.
+
+        Args:
+            user_id: The user's ID
+
+        Returns:
+            List of saved opportunity IDs
+        """
+        try:
+            response = (
+                self.service_client.table("saved_opportunities")
+                .select("opportunity_id")
+                .eq("user_id", user_id)
+                .execute()
+            )
+
+            if response.data:
+                return [item["opportunity_id"] for item in response.data]
+            return []
+
+        except Exception as e:
+            logger.error(f"Error getting saved opportunity IDs: {str(e)}")
+            return []
+
+    def remove_opportunity_interaction(
+        self, user_id: str, opportunity_id: int, interaction_type: str
+    ) -> Dict[str, Any]:
+        """
+        Remove a user's interaction with an opportunity.
+
+        Args:
+            user_id: The user's ID
+            opportunity_id: The opportunity's ID
+            interaction_type: Type of interaction to remove
+
+        Returns:
+            Success/error response
+        """
+        try:
+            response = (
+                self.service_client.table("opportunity_interactions")
+                .delete()
+                .eq("user_id", user_id)
+                .eq("opportunity_id", opportunity_id)
+                .eq("interaction_type", interaction_type)
+                .execute()
+            )
+
+            logger.info(
+                f"Removed {interaction_type} interaction for user {user_id} on opportunity {opportunity_id}"
+            )
+            return {"success": True}
+
+        except Exception as e:
+            logger.error(f"Error removing opportunity interaction: {str(e)}")
+            return {"success": False, "error": str(e)}
+
+    def get_user_interaction_data(self, user_id: str) -> Dict[str, List[int]]:
+        """
+        Get all interaction data for a user in a single call.
+        Used by relevance scoring to efficiently fetch all interaction signals.
+
+        Args:
+            user_id: The user's ID
+
+        Returns:
+            Dictionary with lists of opportunity IDs by interaction type:
+            - saved_ids: Saved opportunities
+            - viewed_ids: Viewed opportunities
+            - applied_ids: Applied opportunities
+            - dismissed_ids: Dismissed opportunities
+        """
+        try:
+            # Fetch all data in parallel-ish queries
+            saved_ids = self.get_user_saved_opportunity_ids(user_id)
+            viewed_ids = self.get_user_viewed_opportunities(user_id)
+            applied_ids = self.get_user_applied_opportunities(user_id)
+            dismissed_ids = self.get_user_dismissed_opportunities(user_id)
+
+            return {
+                "saved_ids": saved_ids,
+                "viewed_ids": viewed_ids,
+                "applied_ids": applied_ids,
+                "dismissed_ids": dismissed_ids,
+            }
+
+        except Exception as e:
+            logger.error(f"Error getting user interaction data: {str(e)}")
+            return {
+                "saved_ids": [],
+                "viewed_ids": [],
+                "applied_ids": [],
+                "dismissed_ids": [],
+            }
+
+    def cleanup_old_interactions(self) -> Dict[str, Any]:
+        """
+        Delete old interaction records based on retention policy.
+
+        Retention periods:
+        - view, click, share: 30 days
+        - dismiss: 180 days (6 months)
+
+        Returns:
+            Dictionary with cleanup results including counts of deleted records
+        """
+        try:
+            # Call the database function that handles cleanup
+            response = self.service_client.rpc("cleanup_old_interactions").execute()
+
+            if response.data:
+                logger.info(f"Interaction cleanup completed: {response.data}")
+                return {"success": True, "result": response.data}
+
+            return {"success": True, "result": {"message": "Cleanup completed"}}
+
+        except Exception as e:
+            logger.error(f"Error during interaction cleanup: {str(e)}")
+            # Fallback: do manual cleanup if RPC fails
+            try:
+                return self._manual_cleanup_old_interactions()
+            except Exception as manual_error:
+                logger.error(f"Manual cleanup also failed: {str(manual_error)}")
+                return {"success": False, "error": str(e)}
+
+    def _manual_cleanup_old_interactions(self) -> Dict[str, Any]:
+        """
+        Fallback manual cleanup if the database function isn't available.
+        """
+        from datetime import datetime, timedelta
+
+        results = {"views": 0, "clicks": 0, "shares": 0, "dismisses": 0}
+
+        # Calculate cutoff dates
+        thirty_days_ago = (datetime.now() - timedelta(days=30)).isoformat()
+        six_months_ago = (datetime.now() - timedelta(days=180)).isoformat()
+
+        # Delete old views
+        for interaction_type in ["view", "click", "share"]:
+            response = (
+                self.service_client.table("opportunity_interactions")
+                .delete()
+                .eq("interaction_type", interaction_type)
+                .lt("created_at", thirty_days_ago)
+                .execute()
+            )
+            results[f"{interaction_type}s"] = len(response.data) if response.data else 0
+
+        # Delete old dismisses (longer retention)
+        response = (
+            self.service_client.table("opportunity_interactions")
+            .delete()
+            .eq("interaction_type", "dismiss")
+            .lt("created_at", six_months_ago)
+            .execute()
+        )
+        results["dismisses"] = len(response.data) if response.data else 0
+
+        total = sum(results.values())
+        logger.info(f"Manual interaction cleanup completed: {total} records deleted")
+
+        return {"success": True, "result": {"deleted": results, "total": total}}
+
+    def get_interaction_stats(self) -> Dict[str, Any]:
+        """
+        Get statistics about stored interactions for monitoring.
+
+        Returns:
+            Dictionary with counts by interaction type and date ranges
+        """
+        try:
+            # Try to use the stats view first
+            response = (
+                self.service_client.table("interaction_stats").select("*").execute()
+            )
+
+            if response.data:
+                return {"success": True, "stats": response.data}
+
+            # Fallback: manual count
+            return self._manual_get_interaction_stats()
+
+        except Exception as e:
+            logger.warning(f"Stats view not available, using manual count: {e}")
+            return self._manual_get_interaction_stats()
+
+    def _manual_get_interaction_stats(self) -> Dict[str, Any]:
+        """
+        Fallback manual stats gathering if the view isn't available.
+        """
+        try:
+            stats = {}
+
+            for interaction_type in ["view", "dismiss", "click", "share"]:
+                response = (
+                    self.service_client.table("opportunity_interactions")
+                    .select("id", count="exact")
+                    .eq("interaction_type", interaction_type)
+                    .execute()
+                )
+                stats[interaction_type] = response.count if response.count else 0
+
+            # Get total
+            total_response = (
+                self.service_client.table("opportunity_interactions")
+                .select("id", count="exact")
+                .execute()
+            )
+            stats["total"] = total_response.count if total_response.count else 0
+
+            return {"success": True, "stats": stats}
+
+        except Exception as e:
+            logger.error(f"Error getting interaction stats: {str(e)}")
+            return {"success": False, "error": str(e)}
 
     # Storage Management Methods
     def create_profile_picture_bucket(self) -> Dict[str, Any]:

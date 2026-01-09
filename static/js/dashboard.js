@@ -97,7 +97,7 @@
     window.deleteOpportunity = async function (id, elementId) {
         if (!confirm('Delete this opportunity? This cannot be undone.')) return;
         try {
-            const res = await fetch(`/delete_opportunity/${id}`, {method: 'POST'});
+            const res = await fetch(`/delete_opportunity/${id}`, { method: 'POST' });
             const data = await res.json();
             if (data.success) {
                 const el = qs(elementId);
@@ -113,7 +113,7 @@
     window.unsaveOpportunity = async function (id, elementId) {
         const key = String(id);
         try {
-            const res = await fetch(`/unsave_opportunity/${id}`, {method: 'POST'});
+            const res = await fetch(`/unsave_opportunity/${id}`, { method: 'POST' });
             const data = await res.json();
             if (data.success) {
                 const el = qs(elementId);
@@ -140,7 +140,7 @@
     window.unsaveProfile = async function (id, elementId) {
         const key = String(id);
         try {
-            const res = await fetch(`/unsave_profile/${id}`, {method: 'POST'});
+            const res = await fetch(`/unsave_profile/${id}`, { method: 'POST' });
             const data = await res.json();
             if (data.success) {
                 const el = qs(elementId);
@@ -226,4 +226,47 @@
 
     // Initial counts sync
     updateSavedCounts();
+
+    // Dismiss opportunity from suggestions (for relevance scoring)
+    window.dismissOpportunity = async function (id, elementId) {
+        try {
+            const res = await fetch(`/dismiss_opportunity/${id}`, { method: 'POST' });
+            const data = await res.json();
+            if (data.success) {
+                const el = qs(elementId);
+                if (el) {
+                    // Smooth fade out animation
+                    el.style.transition = 'opacity 0.3s ease-out';
+                    el.style.opacity = '0';
+                    setTimeout(() => {
+                        el.remove();
+                    }, 300);
+                }
+                showAlert('Opportunity removed from suggestions', 'info');
+            } else {
+                showAlert(data.error || 'Failed to dismiss opportunity', 'error');
+            }
+        } catch (e) {
+            console.error('Error dismissing opportunity:', e);
+            showAlert('Error dismissing opportunity', 'error');
+        }
+    };
+
+    // Undo dismiss (restore opportunity to suggestions)
+    window.undismissOpportunity = async function (id) {
+        try {
+            const res = await fetch(`/undismiss_opportunity/${id}`, { method: 'POST' });
+            const data = await res.json();
+            if (data.success) {
+                showAlert('Opportunity restored to suggestions', 'success');
+                // Reload page to refresh suggestions
+                window.location.reload();
+            } else {
+                showAlert(data.error || 'Failed to restore opportunity', 'error');
+            }
+        } catch (e) {
+            console.error('Error restoring opportunity:', e);
+            showAlert('Error restoring opportunity', 'error');
+        }
+    };
 })();

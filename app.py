@@ -18,6 +18,7 @@ from flask import (
 
 from ai_service import AIService
 from supabase_config import SupabaseService
+from relevance_service import get_relevance_service
 
 # Load environment variables
 load_dotenv()
@@ -32,6 +33,7 @@ if os.getenv("FLASK_ENV") != "development":
     logging.getLogger("httpx").setLevel(logging.WARNING)
     logging.getLogger("supabase_config").setLevel(logging.WARNING)
     logging.getLogger("supabase").setLevel(logging.WARNING)
+    logging.getLogger("relevance_service").setLevel(logging.WARNING)
 
 
 def get_all_available_skills():
@@ -428,12 +430,14 @@ def auth_google():
 
     # If SUPABASE_URL is not configured, fail gracefully and inform developer/user
     if not supabase_url:
-        logger.error("SUPABASE_URL environment variable is not set. Cannot perform Google OAuth.")
+        logger.error(
+            "SUPABASE_URL environment variable is not set. Cannot perform Google OAuth."
+        )
         flash("Google sign-in is not configured on this server.", "error")
         return redirect(url_for("login"))
 
     # Use the actual host where the request arrived so redirect_to matches the running server
-    host_base = request.host_url.rstrip('/')
+    host_base = request.host_url.rstrip("/")
     # Only append user_type to the callback URL when it was provided by the caller
     if user_type:
         redirect_to = f"{host_base}/auth/callback?user_type={user_type}"
@@ -532,17 +536,29 @@ def auth_complete():
         final_user_type = None
         if requested_user_type:
             # Signup flow: if profile exists but is clearly incomplete, update its type
-            if profile and profile.get("user_type") and profile.get("user_type") != requested_user_type:
+            if (
+                profile
+                and profile.get("user_type")
+                and profile.get("user_type") != requested_user_type
+            ):
                 # Consider profile incomplete if is_profile_complete returns false or default name
-                completion = supabase_service.is_profile_complete(profile, profile.get("user_type"))
+                completion = supabase_service.is_profile_complete(
+                    profile, profile.get("user_type")
+                )
                 is_default_name = profile.get("name") in (None, "", "User")
                 if not completion["complete"] or is_default_name:
                     try:
-                        supabase_service.update_profile(user_id, {"user_type": requested_user_type})
-                        logger.info(f"Updated profile user_type to {requested_user_type} for user {user_id}")
+                        supabase_service.update_profile(
+                            user_id, {"user_type": requested_user_type}
+                        )
+                        logger.info(
+                            f"Updated profile user_type to {requested_user_type} for user {user_id}"
+                        )
                         final_user_type = requested_user_type
                     except Exception as e:
-                        logger.warning(f"Failed to update profile user_type for {user_id}: {e}")
+                        logger.warning(
+                            f"Failed to update profile user_type for {user_id}: {e}"
+                        )
                         final_user_type = profile.get("user_type")
                 else:
                     # Existing complete profile has a different type; sign into existing
@@ -559,7 +575,11 @@ def auth_complete():
                 final_user_type = requested_user_type
         else:
             # Login flow: prefer stored profile type; fallback to student
-            final_user_type = profile.get("user_type") if profile and profile.get("user_type") else "student"
+            final_user_type = (
+                profile.get("user_type")
+                if profile and profile.get("user_type")
+                else "student"
+            )
 
         # Set Flask session using the resolved/actual profile user_type
         session["user_id"] = user_id
@@ -577,7 +597,9 @@ def auth_complete():
                 jsonify(
                     {
                         "success": True,
-                        "redirect": url_for("signup_complete", user_type=final_user_type),
+                        "redirect": url_for(
+                            "signup_complete", user_type=final_user_type
+                        ),
                     }
                 ),
                 200,
@@ -1407,25 +1429,51 @@ def dashboard():
         }
 
     if user_type == "student":
-        # Get student's applications, relevant opportunities, and saved opportunities/profiles
+        # Get student's personalized opportunity suggestions
         try:
-            opportunities = supabase_service.get_opportunities()
+            # Fetch all active opportunities
+            all_opportunities = supabase_service.get_opportunities()
             saved_opportunities = supabase_service.get_saved_opportunities(user_id)
             saved_profiles = supabase_service.get_saved_profiles(user_id)
+
+            # Get user interaction data for relevance scoring
+            interaction_data = supabase_service.get_user_interaction_data(user_id)
+
+            # Use relevance service to get personalized suggestions
+            relevance_service = get_relevance_service()
+            suggested_opportunities = relevance_service.get_suggested_opportunities(
+                user_profile=user_profile,
+                opportunities=all_opportunities,
+                saved_ids=interaction_data["saved_ids"],
+                applied_ids=interaction_data["applied_ids"],
+                dismissed_ids=interaction_data["dismissed_ids"],
+                limit=6,  # Show top 6 suggestions on dashboard
+            )
+
+            logger.info(
+                f"Generated {len(suggested_opportunities)} personalized suggestions for user {user_id}"
+            )
+
             return render_template(
                 "dashboard.html",
                 user_type="student",
-                opportunities=opportunities,
+                opportunities=suggested_opportunities,
                 saved_opportunities=saved_opportunities,
                 saved_profiles=saved_profiles,
                 user=user_profile,
             )
         except Exception as e:
-            flash(f"Error loading dashboard: {str(e)}", "error")
+            logger.error(f"Error loading dashboard with recommendations: {str(e)}")
+            # Fallback to basic opportunity list
+            try:
+                opportunities = supabase_service.get_opportunities(limit=6)
+            except:
+                opportunities = []
+            flash(f"Error loading personalized suggestions", "warning")
             return render_template(
                 "dashboard.html",
                 user_type="student",
-                opportunities=[],
+                opportunities=opportunities,
                 saved_opportunities=[],
                 saved_profiles=[],
                 user=user_profile,
@@ -1655,7 +1703,11 @@ def view_profile(user_id):
         skills_json=skills_json,
         skills_master=get_all_available_skills(),
         # If this is an organization profile, include their opportunities
-        organization_opportunities=(supabase_service.get_organization_opportunities(user_id) if profile.get('user_type') == 'organization' else []),
+        organization_opportunities=(
+            supabase_service.get_organization_opportunities(user_id)
+            if profile.get("user_type") == "organization"
+            else []
+        ),
     )
 
 
@@ -1664,6 +1716,8 @@ def opportunities():
     if "user_id" not in session:
         return redirect(url_for("login"))
 
+    user_id = session.get("user_id")
+
     try:
         # Get filters from query parameters
         search_query = request.args.get("search", "")
@@ -1671,6 +1725,7 @@ def opportunities():
         category = request.args.get("category", "")
         location = request.args.get("location", "")
         skills_needed = request.args.get("skills_needed", "")
+        sort_by = request.args.get("sort", "relevance")  # Default to relevance sorting
 
         # Get pagination parameters
         page = int(request.args.get("page", 1))
@@ -1685,6 +1740,44 @@ def opportunities():
             skills_needed=skills_needed,
         )
 
+        # Apply relevance-based sorting if requested (default behavior)
+        if sort_by == "relevance" and not search_query:
+            # Only apply relevance sorting when not using text search
+            # Text search already has its own relevance built in
+            try:
+                user_profile = supabase_service.get_profile(user_id)
+                if user_profile:
+                    # Get user interaction data
+                    interaction_data = supabase_service.get_user_interaction_data(
+                        user_id
+                    )
+
+                    # Rank opportunities by relevance
+                    relevance_service = get_relevance_service()
+                    all_opportunities = relevance_service.rank_opportunities(
+                        user_profile=user_profile,
+                        opportunities=all_opportunities,
+                        saved_ids=interaction_data["saved_ids"],
+                        viewed_ids=interaction_data["viewed_ids"],
+                        applied_ids=interaction_data["applied_ids"],
+                        dismissed_ids=interaction_data["dismissed_ids"],
+                        exclude_applied=False,  # Show all on opportunities page
+                        exclude_dismissed=False,
+                    )
+                    logger.info(f"Applied relevance sorting for user {user_id}")
+            except Exception as e:
+                logger.warning(f"Could not apply relevance sorting: {e}")
+                # Fall back to recency-based sorting (already default from DB)
+        elif sort_by == "recent":
+            # Already sorted by recency from DB query
+            pass
+        elif sort_by == "deadline":
+            # Sort by application deadline
+            all_opportunities = sorted(
+                all_opportunities,
+                key=lambda x: x.get("application_deadline") or "9999-12-31",
+            )
+
         # Calculate pagination
         total_opportunities = len(all_opportunities)
         total_pages = (total_opportunities + per_page - 1) // per_page
@@ -1693,8 +1786,6 @@ def opportunities():
         opportunities = all_opportunities[start_idx:end_idx]
 
         # Parse skills_needed (comma-separated or JSON)
-        import json
-
         def parse_skills(val):
             if not val:
                 return []
@@ -1720,6 +1811,7 @@ def opportunities():
             selected_category=category,
             selected_location=location,
             selected_skills_needed=selected_skills_needed,
+            selected_sort=sort_by,
             skills_master=get_all_available_skills(),
             current_page=page,
             total_pages=total_pages,
@@ -1745,6 +1837,12 @@ def opportunity_details(id):
 
         # Check if opportunity is saved by current user
         is_saved = supabase_service.is_opportunity_saved(user_id, id)
+
+        # Record view interaction for relevance scoring
+        try:
+            supabase_service.record_opportunity_interaction(user_id, id, "view")
+        except Exception as e:
+            logger.warning(f"Failed to record opportunity view: {e}")
 
         return render_template(
             "opportunity_details.html", opportunity=opportunity, is_saved=is_saved
@@ -1775,7 +1873,7 @@ def talent_search():
         per_page = 9  # 9 profiles per page
 
         # Branch by requested profile_type
-        if profile_type == 'organization':
+        if profile_type == "organization":
             all_orgs = supabase_service.search_organizations(
                 search_query=search_query,
                 location=location,
@@ -2246,6 +2344,69 @@ def unsave_opportunity(opportunity_id):
         return {"success": False, "error": str(e)}, 500
 
 
+@app.route("/dismiss_opportunity/<int:opportunity_id>", methods=["POST"])
+def dismiss_opportunity(opportunity_id):
+    """
+    Dismiss an opportunity so it won't appear in suggestions.
+    This records a 'dismiss' interaction for relevance scoring.
+    """
+    if "user_id" not in session:
+        return jsonify({"success": False, "error": "Not authenticated"}), 401
+
+    user_id = session.get("user_id")
+
+    try:
+        result = supabase_service.record_opportunity_interaction(
+            user_id, opportunity_id, "dismiss"
+        )
+        if result["success"]:
+            return jsonify({"success": True, "message": "Opportunity dismissed"})
+        else:
+            return (
+                jsonify(
+                    {
+                        "success": False,
+                        "error": result.get("error", "Failed to dismiss opportunity"),
+                    }
+                ),
+                400,
+            )
+    except Exception as e:
+        logger.error(f"Error dismissing opportunity: {str(e)}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route("/undismiss_opportunity/<int:opportunity_id>", methods=["POST"])
+def undismiss_opportunity(opportunity_id):
+    """
+    Remove a dismiss interaction to show opportunity in suggestions again.
+    """
+    if "user_id" not in session:
+        return jsonify({"success": False, "error": "Not authenticated"}), 401
+
+    user_id = session.get("user_id")
+
+    try:
+        result = supabase_service.remove_opportunity_interaction(
+            user_id, opportunity_id, "dismiss"
+        )
+        if result["success"]:
+            return jsonify({"success": True, "message": "Opportunity restored"})
+        else:
+            return (
+                jsonify(
+                    {
+                        "success": False,
+                        "error": result.get("error", "Failed to restore opportunity"),
+                    }
+                ),
+                400,
+            )
+    except Exception as e:
+        logger.error(f"Error undismissing opportunity: {str(e)}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
 @app.route("/save_profile/<profile_id>", methods=["POST"])
 def save_profile(profile_id):
     if "user_id" not in session:
@@ -2560,4 +2721,4 @@ def chat_clear():
 
 
 if __name__ == "__main__":
-    app.run(debug=True, port=5001)
+    app.run(debug=True, port=5000)
