@@ -18,7 +18,7 @@ from flask import (
 
 from ai_service import AIService
 from supabase_config import SupabaseService
-from relevance_service import get_relevance_service
+from faiss_search_service import get_faiss_search
 
 # Load environment variables
 load_dotenv()
@@ -33,7 +33,7 @@ if os.getenv("FLASK_ENV") != "development":
     logging.getLogger("httpx").setLevel(logging.WARNING)
     logging.getLogger("supabase_config").setLevel(logging.WARNING)
     logging.getLogger("supabase").setLevel(logging.WARNING)
-    logging.getLogger("relevance_service").setLevel(logging.WARNING)
+    logging.getLogger("faiss_search_service").setLevel(logging.WARNING)
 
 
 def get_all_available_skills():
@@ -1436,18 +1436,25 @@ def dashboard():
             saved_opportunities = supabase_service.get_saved_opportunities(user_id)
             saved_profiles = supabase_service.get_saved_profiles(user_id)
 
-            # Get user interaction data for relevance scoring
+            # Get user interaction data for filtering
             interaction_data = supabase_service.get_user_interaction_data(user_id)
 
-            # Use relevance service to get personalized suggestions
-            relevance_service = get_relevance_service()
-            suggested_opportunities = relevance_service.get_suggested_opportunities(
+            # Filter out applied and dismissed opportunities
+            applied_ids = set(interaction_data.get("applied_ids", []))
+            dismissed_ids = set(interaction_data.get("dismissed_ids", []))
+            filtered_opportunities = [
+                opp
+                for opp in all_opportunities
+                if opp.get("id") not in applied_ids
+                and opp.get("id") not in dismissed_ids
+            ]
+
+            # Use FAISS to get personalized suggestions based on profile similarity
+            faiss_search = get_faiss_search()
+            suggested_opportunities = faiss_search.recommend_opportunities_for_user(
                 user_profile=user_profile,
-                opportunities=all_opportunities,
-                saved_ids=interaction_data["saved_ids"],
-                applied_ids=interaction_data["applied_ids"],
-                dismissed_ids=interaction_data["dismissed_ids"],
-                limit=6,  # Show top 6 suggestions on dashboard
+                opportunities=filtered_opportunities,
+                top_k=6,  # Show top 6 suggestions on dashboard
             )
 
             logger.info(
@@ -1740,33 +1747,49 @@ def opportunities():
             skills_needed=skills_needed,
         )
 
+        # Apply FAISS-based semantic search if search query provided
+        if search_query and all_opportunities:
+            try:
+                filters = {}
+                if opportunity_type:
+                    filters["type"] = opportunity_type
+                if category:
+                    filters["category"] = category
+                if location:
+                    filters["location"] = location
+
+                # Use lightweight FAISS to re-rank results by semantic similarity
+                faiss_search = get_faiss_search()
+                all_opportunities = faiss_search.search_opportunities(
+                    query=search_query,
+                    opportunities=all_opportunities,
+                    top_k=100,  # Get top 100, then paginate
+                    filters=filters,
+                )
+                logger.info(
+                    f"FAISS returned {len(all_opportunities)} results for opportunity search: {search_query}"
+                )
+            except Exception as e:
+                logger.error(f"FAISS search failed, using database results: {e}")
+
         # Apply relevance-based sorting if requested (default behavior)
         if sort_by == "relevance" and not search_query:
-            # Only apply relevance sorting when not using text search
-            # Text search already has its own relevance built in
+            # Use FAISS semantic similarity to recommend relevant opportunities
             try:
                 user_profile = supabase_service.get_profile(user_id)
-                if user_profile:
-                    # Get user interaction data
-                    interaction_data = supabase_service.get_user_interaction_data(
-                        user_id
-                    )
-
-                    # Rank opportunities by relevance
-                    relevance_service = get_relevance_service()
-                    all_opportunities = relevance_service.rank_opportunities(
+                if user_profile and all_opportunities:
+                    # Use FAISS to rank opportunities by semantic similarity to user profile
+                    faiss_search = get_faiss_search()
+                    all_opportunities = faiss_search.recommend_opportunities_for_user(
                         user_profile=user_profile,
                         opportunities=all_opportunities,
-                        saved_ids=interaction_data["saved_ids"],
-                        viewed_ids=interaction_data["viewed_ids"],
-                        applied_ids=interaction_data["applied_ids"],
-                        dismissed_ids=interaction_data["dismissed_ids"],
-                        exclude_applied=False,  # Show all on opportunities page
-                        exclude_dismissed=False,
+                        top_k=100,
                     )
-                    logger.info(f"Applied relevance sorting for user {user_id}")
+                    logger.info(
+                        f"FAISS recommended {len(all_opportunities)} opportunities for user {user_id}"
+                    )
             except Exception as e:
-                logger.warning(f"Could not apply relevance sorting: {e}")
+                logger.warning(f"FAISS recommendation failed, using default order: {e}")
                 # Fall back to recency-based sorting (already default from DB)
         elif sort_by == "recent":
             # Already sorted by recency from DB query
@@ -1882,33 +1905,83 @@ def talent_search():
             except Exception as e:
                 logger.warning(f"Could not load viewer profile for relevance: {e}")
 
-        # Branch by requested profile_type
+        # Build filters for FAISS search
+        filters = {}
+        if school:
+            filters["school"] = school
+        if grade:
+            filters["grade"] = grade
+        if location:
+            filters["location"] = location
+
+        # Get FAISS search service
+        faiss_search = get_faiss_search()
+
+        # Use FAISS search if available, otherwise fall back to database
         if profile_type == "organization":
+            # Organizations search - use database search
             all_results = supabase_service.search_organizations(
                 search_query=search_query,
                 location=location,
             )
         else:
-            # Search all students with filters first
-            all_results = supabase_service.search_students(
-                search_query=search_query,
-                skills=skills,
-                school=school,
-                grade=grade,
-                location=location,
-            )
+            # Student search - use FAISS for fast semantic search
+            if search_query or skills:
+                # First, get all students from database
+                all_students = supabase_service.search_students(
+                    search_query=search_query if search_query else "",
+                    skills=skills,
+                    school=school,
+                    grade=grade,
+                    location=location,
+                )
+
+                # If we have a search query, use FAISS for better semantic matching
+                if search_query and all_students:
+                    try:
+                        # Use lightweight FAISS to re-rank results by semantic similarity
+                        faiss_filters = {k: v for k, v in filters.items() if v}
+                        all_results = faiss_search.search_students(
+                            query=search_query,
+                            students=all_students,
+                            top_k=100,  # Get top 100, then paginate
+                            filters=faiss_filters,
+                        )
+                        logger.info(
+                            f"FAISS returned {len(all_results)} results for search: {search_query}"
+                        )
+                    except Exception as e:
+                        logger.error(
+                            f"FAISS search failed, using database results: {e}"
+                        )
+                        all_results = all_students
+                else:
+                    all_results = all_students
+            else:
+                # No search query, get all students ordered by creation date
+                all_results = supabase_service.search_students(
+                    search_query="",
+                    skills=skills,
+                    school=school,
+                    grade=grade,
+                    location=location,
+                )
 
         # Apply relevance ranking if requested and viewer profile available
         if sort_by == "relevance" and viewer_profile and all_results:
             try:
-                relevance_service = get_relevance_service()
-                all_results = relevance_service.rank_people(
-                    viewer_profile=viewer_profile,
+                # Use FAISS semantic similarity to recommend relevant people
+                faiss_search = get_faiss_search()
+                all_results = faiss_search.recommend_people_for_user(
+                    user_profile=viewer_profile,
                     candidates=all_results,
+                    top_k=100,
                 )
-                logger.info(f"Ranked {len(all_results)} profiles by relevance")
+                logger.info(
+                    f"FAISS recommended {len(all_results)} profiles by relevance"
+                )
             except Exception as e:
-                logger.error(f"Error ranking people by relevance: {e}")
+                logger.error(f"FAISS recommendation failed: {e}")
                 # Fall back to default order
         elif sort_by == "name":
             # Sort alphabetically by name (student.name or organization_name)
