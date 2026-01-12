@@ -1,3 +1,6 @@
 .venv/
 .idea/
 node_modules/
+__pycache__/
+.vscode/
+docs/
