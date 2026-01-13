@@ -267,3 +267,167 @@
     object-fit: cover;
     border: 2px solid #e5e7eb;
 }
+
+/* ============================================
+   DISCOVERY FEED STYLES - YouTube-style layout
+   ============================================ */
+
+/* Category row */
+.discovery-category-row {
+    margin-bottom: 2rem;
+}
+
+.discovery-category-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding: 0 0.5rem;
+}
+
+.discovery-category-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #1f2937;
+    display: flex;
+    align-items: center;
+}
+
+/* Horizontal scroll container */
+.discovery-scroll-container {
+    position: relative;
+    overflow: hidden;
+}
+
+.discovery-scroll-wrapper {
+    display: flex;
+    overflow-x: auto;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    padding: 0.5rem 0;
+    gap: 1rem;
+}
+
+.discovery-scroll-wrapper::-webkit-scrollbar {
+    display: none;
+}
+
+/* Scroll buttons */
+.discovery-scroll-btn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 10;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: white;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    opacity: 0;
+}
+
+.discovery-scroll-container:hover .discovery-scroll-btn {
+    opacity: 1;
+}
+
+.discovery-scroll-btn:hover {
+    background: #f3f4f6;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.discovery-scroll-btn.left {
+    left: 0;
+}
+
+.discovery-scroll-btn.right {
+    right: 0;
+}
+
+/* Card styles for horizontal scroll */
+.discovery-card {
+    flex: 0 0 320px;
+    max-width: 320px;
+    background: white;
+    border-radius: 0.75rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    transition: all 0.2s;
+    border: 1px solid #e5e7eb;
+}
+
+.discovery-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transform: translateY(-2px);
+}
+
+/* Profile card in discovery */
+.discovery-profile-card {
+    flex: 0 0 340px;
+    max-width: 340px;
+}
+
+/* Loading skeleton animation */
+@keyframes discovery-shimmer {
+    0% {
+        background-position: 200% 0;
+    }
+
+    100% {
+        background-position: -200% 0;
+    }
+}
+
+.discovery-skeleton {
+    background: linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 50%, #e5e7eb 75%);
+    background-size: 200% 100%;
+    animation: discovery-shimmer 1.5s infinite;
+}
+
+/* End of content indicator */
+.discovery-end-indicator {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.5rem 1rem;
+    background: #f3f4f6;
+    border-radius: 9999px;
+    color: #6b7280;
+    font-size: 0.875rem;
+}
+
+/* Responsive adjustments for discovery layout */
+@media (max-width: 768px) {
+    .discovery-card {
+        flex: 0 0 280px;
+        max-width: 280px;
+    }
+
+    .discovery-profile-card {
+        flex: 0 0 300px;
+        max-width: 300px;
+    }
+
+    .discovery-scroll-btn {
+        width: 32px;
+        height: 32px;
+    }
+}
+
+@media (max-width: 480px) {
+    .discovery-card {
+        flex: 0 0 260px;
+        max-width: 260px;
+    }
+
+    .discovery-profile-card {
+        flex: 0 0 280px;
+        max-width: 280px;
+    }
+}

@@ -339,13 +339,18 @@ class LightweightFAISSSearch:
                 query_vector, min(top_k, len(students))
             )
 
-            # Get results
+            # Get results - filter by minimum relevance score
+            MIN_RELEVANCE_SCORE = (
+                0.15  # Threshold for relevance (lowered to ensure results)
+            )
             results = []
             for score, idx in zip(scores[0], indices[0]):
                 if idx >= 0 and idx in self._student_map:
-                    student = self._student_map[idx].copy()
-                    student["faiss_score"] = float(score)
-                    results.append(student)
+                    # Only include if score meets minimum threshold
+                    if float(score) >= MIN_RELEVANCE_SCORE:
+                        student = self._student_map[idx].copy()
+                        student["faiss_score"] = float(score)
+                        results.append(student)
 
             # Apply filters
             if filters:
@@ -407,13 +412,20 @@ class LightweightFAISSSearch:
                 query_vector, min(top_k, len(opportunities))
             )
 
-            # Get results
+            # Get results - filter by minimum relevance score
+            # FAISS inner product scores: higher is more similar
+            # Only include opportunities with a meaningful relevance
+            MIN_RELEVANCE_SCORE = (
+                0.15  # Threshold for relevance (lowered to ensure results)
+            )
             results = []
             for score, idx in zip(scores[0], indices[0]):
                 if idx >= 0 and idx in self._opportunity_map:
-                    opp = self._opportunity_map[idx].copy()
-                    opp["faiss_score"] = float(score)
-                    results.append(opp)
+                    # Only include if score meets minimum threshold
+                    if float(score) >= MIN_RELEVANCE_SCORE:
+                        opp = self._opportunity_map[idx].copy()
+                        opp["faiss_score"] = float(score)
+                        results.append(opp)
 
             # Apply filters
             if filters:
@@ -619,6 +631,526 @@ class LightweightFAISSSearch:
         except Exception as e:
             logger.error(f"Error in FAISS people recommendation: {e}")
             return candidates
+
+    def generate_dynamic_categories_for_opportunities(
+        self,
+        user_profile: Dict[str, Any],
+        opportunities: List[Dict[str, Any]],
+        max_categories: int = 15,
+    ) -> List[Dict[str, Any]]:
+        """
+        Dynamically generate personalized category suggestions for opportunities.
+
+        Categories are generated from:
+        1. User's skills/interests (highest priority - semantic search)
+        2. Unique opportunity types in the database
+        3. Unique categories from opportunities
+        4. Skills needed across opportunities
+
+        Returns list of category dicts with 'name' and 'query' for FAISS search.
+        """
+        categories = []
+        seen_names = set()
+
+        # Always start with personalized recommendations
+        categories.append(
+            {
+                "name": "Recommended for You",
+                "type": "personalized",
+                "query": None,  # Uses user profile directly
+            }
+        )
+        seen_names.add("recommended for you")
+
+        # Extract user's skills and interests for semantic categories
+        user_skills = user_profile.get("skills", [])
+        if isinstance(user_skills, str):
+            try:
+                user_skills = json.loads(user_skills)
+            except:
+                user_skills = [s.strip() for s in user_skills.split(",") if s.strip()]
+
+        user_interests = user_profile.get("interests", "")
+        if isinstance(user_interests, str):
+            interest_list = [i.strip() for i in user_interests.split(",") if i.strip()]
+        else:
+            interest_list = user_interests if isinstance(user_interests, list) else []
+
+        # Add categories based on user's skills (semantic search)
+        for skill in (user_skills or [])[:5]:  # Top 5 skills
+            if isinstance(skill, str) and skill.strip():
+                skill_name = skill.strip()
+                if skill_name.lower() not in seen_names:
+                    categories.append(
+                        {
+                            "name": f"{skill_name} Opportunities",
+                            "type": "semantic",
+                            "query": skill_name,
+                        }
+                    )
+                    seen_names.add(skill_name.lower())
+
+        # Add categories based on user's interests
+        for interest in (interest_list or [])[:3]:  # Top 3 interests
+            if isinstance(interest, str) and interest.strip():
+                interest_name = interest.strip()
+                if interest_name.lower() not in seen_names:
+                    categories.append(
+                        {
+                            "name": f"{interest_name} Opportunities",
+                            "type": "semantic",
+                            "query": interest_name,
+                        }
+                    )
+                    seen_names.add(interest_name.lower())
+
+        # Extract unique opportunity types from actual data
+        opp_types = set()
+        for opp in opportunities:
+            opp_type = opp.get("type", "")
+            if opp_type and isinstance(opp_type, str):
+                opp_types.add(opp_type.strip())
+
+        # Add opportunity type categories
+        for opp_type in sorted(opp_types):
+            if opp_type.lower() not in seen_names and len(categories) < max_categories:
+                # Pluralize type name for category title
+                display_name = opp_type if opp_type.endswith("s") else f"{opp_type}s"
+                categories.append(
+                    {"name": display_name, "type": "filter_type", "query": opp_type}
+                )
+                seen_names.add(opp_type.lower())
+
+        # Extract unique categories from opportunities
+        opp_categories = set()
+        for opp in opportunities:
+            cat = opp.get("category", "")
+            if cat and isinstance(cat, str):
+                opp_categories.add(cat.strip())
+
+        for cat in sorted(opp_categories):
+            if cat.lower() not in seen_names and len(categories) < max_categories:
+                categories.append(
+                    {"name": cat, "type": "filter_category", "query": cat}
+                )
+                seen_names.add(cat.lower())
+
+        # Extract common skills from opportunities for additional semantic categories
+        skill_counts = {}
+        for opp in opportunities:
+            skills_needed = opp.get("skills_needed", [])
+            if isinstance(skills_needed, str):
+                try:
+                    skills_needed = json.loads(skills_needed)
+                except:
+                    skills_needed = [
+                        s.strip() for s in skills_needed.split(",") if s.strip()
+                    ]
+
+            for skill in skills_needed or []:
+                if isinstance(skill, str) and skill.strip():
+                    skill_lower = skill.strip().lower()
+                    skill_counts[skill_lower] = skill_counts.get(skill_lower, 0) + 1
+
+        # Add top skills as semantic categories
+        top_skills = sorted(skill_counts.items(), key=lambda x: x[1], reverse=True)[:5]
+        for skill, count in top_skills:
+            if skill not in seen_names and len(categories) < max_categories:
+                # Capitalize skill name
+                display_name = skill.title()
+                categories.append(
+                    {
+                        "name": f"{display_name} Related",
+                        "type": "semantic",
+                        "query": skill,
+                    }
+                )
+                seen_names.add(skill)
+
+        # Limit to max_categories first, then add "All Opportunities" at the end
+        categories = categories[:max_categories]
+
+        # Always add "All Opportunities" at the very end
+        categories.append({"name": "All Opportunities", "type": "all", "query": None})
+
+        return categories
+
+    def generate_dynamic_categories_for_talent(
+        self,
+        user_profile: Dict[str, Any],
+        profiles: List[Dict[str, Any]],
+        max_categories: int = 15,
+    ) -> List[Dict[str, Any]]:
+        """
+        Dynamically generate personalized category suggestions for talent search.
+
+        Categories are generated from:
+        1. User's skills/interests (find similar people)
+        2. Unique schools in the database
+        3. Unique grades
+        4. Common skills across profiles
+
+        Returns list of category dicts with 'name' and 'query' for FAISS search.
+        """
+        categories = []
+        seen_names = set()
+
+        # Ensure profiles is not None
+        if profiles is None:
+            profiles = []
+
+        # Ensure user_profile is not None
+        if user_profile is None:
+            user_profile = {}
+
+        # Always start with personalized matches
+        categories.append(
+            {"name": "Best Matches for You", "type": "personalized", "query": None}
+        )
+        seen_names.add("best matches for you")
+
+        # Extract user's skills for finding similar people
+        user_skills = user_profile.get("skills", [])
+        if isinstance(user_skills, str):
+            try:
+                user_skills = json.loads(user_skills)
+            except:
+                user_skills = [s.strip() for s in user_skills.split(",") if s.strip()]
+
+        # Ensure user_skills is a list
+        if user_skills is None:
+            user_skills = []
+        if not isinstance(user_skills, list):
+            user_skills = []
+
+        # Add "Similar Skills" if user has skills
+        if user_skills:
+            categories.append(
+                {
+                    "name": "People with Similar Skills",
+                    "type": "similar_skills",
+                    "query": None,
+                }
+            )
+            seen_names.add("people with similar skills")
+
+        # Add user's school as a category if they have one
+        user_school = user_profile.get("school", "")
+        if user_school and isinstance(user_school, str) and user_school.strip():
+            categories.append(
+                {
+                    "name": f"From {user_school.strip()}",
+                    "type": "filter_school",
+                    "query": user_school.strip(),
+                }
+            )
+            seen_names.add(user_school.strip().lower())
+
+        # Add categories based on user's skills (find experts)
+        for skill in (user_skills or [])[:4]:
+            if isinstance(skill, str) and skill.strip():
+                skill_name = skill.strip()
+                if skill_name.lower() not in seen_names:
+                    categories.append(
+                        {
+                            "name": f"{skill_name.title()} Experts",
+                            "type": "semantic",
+                            "query": skill_name,
+                        }
+                    )
+                    seen_names.add(skill_name.lower())
+
+        # Extract unique grades from profiles
+        grades = set()
+        for profile in profiles or []:
+            grade = profile.get("grade", "")
+            if grade and isinstance(grade, str):
+                grades.add(grade.strip())
+
+        # Add grade categories
+        grade_order = [
+            "9th Grade",
+            "10th Grade",
+            "11th Grade",
+            "12th Grade",
+            "Freshman",
+            "Sophomore",
+            "Junior",
+            "Senior",
+            "College",
+            "Graduate",
+        ]
+        for grade in grade_order:
+            if any(grade.lower() in g.lower() for g in grades):
+                if grade.lower() not in seen_names and len(categories) < max_categories:
+                    categories.append(
+                        {
+                            "name": f"{grade} Students",
+                            "type": "filter_grade",
+                            "query": grade,
+                        }
+                    )
+                    seen_names.add(grade.lower())
+
+        # Extract common skills from all profiles
+        skill_counts = {}
+        for profile in profiles or []:
+            profile_skills = profile.get("skills", [])
+            if isinstance(profile_skills, str):
+                try:
+                    profile_skills = json.loads(profile_skills)
+                except:
+                    profile_skills = [
+                        s.strip() for s in profile_skills.split(",") if s.strip()
+                    ]
+
+            # Ensure profile_skills is a list
+            if profile_skills is None:
+                profile_skills = []
+            if not isinstance(profile_skills, list):
+                profile_skills = []
+
+            for skill in profile_skills or []:
+                if isinstance(skill, str) and skill.strip():
+                    skill_lower = skill.strip().lower()
+                    skill_counts[skill_lower] = skill_counts.get(skill_lower, 0) + 1
+
+        # Add top skills as semantic categories
+        top_skills = sorted(skill_counts.items(), key=lambda x: x[1], reverse=True)[:6]
+        for skill, count in top_skills:
+            if skill not in seen_names and len(categories) < max_categories:
+                display_name = skill.title()
+                categories.append(
+                    {
+                        "name": f"{display_name} Skilled",
+                        "type": "semantic",
+                        "query": skill,
+                    }
+                )
+                seen_names.add(skill)
+
+        # Extract unique schools for more variety
+        schools = {}
+        for profile in profiles or []:
+            school = profile.get("school", "")
+            if school and isinstance(school, str) and school.strip():
+                school_clean = school.strip()
+                schools[school_clean] = schools.get(school_clean, 0) + 1
+
+        # Add top schools as categories
+        top_schools = sorted(schools.items(), key=lambda x: x[1], reverse=True)[:3]
+        for school, count in top_schools:
+            if school.lower() not in seen_names and len(categories) < max_categories:
+                categories.append(
+                    {"name": f"From {school}", "type": "filter_school", "query": school}
+                )
+                seen_names.add(school.lower())
+
+        # Always add "All Talent" at the end
+        if "all talent" not in seen_names:
+            categories.append({"name": "All Talent", "type": "all", "query": None})
+
+        return categories[: max_categories + 1]  # +1 to include All Talent
+
+    def get_opportunities_for_category(
+        self,
+        category_info: Dict[str, Any],
+        user_profile: Dict[str, Any],
+        opportunities: List[Dict[str, Any]],
+        limit: int = 10,
+        offset: int = 0,
+    ) -> List[Dict[str, Any]]:
+        """
+        Get opportunities for a specific category.
+
+        Args:
+            category_info: Dict with 'name', 'type', and 'query' keys
+            user_profile: User's profile for personalized categories
+            opportunities: All opportunities to search/filter
+            limit: Max results to return
+            offset: Pagination offset
+
+        Returns:
+            List of matching opportunities
+        """
+        # Ensure opportunities is not None
+        if opportunities is None:
+            opportunities = []
+
+        cat_type = category_info.get("type", "semantic")
+        query = category_info.get("query", "") or ""  # Ensure query is never None
+
+        results = []
+
+        if cat_type == "personalized":
+            # Use FAISS recommendation
+            results = self.recommend_opportunities_for_user(
+                user_profile=user_profile, opportunities=opportunities, top_k=100
+            )
+
+        elif cat_type == "filter_type":
+            # Filter by opportunity type
+            results = [
+                o for o in opportunities if o.get("type", "").lower() == query.lower()
+            ]
+
+        elif cat_type == "filter_category":
+            # Filter by category field
+            results = [
+                o
+                for o in opportunities
+                if o.get("category", "").lower() == query.lower()
+            ]
+
+        elif cat_type == "semantic":
+            # Use FAISS semantic search
+            results = self.search_opportunities(
+                query=query, opportunities=opportunities, top_k=100
+            )
+
+        elif cat_type == "all":
+            # Return all opportunities
+            results = opportunities
+
+        else:
+            results = opportunities
+
+        # Ensure results is not None
+        if results is None:
+            results = []
+
+        # Apply pagination
+        return results[offset : offset + limit]
+
+    def get_profiles_for_category(
+        self,
+        category_info: Dict[str, Any],
+        user_profile: Dict[str, Any],
+        profiles: List[Dict[str, Any]],
+        limit: int = 10,
+        offset: int = 0,
+    ) -> List[Dict[str, Any]]:
+        """
+        Get profiles for a specific talent category.
+
+        Args:
+            category_info: Dict with 'name', 'type', and 'query' keys
+            user_profile: User's profile for personalized categories
+            profiles: All profiles to search/filter
+            limit: Max results to return
+            offset: Pagination offset
+
+        Returns:
+            List of matching profiles
+        """
+        # Ensure profiles is not None
+        if profiles is None:
+            profiles = []
+
+        cat_type = category_info.get("type", "semantic")
+        query = category_info.get("query", "") or ""  # Ensure query is never None
+
+        results = []
+
+        if cat_type == "personalized":
+            # Use FAISS recommendation
+            results = self.recommend_people_for_user(
+                user_profile=user_profile, candidates=profiles, top_k=100
+            )
+
+        elif cat_type == "similar_skills":
+            # Find people with overlapping skills
+            user_skills = user_profile.get("skills", [])
+            if isinstance(user_skills, str):
+                try:
+                    user_skills = json.loads(user_skills)
+                except:
+                    user_skills = [
+                        s.strip() for s in user_skills.split(",") if s.strip()
+                    ]
+
+            # Ensure user_skills is a list
+            if user_skills is None:
+                user_skills = []
+            if not isinstance(user_skills, list):
+                user_skills = []
+
+            user_skills_lower = set(
+                s.lower() for s in user_skills if isinstance(s, str)
+            )
+
+            # If user has no skills, return all profiles (fallback)
+            if not user_skills_lower:
+                results = profiles if profiles else []
+            else:
+                scored_profiles = []
+                for profile in profiles or []:
+                    profile_skills = profile.get("skills", [])
+                    if isinstance(profile_skills, str):
+                        try:
+                            profile_skills = json.loads(profile_skills)
+                        except:
+                            profile_skills = [
+                                s.strip()
+                                for s in profile_skills.split(",")
+                                if s.strip()
+                            ]
+
+                    # Ensure profile_skills is a list
+                    if profile_skills is None:
+                        profile_skills = []
+                    if not isinstance(profile_skills, list):
+                        profile_skills = []
+
+                    profile_skills_lower = set(
+                        s.lower() for s in profile_skills if isinstance(s, str)
+                    )
+                    overlap = len(user_skills_lower & profile_skills_lower)
+                    if overlap > 0:
+                        p = profile.copy()
+                        p["_skill_overlap"] = overlap
+                        scored_profiles.append(p)
+
+                # Sort by overlap count
+                results = sorted(
+                    scored_profiles,
+                    key=lambda x: x.get("_skill_overlap", 0),
+                    reverse=True,
+                )
+
+        elif cat_type == "filter_school":
+            # Filter by school
+            results = [
+                p
+                for p in profiles
+                if query.lower() in (p.get("school", "") or "").lower()
+            ]
+
+        elif cat_type == "filter_grade":
+            # Filter by grade
+            results = [
+                p
+                for p in profiles
+                if query.lower() in (p.get("grade", "") or "").lower()
+            ]
+
+        elif cat_type == "semantic":
+            # Use FAISS semantic search
+            results = self.search_students(query=query, students=profiles, top_k=100)
+
+        elif cat_type == "all":
+            # Return all profiles
+            results = profiles
+
+        else:
+            results = profiles
+
+        # Ensure results is not None
+        if results is None:
+            results = []
+
+        # Apply pagination
+        return results[offset : offset + limit]
 
 
 # Singleton instance

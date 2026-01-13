@@ -7,9 +7,8 @@
     <!-- Header -->
     <div class="mb-8 flex justify-between items-start">
         <div>
-            <h1 class="text-3xl font-bold text-gray-900">Opportunities</h1>
-            <p class="mt-2 text-gray-600">Discover internships, jobs, research opportunities, summer programs, camps,
-                and other opportunities that match your interests</p>
+            <h1 class="text-3xl font-bold text-gray-900">Discover Opportunities</h1>
+            <p class="mt-2 text-gray-600">Personalized recommendations based on your interests and skills</p>
         </div>
         {% if session.user_type == 'organization' %}
         <div class="flex-shrink-0 ml-6">
@@ -22,88 +21,59 @@
         {% endif %}
     </div>
 
-    <!-- Unified Search Bar -->
+    <!-- Quick Filters Bar -->
     <div class="bg-white p-4 rounded-lg shadow-sm mb-8 border border-blue-200">
-        <form method="GET">
-            <!-- Main search row -->
-            <div class="flex flex-wrap items-center gap-3 mb-3">
-                <!-- Unified Search Input -->
+        <form method="GET" id="search-form">
+            <div class="flex flex-wrap items-center gap-3">
+                <!-- Search Input -->
                 <div class="flex-1 min-w-[300px] relative">
                     <input type="text" id="unified-search" name="search" value="{{ search_query or '' }}"
-                        placeholder="Search opportunities, companies, or skills... (type skill names to filter)"
+                        placeholder="Search opportunities..."
                         class="block w-full px-4 py-2 pr-10 border border-blue-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                         autocomplete="off">
                     <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
                         <i class="fas fa-search text-blue-400"></i>
                     </div>
-                    <!-- Skills dropdown for autocomplete -->
-                    <div id="skills-autocomplete-list"
-                        class="absolute z-50 bg-white border border-gray-300 rounded-md mt-1 w-full shadow-lg"
-                        style="display:none;"></div>
-                    <!-- Hidden input for selected skills -->
-                    <input type="hidden" name="skills_needed" id="skills-hidden-input"
-                        value="{{ selected_skills_needed|tojson|safe }}">
                 </div>
 
-                <div class="relative">
-                    <select id="type" name="type"
-                        class="block px-4 py-2 border border-blue-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-white text-gray-900 text-sm">
-                        <option value="">All Types</option>
-                        <option value="Internship" {% if selected_type=='Internship' %}selected{% endif %}>Internship
-                        </option>
-                        <option value="Volunteer" {% if selected_type=='Volunteer' %}selected{% endif %}>Volunteer
-                        </option>
-                        <option value="Job" {% if selected_type=='Job' %}selected{% endif %}>Job
-                        </option>
-                        <option value="Summer Camp" {% if selected_type=='Summer Camp' %}selected{% endif %}>Summer Camp
-                        </option>
-                        <option value="Research Opportunity" {% if selected_type=='Research Opportunity' %}selected{%
-                            endif %}>Research Opportunity
-                        </option>
-                        <option value="Summer Program" {% if selected_type=='Summer Program' %}selected{% endif %}>
-                            Summer Program
-                        </option>
-                        <option value="Scholarship" {% if selected_type=='Scholarship' %}selected{% endif %}>Scholarship
-                        </option>
-                        <option value="Competition" {% if selected_type=='Competition' %}selected{% endif %}>Competition
-                        </option>
-                        <option value="Workshop" {% if selected_type=='Workshop' %}selected{% endif %}>Workshop
-                        </option>
-                        <option value="Mentorship" {% if selected_type=='Mentorship' %}selected{% endif %}>Mentorship
-                        </option>
-                        <option value="Full-time" {% if selected_type=='Full-time' %}selected{% endif %}>Full-time
-                        </option>
-                        <option value="Part-time" {% if selected_type=='Part-time' %}selected{% endif %}>Part-time
-                        </option>
-                    </select>
-                </div>
+                <select id="type" name="type"
+                    class="block px-4 py-2 border border-blue-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-white text-gray-900 text-sm">
+                    <option value="">All Types</option>
+                    <option value="Internship" {% if selected_type=='Internship' %}selected{% endif %}>Internship
+                    </option>
+                    <option value="Volunteer" {% if selected_type=='Volunteer' %}selected{% endif %}>Volunteer</option>
+                    <option value="Job" {% if selected_type=='Job' %}selected{% endif %}>Job</option>
+                    <option value="Summer Camp" {% if selected_type=='Summer Camp' %}selected{% endif %}>Summer Camp
+                    </option>
+                    <option value="Research Opportunity" {% if selected_type=='Research Opportunity' %}selected{% endif
+                        %}>Research Opportunity</option>
+                    <option value="Summer Program" {% if selected_type=='Summer Program' %}selected{% endif %}>Summer
+                        Program</option>
+                    <option value="Scholarship" {% if selected_type=='Scholarship' %}selected{% endif %}>Scholarship
+                    </option>
+                    <option value="Competition" {% if selected_type=='Competition' %}selected{% endif %}>Competition
+                    </option>
+                    <option value="Workshop" {% if selected_type=='Workshop' %}selected{% endif %}>Workshop</option>
+                    <option value="Mentorship" {% if selected_type=='Mentorship' %}selected{% endif %}>Mentorship
+                    </option>
+                </select>
 
-                <div class="relative">
-                    <select id="category" name="category"
-                        class="block px-4 py-2 border border-blue-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-white text-gray-900 text-sm">
-                        <option value="">All Categories</option>
-                        <option value="Technology" {% if selected_category=='Technology' %}selected{% endif %}>
-                            Technology</option>
-                        <option value="Environment" {% if selected_category=='Environment' %}selected{% endif %}>
-                            Environment</option>
-                        <option value="Healthcare" {% if selected_category=='Healthcare' %}selected{% endif %}>
-                            Healthcare</option>
-                        <option value="Education" {% if selected_category=='Education' %}selected{% endif %}>Education
-                        </option>
-                        <option value="Marketing" {% if selected_category=='Marketing' %}selected{% endif %}>Marketing
-                        </option>
-                        <option value="Science" {% if selected_category=='Science' %}selected{% endif %}>Science
-                        </option>
-                        <option value="Other" {% if selected_category=='Other' %}selected{% endif %}>Other
-                        </option>
-                    </select>
-                </div>
-
-                <div class="relative">
-                    <input type="text" id="location" name="location" placeholder="Location..."
-                        value="{{ selected_location }}"
-                        class="block px-4 py-2 border border-blue-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-sm">
-                </div>
+                <select id="category" name="category"
+                    class="block px-4 py-2 border border-blue-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-white text-gray-900 text-sm">
+                    <option value="">All Categories</option>
+                    <option value="Technology" {% if selected_category=='Technology' %}selected{% endif %}>Technology
+                    </option>
+                    <option value="Environment" {% if selected_category=='Environment' %}selected{% endif %}>Environment
+                    </option>
+                    <option value="Healthcare" {% if selected_category=='Healthcare' %}selected{% endif %}>Healthcare
+                    </option>
+                    <option value="Education" {% if selected_category=='Education' %}selected{% endif %}>Education
+                    </option>
+                    <option value="Marketing" {% if selected_category=='Marketing' %}selected{% endif %}>Marketing
+                    </option>
+                    <option value="Science" {% if selected_category=='Science' %}selected{% endif %}>Science</option>
+                    <option value="Other" {% if selected_category=='Other' %}selected{% endif %}>Other</option>
+                </select>
 
                 <div class="flex items-center gap-2">
                     <button type="submit"
@@ -112,238 +82,79 @@
                         Search
                     </button>
                     <a href="{{ url_for('opportunities') }}"
-                        class="bg-gray-100 text-gray-700 px-3 py-2 rounded-lg hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors font-medium inline-flex items-center border border-gray-300 text-sm">
+                        class="bg-gray-100 text-gray-700 px-3 py-2 rounded-lg hover:bg-gray-200 transition-colors font-medium inline-flex items-center border border-gray-300 text-sm">
                         <i class="fas fa-times mr-1"></i>
                         Clear
                     </a>
                 </div>
             </div>
-
-            <!-- Skills bubbles row - only show when skills are selected -->
-            <div id="skills-bubble-container" class="flex flex-wrap gap-2" style="display:none;"></div>
-
-            <!-- Search hint -->
-            <div class="text-xs text-gray-500 mt-2">
-                <i class="fas fa-lightbulb mr-1"></i>
-                <span>Tip: Type to search for anything, or select skills from the dropdown. Press Enter to search or
-                    click on skills to filter by them.</span>
-            </div>
         </form>
     </div>
 
-    <!-- Results header with sort dropdown -->
-    {% if opportunities %}
-    <div class="flex items-center justify-between mb-6">
-        <div class="text-sm text-gray-600">
-            <span class="font-medium">{{ total_opportunities }}</span> result{{ 's' if total_opportunities != 1 else ''
-            }} found
-        </div>
-        <div class="flex items-center gap-2">
-            <label for="sort-select" class="text-sm text-gray-700 font-medium">Sort by:</label>
-            <select id="sort-select" name="sort"
-                class="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white">
-                <option value="relevance" {% if selected_sort=='relevance' or not selected_sort %}selected{% endif %}>
-                    Relevance</option>
-                <option value="recent" {% if selected_sort=='recent' %}selected{% endif %}>Most Recent</option>
-                <option value="deadline" {% if selected_sort=='deadline' %}selected{% endif %}>Deadline (Soonest)
-                </option>
-            </select>
-        </div>
-    </div>
-    {% endif %}
+    <!-- Discovery Feed Container -->
+    <div id="discovery-feed">
+        <!-- Category rows will be loaded here dynamically -->
+        <div id="category-rows-container"></div>
 
-    <!-- Opportunities Grid -->
-
-    {% if opportunities %}
-    <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {% for opportunity in opportunities %}
-        <a href="{{ url_for('opportunity_details', id=opportunity.id) }}?type={{ selected_type }}&category={{ selected_category }}&location={{ selected_location }}&search={{ search_query }}&skills_needed={{ selected_skills_needed|join(',') }}"
-            class="block">
-            <div
-                class="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow cursor-pointer relative">
-                <!-- Match indicator badge (shown when relevance scoring is active) -->
-                {% if opportunity.relevance_score is defined and opportunity.relevance_score > 0.7 %}
-                <div class="absolute top-2 right-2 z-10">
-                    <span
-                        class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-500 text-white shadow-sm">
-                        <i class="fas fa-star mr-1"></i>Great match
-                    </span>
-                </div>
-                {% elif opportunity.relevance_score is defined and opportunity.relevance_score > 0.5 %}
-                <div class="absolute top-2 right-2 z-10">
-                    <span
-                        class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-500 text-white shadow-sm">
-                        <i class="fas fa-check mr-1"></i>Good match
-                    </span>
-                </div>
-                {% endif %}
-
-                {% if opportunity.image %}
-                <div class="h-48 bg-gray-200 bg-cover bg-center"
-                    style="background-image: url('{{ opportunity.image }}')">
-                </div>
-                {% else %}
-                <div class="h-48 bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-                    <i class="fas fa-briefcase text-white text-4xl"></i>
-                </div>
-                {% endif %}
-
-                <div class="p-6">
-                    <div class="flex items-center justify-between mb-3">
-                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
-                            {% if opportunity.type == 'Internship' %}bg-blue-100 text-blue-800
-                            {% elif opportunity.type == 'Job' %}bg-purple-100 text-purple-800
-                            {% elif opportunity.type == 'Summer Camp' %}bg-yellow-100 text-yellow-800
-                            {% elif opportunity.type == 'Research Opportunity' %}bg-indigo-100 text-indigo-800
-                            {% elif opportunity.type == 'Summer Program' %}bg-orange-100 text-orange-800
-                            {% elif opportunity.type == 'Scholarship' %}bg-pink-100 text-pink-800
-                            {% elif opportunity.type == 'Competition' %}bg-red-100 text-red-800
-                            {% elif opportunity.type == 'Workshop' %}bg-teal-100 text-teal-800
-                            {% elif opportunity.type == 'Mentorship' %}bg-cyan-100 text-cyan-800
-                            {% elif opportunity.type == 'Volunteer' %}bg-green-100 text-green-800
-                            {% elif opportunity.type == 'Full-time' %}bg-gray-100 text-gray-800
-                            {% elif opportunity.type == 'Part-time' %}bg-slate-100 text-slate-800
-                            {% else %}bg-green-100 text-green-800{% endif %}">
-                            {{ opportunity.type if opportunity.type else 'Draft' }}
-                        </span>
-                    </div>
-                    {% if opportunity.category %}
-                    <div class="mb-2">
-                        <span class="inline-block bg-gray-200 text-gray-700 text-xs px-2 py-1 rounded">{{
-                            opportunity.category|capitalize }}</span>
-                    </div>
-                    {% endif %}
-
-                    <h3 class="text-lg font-semibold text-gray-900 mb-2 hover:text-blue-600">
-                        {{ opportunity.title if opportunity.title else 'Untitled' }}
-                    </h3>
-
-                    <div class="flex items-center mb-2">
-                        {% if opportunity.profiles and opportunity.profiles.profile_image %}
-                        <img src="{{ opportunity.profiles.profile_image }}"
-                            alt="{{ opportunity.profiles.name or opportunity.profiles.organization_name }}"
-                            class="w-6 h-6 rounded-full mr-2">
-                        {% endif %}
-                        <p class="text-sm text-gray-600 font-medium">{{ opportunity.profiles.name or
-                            opportunity.profiles.organization_name or 'Organization' }}</p>
-                    </div>
-
-                    <div class="space-y-1 mb-4 text-sm text-gray-500">
-                        <div class="flex items-center">
-                            <i class="fas fa-map-marker-alt mr-2 w-4"></i>
-                            <span>{{ opportunity.location if opportunity.location else 'Location not specified'
-                                }}</span>
-                        </div>
-                        <div class="flex items-center">
-                            <i class="fas fa-clock mr-2 w-4"></i>
-                            <span>{{ opportunity.duration if opportunity.duration else 'Duration not specified'
-                                }}</span>
-                        </div>
-                        <div class="flex items-center">
-                            <i class="fas fa-calendar mr-2 w-4"></i>
-                            <span>{{ opportunity.created_at | format_date }}</span>
-                        </div>
-                    </div>
-
-                    <p class="text-gray-700 text-sm mb-3 line-clamp-3">
-                        {{ opportunity.description[:150] if opportunity.description else '' }}{% if
-                        opportunity.description and opportunity.description|length > 150 %}...{% endif %}
-                    </p>
-
-                    {% if opportunity.skills_needed %}
-                    <div class="mb-4">
-                        <div class="flex flex-wrap gap-1">
-                            {% for skill in opportunity.skills_needed[:3] %}
-                            <span
-                                class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">{{
-                                skill }}</span>
-                            {% endfor %}
-                            {% if opportunity.skills_needed|length > 3 %}
-                            <span class="text-xs text-gray-500">+{{ opportunity.skills_needed|length - 3 }} more</span>
-                            {% endif %}
-                        </div>
-                    </div>
-                    {% endif %}
-
-                    <div class="flex items-center justify-between">
-                        <div class="text-sm text-gray-500">
-                            <i class="fas fa-exclamation-circle mr-1"></i>
-                            Deadline: {{ opportunity.application_deadline | format_date if
-                            opportunity.application_deadline else 'No deadline' }}
-                        </div>
-                        <span class="text-blue-600 hover:text-blue-800 font-medium text-sm">
-                            Learn More →
-                        </span>
-                    </div>
+        <!-- All Opportunities Section -->
+        <div id="all-opportunities-section" class="mt-8">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-semibold text-gray-900">
+                    <i class="fas fa-briefcase text-blue-500 mr-2"></i>
+                    All Opportunities
+                </h2>
+                <span id="all-opportunities-count" class="text-sm text-gray-500"></span>
+            </div>
+            <div id="all-opportunities-grid"
+                class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                <!-- Opportunities will be loaded here -->
+            </div>
+            <div id="all-opportunities-loading" class="py-8 text-center hidden">
+                <div class="inline-flex items-center px-4 py-2 text-blue-600">
+                    <svg class="animate-spin -ml-1 mr-3 h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none"
+                        viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4">
+                        </circle>
+                        <path class="opacity-75" fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                        </path>
+                    </svg>
+                    Loading more opportunities...
                 </div>
             </div>
-        </a>
-        {% endfor %}
-    </div>
+            <div id="end-of-all-opportunities" class="py-8 text-center hidden">
+                <div class="inline-flex items-center px-4 py-2 bg-gray-100 rounded-full text-gray-600">
+                    <i class="fas fa-check-circle mr-2 text-green-500"></i>
+                    You've seen all opportunities!
+                </div>
+            </div>
+        </div>
 
-    <!-- Pagination -->
-    {% if total_pages > 1 %}
-    <div class="mt-8 flex justify-center">
-        <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-            <!-- Previous Page -->
-            {% if current_page > 1 %}
-            <a href="{{ url_for('opportunities', search=search_query, type=selected_type, category=selected_category, location=selected_location, skills_needed=selected_skills_needed|join(','), page=current_page-1) }}"
-                class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-blue-300 bg-white text-sm font-medium text-blue-500 hover:bg-blue-50">
-                <i class="fas fa-chevron-left"></i>
-            </a>
-            {% else %}
-            <span
-                class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-gray-100 text-sm font-medium text-gray-400 cursor-not-allowed">
-                <i class="fas fa-chevron-left"></i>
-            </span>
-            {% endif %}
+        <!-- Loading indicator for vertical scroll -->
+        <div id="vertical-loading" class="py-8 text-center hidden">
+            <div class="inline-flex items-center px-4 py-2 text-blue-600">
+                <svg class="animate-spin -ml-1 mr-3 h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none"
+                    viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                    </path>
+                </svg>
+                Loading more opportunities...
+            </div>
+        </div>
 
-            <!-- Page Numbers -->
-            {% for page_num in range(1, total_pages + 1) %}
-            {% if page_num == current_page %}
-            <span
-                class="relative inline-flex items-center px-4 py-2 border border-blue-300 bg-blue-50 text-sm font-medium text-blue-600">
-                {{ page_num }}
-            </span>
-            {% elif page_num <= 3 or page_num> total_pages - 3 or (page_num >= current_page - 1 and page_num <=
-                    current_page + 1) %} <a
-                    href="{{ url_for('opportunities', search=search_query, type=selected_type, category=selected_category, location=selected_location, skills_needed=selected_skills_needed|join(','), page=page_num) }}"
-                    class="relative inline-flex items-center px-4 py-2 border border-blue-300 bg-white text-sm font-medium text-blue-700 hover:bg-blue-50">
-                    {{ page_num }}
-                    </a>
-                    {% elif page_num == 4 and current_page > 5 %}
-                    <span
-                        class="relative inline-flex items-center px-4 py-2 border border-blue-300 bg-white text-sm font-medium text-gray-500">...</span>
-                    {% elif page_num == total_pages - 3 and current_page < total_pages - 4 %} <span
-                        class="relative inline-flex items-center px-4 py-2 border border-blue-300 bg-white text-sm font-medium text-gray-500">
-                        ...</span>
-                        {% endif %}
-                        {% endfor %}
-
-                        <!-- Next Page -->
-                        {% if current_page < total_pages %} <a
-                            href="{{ url_for('opportunities', search=search_query, type=selected_type, category=selected_category, location=selected_location, skills_needed=selected_skills_needed|join(','), page=current_page+1) }}"
-                            class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-blue-300 bg-white text-sm font-medium text-blue-500 hover:bg-blue-50">
-                            <i class="fas fa-chevron-right"></i>
-                            </a>
-                            {% else %}
-                            <span
-                                class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-gray-100 text-sm font-medium text-gray-400 cursor-not-allowed">
-                                <i class="fas fa-chevron-right"></i>
-                            </span>
-                            {% endif %}
-        </nav>
-
-        <!-- Results info -->
-        <div class="mt-4 text-center text-sm text-gray-600">
-            Showing {{ ((current_page - 1) * 6) + 1 }} to {{ [current_page * 6, total_opportunities]|min }} of {{
-            total_opportunities }} opportunities
+        <!-- End of content indicator -->
+        <div id="end-of-content" class="py-8 text-center hidden">
+            <div class="inline-flex items-center px-4 py-2 bg-gray-100 rounded-full text-gray-600">
+                <i class="fas fa-check-circle mr-2 text-green-500"></i>
+                You've seen all available opportunities!
+            </div>
         </div>
     </div>
-    {% endif %}
 
-    {% else %}
-    <div class="text-center py-12">
+    <!-- Initial empty state -->
+    <div id="empty-state" class="text-center py-12 hidden">
         <div class="mx-auto h-24 w-24 text-gray-400">
             <i class="fas fa-search text-6xl"></i>
         </div>
@@ -351,24 +162,13 @@
         <p class="mt-2 text-gray-500">
             Try adjusting your filters or check back later for new opportunities.
         </p>
-        {% if not session.user_id %}
-        <div class="mt-6">
-            <a href="{{ url_for('signup') }}"
-                class="inline-flex items-center px-4 py-2 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
-                Create Account to Get Notified
-            </a>
-        </div>
-        {% endif %}
     </div>
-    {% endif %}
 
     <!-- Call to Action for Non-logged in users -->
     {% if not session.user_id %}
     <div class="mt-12 bg-gray-50 rounded-lg p-8 text-center">
         <h3 class="text-lg font-medium text-gray-900 mb-2">Ready to apply?</h3>
-        <p class="text-gray-600 mb-4">Create your profile to start applying for opportunities and connecting
-            with
-            organizations.</p>
+        <p class="text-gray-600 mb-4">Create your profile to start applying for opportunities.</p>
         <a href="{{ url_for('signup') }}"
             class="inline-flex items-center px-4 py-2 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
             Create Your Profile
@@ -378,272 +178,657 @@
 </div>
 
 <style>
-    .line-clamp-3 {
-        display: -webkit-box;
-        -webkit-line-clamp: 3;
-        line-clamp: 3;
-        -webkit-box-orient: vertical;
+    /* Discovery Feed Styles */
+    .category-row {
+        margin-bottom: 2rem;
+    }
+
+    .category-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+        padding: 0 0.5rem;
+    }
+
+    .category-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #1f2937;
+    }
+
+    .category-see-all {
+        font-size: 0.875rem;
+        color: #3b82f6;
+        font-weight: 500;
+        cursor: pointer;
+        transition: color 0.2s;
+    }
+
+    .category-see-all:hover {
+        color: #1d4ed8;
+    }
+
+    /* Horizontal scroll container */
+    .horizontal-scroll-container {
+        position: relative;
         overflow: hidden;
     }
 
-    #skills-filter-autocomplete-list {
-        max-height: 120px;
-        overflow-y: auto;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    .horizontal-scroll-wrapper {
+        display: flex;
+        overflow-x: auto;
+        scroll-behavior: smooth;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+        padding: 0.5rem 0;
+        gap: 1rem;
     }
 
-    .skill-bubble {
-        display: inline-flex;
+    .horizontal-scroll-wrapper::-webkit-scrollbar {
+        display: none;
+    }
+
+    /* Scroll buttons */
+    .scroll-btn {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        z-index: 10;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: white;
+        border: 1px solid #e5e7eb;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        display: flex;
         align-items: center;
-        padding: 0.25rem 0.5rem;
-        border-radius: 9999px;
-        background-color: #DBEAFE;
-        color: #1D4ED8;
-        font-size: 0.75rem;
-        font-weight: 500;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.2s;
+        opacity: 0;
     }
 
-    .skill-bubble button {
-        margin-left: 0.25rem;
-        color: #2563EB;
-        background: none;
-        border: none;
-        cursor: pointer;
-        font-size: 0.75rem;
-        padding: 0;
-        width: 12px;
-        height: 12px;
+    .horizontal-scroll-container:hover .scroll-btn {
+        opacity: 1;
+    }
+
+    .scroll-btn:hover {
+        background: #f3f4f6;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+
+    .scroll-btn.disabled {
+        opacity: 0.3;
+        cursor: not-allowed;
+    }
+
+    .scroll-btn-left {
+        left: 0;
+    }
+
+    .scroll-btn-right {
+        right: 0;
+    }
+
+    /* Opportunity card in horizontal scroll */
+    .opportunity-card-horizontal {
+        flex: 0 0 320px;
+        max-width: 320px;
+        background: white;
+        border-radius: 0.75rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+        transition: all 0.2s;
+        border: 1px solid #e5e7eb;
+        position: relative;
+    }
+
+    .opportunity-card-horizontal:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        transform: translateY(-2px);
+    }
+
+    .opportunity-card-image {
+        height: 140px;
+        background-size: cover;
+        background-position: center;
+        background-color: #e5e7eb;
+    }
+
+    .opportunity-card-image.gradient-bg {
+        background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
         display: flex;
         align-items: center;
         justify-content: center;
     }
 
-    .skill-bubble button:hover {
-        color: #DC2626;
+    .opportunity-card-content {
+        padding: 1rem;
+    }
+
+    .opportunity-card-type {
+        display: inline-block;
+        padding: 0.125rem 0.5rem;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: 500;
+        margin-bottom: 0.5rem;
+    }
+
+    .opportunity-card-title {
+        font-size: 1rem;
+        font-weight: 600;
+        color: #1f2937;
+        margin-bottom: 0.5rem;
+        line-height: 1.3;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    .opportunity-card-company {
+        font-size: 0.875rem;
+        color: #6b7280;
+        margin-bottom: 0.5rem;
+        display: flex;
+        align-items: center;
+    }
+
+    .opportunity-card-meta {
+        font-size: 0.75rem;
+        color: #9ca3af;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    /* Skills tags */
+    .skills-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.25rem;
+        margin-top: 0.5rem;
+    }
+
+    .skill-tag-small {
+        padding: 0.125rem 0.5rem;
+        background: #dcfce7;
+        color: #166534;
+        border-radius: 9999px;
+        font-size: 0.625rem;
+        font-weight: 500;
+    }
+
+    /* Loading skeleton */
+    .skeleton-card {
+        flex: 0 0 320px;
+        max-width: 320px;
+        background: #f3f4f6;
+        border-radius: 0.75rem;
+        overflow: hidden;
+    }
+
+    .skeleton-image {
+        height: 140px;
+        background: linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 50%, #e5e7eb 75%);
+        background-size: 200% 100%;
+        animation: shimmer 1.5s infinite;
+    }
+
+    .skeleton-content {
+        padding: 1rem;
+    }
+
+    .skeleton-line {
+        height: 0.75rem;
+        background: linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 50%, #e5e7eb 75%);
+        background-size: 200% 100%;
+        animation: shimmer 1.5s infinite;
+        border-radius: 0.25rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .skeleton-line.short {
+        width: 60%;
+    }
+
+    @keyframes shimmer {
+        0% {
+            background-position: 200% 0;
+        }
+
+        100% {
+            background-position: -200% 0;
+        }
+    }
+
+    /* Match badges */
+    .match-badge {
+        position: absolute;
+        top: 0.5rem;
+        right: 0.5rem;
+        z-index: 5;
+    }
+
+    .line-clamp-2 {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    .line-clamp-3 {
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
     }
 </style>
+
 <script>
-    // --- Unified Search with Skills Integration ---
-    const allowedSkills = JSON.parse('{{ skills_master|tojson|safe }}');
+    // Discovery Feed State
+    const discoveryState = {
+        rowOffset: 0,
+        rowsToLoad: 4,
+        itemsPerRow: 10,
+        isLoading: false,
+        hasMore: true,
+        loadedCategories: new Set(),
+        // All opportunities state
+        allOppsOffset: 0,
+        allOppsLimit: 12,
+        allOppsLoading: false,
+        allOppsHasMore: true,
+        allOppsTotal: 0
+    };
 
-    function renderSkillBubbles(skills, container) {
-        container.innerHTML = '';
-        const hasSkills = skills && skills.length > 0;
-        container.style.display = hasSkills ? 'flex' : 'none';
+    // Type colors mapping
+    const typeColors = {
+        'Internship': 'bg-blue-100 text-blue-800',
+        'Job': 'bg-purple-100 text-purple-800',
+        'Summer Camp': 'bg-yellow-100 text-yellow-800',
+        'Research Opportunity': 'bg-indigo-100 text-indigo-800',
+        'Summer Program': 'bg-orange-100 text-orange-800',
+        'Scholarship': 'bg-pink-100 text-pink-800',
+        'Competition': 'bg-red-100 text-red-800',
+        'Workshop': 'bg-teal-100 text-teal-800',
+        'Mentorship': 'bg-cyan-100 text-cyan-800',
+        'Volunteer': 'bg-green-100 text-green-800',
+        'Full-time': 'bg-gray-100 text-gray-800',
+        'Part-time': 'bg-slate-100 text-slate-800'
+    };
 
-        if (hasSkills) {
-            skills.forEach(skill => {
-                if (!allowedSkills.includes(skill)) return;
-                const bubble = document.createElement('span');
-                bubble.className = 'skill-bubble inline-flex items-center px-2 py-1 rounded-full bg-blue-100 text-blue-800 text-xs font-medium';
+    // Create opportunity card HTML
+    function createOpportunityCard(opp) {
+        const typeClass = typeColors[opp.type] || 'bg-gray-100 text-gray-800';
+        const hasImage = opp.image;
+        const companyName = opp.profiles?.name || opp.profiles?.organization_name || 'Organization';
 
-                // Create skill text with tag icon for clarity
-                const skillText = document.createElement('span');
-                skillText.className = 'mr-1';
-                skillText.innerHTML = `<i class="fas fa-tag mr-1"></i>${skill}`;
-                bubble.appendChild(skillText);
-
-                const removeBtn = document.createElement('button');
-                removeBtn.type = 'button';
-                removeBtn.className = 'ml-1 text-blue-500 hover:text-red-600 focus:outline-none';
-                removeBtn.innerHTML = '<i class="fas fa-times text-xs"></i>';
-                removeBtn.onclick = (e) => {
-                    e.preventDefault();
-                    container.removeChild(bubble);
-                    updateHiddenInput(container);
-                };
-                bubble.appendChild(removeBtn);
-                container.appendChild(bubble);
-            });
+        // Match badge
+        let matchBadge = '';
+        if (opp.relevance_score !== undefined) {
+            if (opp.relevance_score > 0.7) {
+                matchBadge = `<div class="match-badge"><span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-500 text-white shadow-sm"><i class="fas fa-star mr-1"></i>Great match</span></div>`;
+            } else if (opp.relevance_score > 0.5) {
+                matchBadge = `<div class="match-badge"><span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-500 text-white shadow-sm"><i class="fas fa-check mr-1"></i>Good match</span></div>`;
+            }
         }
+
+        // Skills
+        let skillsHtml = '';
+        if (opp.skills_needed && opp.skills_needed.length > 0) {
+            const skills = Array.isArray(opp.skills_needed) ? opp.skills_needed : [];
+            const displaySkills = skills.slice(0, 3);
+            const moreCount = skills.length - 3;
+            skillsHtml = `<div class="skills-row">
+            ${displaySkills.map(s => `<span class="skill-tag-small">${escapeHtml(s)}</span>`).join('')}
+            ${moreCount > 0 ? `<span class="text-xs text-gray-500">+${moreCount}</span>` : ''}
+        </div>`;
+        }
+
+        // Format date
+        const formatDate = (dateStr) => {
+            if (!dateStr) return 'Recently';
+            try {
+                const date = new Date(dateStr);
+                return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+            } catch {
+                return 'Recently';
+            }
+        };
+
+        return `
+        <a href="/opportunity/${opp.id}" class="opportunity-card-horizontal block">
+            ${matchBadge}
+            <div class="opportunity-card-image ${hasImage ? '' : 'gradient-bg'}" 
+                 style="${hasImage ? `background-image: url('${escapeHtml(opp.image)}')` : ''}">
+                ${!hasImage ? '<i class="fas fa-briefcase text-white text-3xl"></i>' : ''}
+            </div>
+            <div class="opportunity-card-content">
+                <span class="opportunity-card-type ${typeClass}">${escapeHtml(opp.type || 'Opportunity')}</span>
+                <h3 class="opportunity-card-title">${escapeHtml(opp.title || 'Untitled')}</h3>
+                <div class="opportunity-card-company">
+                    ${opp.profiles?.profile_image ? `<img src="${escapeHtml(opp.profiles.profile_image)}" class="w-5 h-5 rounded-full mr-2" alt="">` : ''}
+                    <span class="truncate">${escapeHtml(companyName)}</span>
+                </div>
+                <div class="opportunity-card-meta">
+                    <span><i class="fas fa-map-marker-alt mr-1"></i>${escapeHtml(opp.location || 'Remote')}</span>
+                    <span><i class="fas fa-calendar mr-1"></i>${formatDate(opp.created_at)}</span>
+                </div>
+                ${skillsHtml}
+            </div>
+        </a>
+    `;
     }
 
-    function setupUnifiedSearch(input, container) {
-        let debounceTimeout;
+    // Create opportunity card for grid layout (used in filtered results)
+    function createOpportunityCardGrid(opp) {
+        const typeClass = typeColors[opp.type] || 'bg-gray-100 text-gray-800';
+        const hasImage = opp.image;
+        const companyName = opp.profiles?.name || opp.profiles?.organization_name || 'Organization';
 
-        input.addEventListener('input', function () {
-            clearTimeout(debounceTimeout);
-            debounceTimeout = setTimeout(() => {
-                const val = input.value.trim().toLowerCase();
-                const autocompleteList = document.getElementById('skills-autocomplete-list');
+        // Skills
+        let skillsHtml = '';
+        if (opp.skills_needed && opp.skills_needed.length > 0) {
+            const skills = Array.isArray(opp.skills_needed) ? opp.skills_needed : [];
+            const displaySkills = skills.slice(0, 3);
+            const moreCount = skills.length - 3;
+            skillsHtml = `<div class="skills-row mt-2">
+            ${displaySkills.map(s => `<span class="skill-tag-small">${escapeHtml(s)}</span>`).join('')}
+            ${moreCount > 0 ? `<span class="text-xs text-gray-500">+${moreCount}</span>` : ''}
+        </div>`;
+        }
 
-                if (val.length < 2) {
-                    autocompleteList.style.display = 'none';
-                    return;
-                }
+        return `
+        <a href="/opportunity/${opp.id}" class="block bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow relative">
+            <div class="h-36 ${hasImage ? '' : 'bg-gradient-to-br from-blue-500 to-purple-600'} flex items-center justify-center" 
+                 style="${hasImage ? `background-image: url('${escapeHtml(opp.image)}'); background-size: cover; background-position: center;` : ''}">
+                ${!hasImage ? '<i class="fas fa-briefcase text-white text-3xl"></i>' : ''}
+            </div>
+            <div class="p-4">
+                <span class="inline-block px-2 py-1 rounded-full text-xs font-medium mb-2 ${typeClass}">${escapeHtml(opp.type || 'Opportunity')}</span>
+                <h3 class="font-semibold text-gray-900 mb-1 line-clamp-2">${escapeHtml(opp.title || 'Untitled')}</h3>
+                <div class="text-sm text-gray-600 mb-2 flex items-center">
+                    <span class="truncate">${escapeHtml(companyName)}</span>
+                </div>
+                <div class="text-xs text-gray-500 flex items-center gap-3">
+                    <span><i class="fas fa-map-marker-alt mr-1"></i>${escapeHtml(opp.location || 'Remote')}</span>
+                </div>
+                ${skillsHtml}
+            </div>
+        </a>
+    `;
+    }
 
-                // Filter skills that match and aren't already selected
-                let matches = allowedSkills.filter(s =>
-                    s.toLowerCase().includes(val) &&
-                    !getCurrentSkills(container).includes(s)
-                );
-                matches = matches.slice(0, 8);
+    // Escape HTML to prevent XSS
+    function escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
 
-                autocompleteList.innerHTML = '';
+    // Create category row HTML
+    function createCategoryRow(row) {
+        const category = row.category;
+        const categoryType = row.category_type || 'semantic';
+        const categoryQuery = row.category_query || '';
+        const rowId = `row-${category.replace(/\s+/g, '-').toLowerCase().replace(/[^a-z0-9-]/g, '')}`;
 
-                if (matches.length > 0) {
-                    // Add a header to clarify these are skill filters
-                    const header = document.createElement('div');
-                    header.className = 'px-3 py-2 text-xs font-medium text-gray-500 bg-gray-50 border-b border-gray-200';
-                    header.innerHTML = '<i class="fas fa-tag mr-2"></i>Click to filter by skills:';
-                    autocompleteList.appendChild(header);
+        // Determine icon based on category type
+        let icon = '';
+        if (category.toLowerCase().includes('recommend')) {
+            icon = '<i class="fas fa-star text-yellow-500 mr-2"></i>';
+        } else if (categoryType === 'all') {
+            icon = '<i class="fas fa-th-large text-indigo-500 mr-2"></i>';
+        } else if (categoryType === 'filter_type') {
+            icon = '<i class="fas fa-tag text-blue-500 mr-2"></i>';
+        } else if (categoryType === 'filter_category') {
+            icon = '<i class="fas fa-folder text-purple-500 mr-2"></i>';
+        } else if (categoryType === 'semantic') {
+            icon = '<i class="fas fa-search text-green-500 mr-2"></i>';
+        }
 
-                    matches.forEach(skill => {
-                        const item = document.createElement('div');
-                        item.className = 'px-3 py-2 cursor-pointer hover:bg-blue-50 text-sm border-b border-gray-100 last:border-b-0 flex items-center';
-                        item.innerHTML = `<i class="fas fa-plus-circle mr-2 text-blue-500"></i>${skill}`;
-                        item.onclick = () => {
-                            addSkillFilter(skill, container);
-                            autocompleteList.style.display = 'none';
-                            // Don't clear the input completely, just remove the skill part
-                            const currentVal = input.value.trim();
-                            const skillIndex = currentVal.toLowerCase().indexOf(skill.toLowerCase());
-                            if (skillIndex !== -1) {
-                                const beforeSkill = currentVal.substring(0, skillIndex).trim();
-                                const afterSkill = currentVal.substring(skillIndex + skill.length).trim();
-                                input.value = (beforeSkill + ' ' + afterSkill).trim();
-                            }
-                        };
-                        autocompleteList.appendChild(item);
+        return `
+        <div class="category-row" data-category="${escapeHtml(category)}" data-category-type="${escapeHtml(categoryType)}" data-category-query="${escapeHtml(categoryQuery)}">
+            <div class="category-header">
+                <h2 class="category-title">
+                    ${icon}
+                    ${escapeHtml(category)}
+                </h2>
+            </div>
+            <div class="horizontal-scroll-container">
+                <button class="scroll-btn scroll-btn-left" onclick="scrollRow('${rowId}', 'left')">
+                    <i class="fas fa-chevron-left text-gray-600"></i>
+                </button>
+                <div class="horizontal-scroll-wrapper" id="${rowId}">
+                    ${row.opportunities.map(opp => createOpportunityCard(opp)).join('')}
+                </div>
+                <button class="scroll-btn scroll-btn-right" onclick="scrollRow('${rowId}', 'right')">
+                    <i class="fas fa-chevron-right text-gray-600"></i>
+                </button>
+            </div>
+        </div>
+    `;
+    }
+
+    // Scroll row horizontally
+    function scrollRow(rowId, direction) {
+        const container = document.getElementById(rowId);
+        if (!container) return;
+
+        const scrollAmount = 340; // Card width + gap
+        const currentScroll = container.scrollLeft;
+        const newScroll = direction === 'left'
+            ? currentScroll - scrollAmount
+            : currentScroll + scrollAmount;
+
+        container.scrollTo({
+            left: newScroll,
+            behavior: 'smooth'
+        });
+    }
+
+    // Load discovery rows
+    async function loadDiscoveryRows() {
+        if (discoveryState.isLoading || !discoveryState.hasMore) return;
+
+        discoveryState.isLoading = true;
+        document.getElementById('vertical-loading').classList.remove('hidden');
+
+        try {
+            const response = await fetch(`/api/opportunities/discovery?row_offset=${discoveryState.rowOffset}&rows_to_load=${discoveryState.rowsToLoad}&items_per_row=${discoveryState.itemsPerRow}`);
+            const data = await response.json();
+
+            if (data.success) {
+                const container = document.getElementById('category-rows-container');
+
+                if (data.rows.length === 0 && discoveryState.rowOffset === 0) {
+                    document.getElementById('empty-state').classList.remove('hidden');
+                    discoveryState.hasMore = false;
+                } else {
+                    data.rows.forEach(row => {
+                        if (!discoveryState.loadedCategories.has(row.category)) {
+                            container.insertAdjacentHTML('beforeend', createCategoryRow(row));
+                            discoveryState.loadedCategories.add(row.category);
+                        }
                     });
 
-                    autocompleteList.style.display = 'block';
-                } else {
-                    autocompleteList.style.display = 'none';
+                    discoveryState.rowOffset = data.next_offset;
+                    discoveryState.hasMore = data.has_more;
                 }
 
-                // Limit dropdown height for compactness
-                autocompleteList.style.maxHeight = '120px';
-                autocompleteList.style.overflowY = 'auto';
-            }, 300);
-        });
-
-        input.addEventListener('keydown', function (e) {
-            const autocompleteList = document.getElementById('skills-autocomplete-list');
-
-            if (e.key === 'Enter') {
-                // Allow normal form submission for general search
-                autocompleteList.style.display = 'none';
-                return true;
+                if (!discoveryState.hasMore) {
+                    document.getElementById('end-of-content').classList.remove('hidden');
+                }
             }
-
-            if (e.key === 'Escape') {
-                autocompleteList.style.display = 'none';
-                e.preventDefault();
-            }
-        });
-
-        // Hide dropdown when clicking outside
-        document.addEventListener('click', function (e) {
-            const autocompleteList = document.getElementById('skills-autocomplete-list');
-            if (!input.contains(e.target) && !autocompleteList.contains(e.target)) {
-                autocompleteList.style.display = 'none';
-            }
-        });
+        } catch (error) {
+            console.error('Error loading discovery rows:', error);
+        } finally {
+            discoveryState.isLoading = false;
+            document.getElementById('vertical-loading').classList.add('hidden');
+        }
     }
 
-    function addSkillFilter(skill, container) {
-        if (!allowedSkills.includes(skill)) return;
-        if (getCurrentSkills(container).includes(skill)) return;
-
-        const bubble = document.createElement('span');
-        bubble.className = 'skill-bubble inline-flex items-center px-2 py-1 rounded-full bg-blue-100 text-blue-800 text-xs font-medium';
-
-        const skillText = document.createElement('span');
-        skillText.className = 'mr-1';
-        skillText.innerHTML = `<i class="fas fa-tag mr-1"></i>${skill}`;
-        bubble.appendChild(skillText);
-
-        const removeBtn = document.createElement('button');
-        removeBtn.type = 'button';
-        removeBtn.className = 'ml-1 text-blue-500 hover:text-red-600 focus:outline-none';
-        removeBtn.innerHTML = '<i class="fas fa-times text-xs"></i>';
-        removeBtn.onclick = (e) => {
-            e.preventDefault();
-            container.removeChild(bubble);
-            updateHiddenInput(container);
-        };
-        bubble.appendChild(removeBtn);
-        container.appendChild(bubble);
-        updateHiddenInput(container);
+    // Show and load All Opportunities section
+    function showAllOpportunitiesSection() {
+        document.getElementById('all-opportunities-section').classList.remove('hidden');
+        loadAllOpportunities();
+        setupAllOpportunitiesScroll();
     }
 
-    function getCurrentSkills(container) {
-        return Array.from(container.children).map(bubble => {
-            const skillSpan = bubble.querySelector('span');
-            if (skillSpan) {
-                // Get text content and remove any icon characters
-                const skillText = skillSpan.textContent || skillSpan.innerText;
-                return skillText.replace(/^\s*[\uf02b\uf02c\uf005]?\s*/, '').trim();
-            }
-            return '';
-        }).filter(skill => skill.length > 0);
-    }
+    // Load all opportunities for the grid
+    async function loadAllOpportunities() {
+        if (discoveryState.allOppsLoading || !discoveryState.allOppsHasMore) return;
 
-    function updateHiddenInput(container) {
-        const skills = getCurrentSkills(container);
-        document.getElementById('skills-hidden-input').value = JSON.stringify(skills);
-        // Show/hide the container based on whether there are skills
-        container.style.display = skills.length > 0 ? 'flex' : 'none';
-    }
+        discoveryState.allOppsLoading = true;
+        document.getElementById('all-opportunities-loading').classList.remove('hidden');
 
-    document.addEventListener('DOMContentLoaded', function () {
-        const skillsContainer = document.getElementById('skills-bubble-container');
-        const unifiedInput = document.getElementById('unified-search');
-
-        // Initialize with any existing selected skills
-        let initialSkills = [];
         try {
-            initialSkills = JSON.parse('{{ selected_skills_needed|tojson|safe }}');
-        } catch (e) {
-            try {
-                initialSkills = JSON.parse(document.getElementById('skills-hidden-input').value || '[]');
-            } catch (e2) { }
-        }
+            const response = await fetch(`/api/opportunities/all?offset=${discoveryState.allOppsOffset}&limit=${discoveryState.allOppsLimit}`);
+            const data = await response.json();
 
-        renderSkillBubbles(initialSkills, skillsContainer);
-        setupUnifiedSearch(unifiedInput, skillsContainer);
-        updateHiddenInput(skillsContainer);
+            if (data.success) {
+                const grid = document.getElementById('all-opportunities-grid');
 
-        // Update placeholder based on whether skills are selected
-        function updatePlaceholder() {
-            const hasSkills = getCurrentSkills(skillsContainer).length > 0;
-            if (hasSkills) {
-                unifiedInput.placeholder = "Search opportunities, companies... (skill filters active below)";
-            } else {
-                unifiedInput.placeholder = "Search opportunities, companies, or skills... (type skill names to filter)";
+                // Update count
+                discoveryState.allOppsTotal = data.total;
+                document.getElementById('all-opportunities-count').textContent = `${data.total} total opportunities`;
+
+                if (data.opportunities.length > 0) {
+                    data.opportunities.forEach(opp => {
+                        grid.insertAdjacentHTML('beforeend', createOpportunityCardGrid(opp));
+                    });
+
+                    discoveryState.allOppsOffset = data.next_offset;
+                    discoveryState.allOppsHasMore = data.has_more;
+                }
+
+                if (!discoveryState.allOppsHasMore) {
+                    document.getElementById('end-of-all-opportunities').classList.remove('hidden');
+                }
             }
+        } catch (error) {
+            console.error('Error loading all opportunities:', error);
+        } finally {
+            discoveryState.allOppsLoading = false;
+            document.getElementById('all-opportunities-loading').classList.add('hidden');
         }
+    }
 
-        // Call initially and whenever skills change
-        updatePlaceholder();
-
-        // Override the updateHiddenInput to also update placeholder
-        const originalUpdate = updateHiddenInput;
-        updateHiddenInput = function (container) {
-            originalUpdate(container);
-            updatePlaceholder();
-        };
-
-        // Handle sort dropdown change
-        const sortSelect = document.getElementById('sort-select');
-        if (sortSelect) {
-            sortSelect.addEventListener('change', function () {
-                const selectedSort = this.value;
-
-                // Get current URL parameters
-                const urlParams = new URLSearchParams(window.location.search);
-
-                // Update or add sort parameter
-                urlParams.set('sort', selectedSort);
-
-                // Reset to page 1 when changing sort order
-                urlParams.set('page', '1');
-
-                // Reload page with new parameters
-                window.location.search = urlParams.toString();
+    // Infinite scroll for All Opportunities
+    function setupAllOpportunitiesScroll() {
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting && discoveryState.allOppsHasMore && !discoveryState.allOppsLoading) {
+                    loadAllOpportunities();
+                }
             });
+        }, {
+            rootMargin: '200px'
+        });
+
+        observer.observe(document.getElementById('all-opportunities-loading'));
+    }
+
+    // Infinite scroll handler for category rows
+    function setupInfiniteScroll() {
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting && discoveryState.hasMore && !discoveryState.isLoading) {
+                    loadDiscoveryRows();
+                }
+            });
+        }, {
+            rootMargin: '200px'
+        });
+
+        observer.observe(document.getElementById('vertical-loading'));
+    }
+
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', function () {
+        // Check if we have search filters active
+        const urlParams = new URLSearchParams(window.location.search);
+        const hasFilters = urlParams.get('search') || urlParams.get('type') || urlParams.get('category');
+
+        if (hasFilters) {
+            // If filters are active, show traditional search results instead
+            loadFilteredResults();
+        } else {
+            // Load discovery feed
+            loadDiscoveryRows();
+            setupInfiniteScroll();
+            // Load all opportunities section
+            loadAllOpportunities();
+            setupAllOpportunitiesScroll();
         }
     });
+
+    // Load filtered results (traditional view when search is active)
+    async function loadFilteredResults() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const searchQuery = urlParams.get('search') || '';
+        const type = urlParams.get('type') || '';
+        const category = urlParams.get('category') || '';
+
+        // Show loading
+        document.getElementById('vertical-loading').classList.remove('hidden');
+
+        try {
+            // Use the all opportunities API for filtering
+            const response = await fetch(`/api/opportunities/all?offset=0&limit=100`);
+            const data = await response.json();
+
+            const container = document.getElementById('category-rows-container');
+
+            if (data.success && data.opportunities && data.opportunities.length > 0) {
+                let allOpps = data.opportunities;
+
+                // Apply filters
+                if (searchQuery) {
+                    const query = searchQuery.toLowerCase();
+                    allOpps = allOpps.filter(opp =>
+                        (opp.title || '').toLowerCase().includes(query) ||
+                        (opp.description || '').toLowerCase().includes(query)
+                    );
+                }
+                if (type) {
+                    allOpps = allOpps.filter(opp => opp.type === type);
+                }
+                if (category) {
+                    allOpps = allOpps.filter(opp => opp.category === category);
+                }
+
+                if (allOpps.length > 0) {
+                    container.innerHTML = `
+                    <div class="mb-4 text-sm text-gray-600">
+                        <span class="font-medium">${allOpps.length}</span> results found
+                        <a href="{{ url_for('opportunities') }}" class="ml-2 text-blue-600 hover:underline">
+                            <i class="fas fa-arrow-left mr-1"></i>Back to discovery
+                        </a>
+                    </div>
+                    <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                        ${allOpps.map(opp => createOpportunityCardGrid(opp)).join('')}
+                    </div>
+                `;
+                } else {
+                    document.getElementById('empty-state').classList.remove('hidden');
+                }
+            } else {
+                document.getElementById('empty-state').classList.remove('hidden');
+            }
+        } catch (error) {
+            console.error('Error loading filtered results:', error);
+            // Fall back to discovery feed
+            loadDiscoveryRows();
+            setupInfiniteScroll();
+        } finally {
+            document.getElementById('vertical-loading').classList.add('hidden');
+        }
+    }
 </script>
 {% endblock %}

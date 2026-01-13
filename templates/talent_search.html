@@ -6,64 +6,47 @@
 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
     <!-- Header -->
     <div class="mb-6">
-        <h1 class="text-3xl font-bold text-gray-900">Find Talent</h1>
-        <p class="mt-2 text-gray-600">Connect with students and organizations. Use the filters to narrow results.</p>
+        <h1 class="text-3xl font-bold text-gray-900">Discover Talent</h1>
+        <p class="mt-2 text-gray-600">Connect with students and organizations based on your interests</p>
     </div>
 
-    <!-- Unified Search Bar -->
+    <!-- Quick Filters Bar -->
     <div class="bg-white p-4 rounded-lg shadow-sm mb-8 border border-blue-200">
-        <form method="GET" action="{{ url_for('talent_search') }}">
-            <!-- Main search row -->
-            <div class="flex flex-wrap items-center gap-3 mb-3">
-                <!-- Unified Search Input -->
+        <form method="GET" action="{{ url_for('talent_search') }}" id="search-form">
+            <div class="flex flex-wrap items-center gap-3">
+                <!-- Search Input -->
                 <div class="flex-1 min-w-[300px] relative">
                     <input type="text" id="unified-search" name="search" value="{{ search_query or '' }}"
-                        placeholder="Search by name, school, bio, or skills... (type skill names to filter)"
+                        placeholder="Search by name, school, bio, or skills..."
                         class="block w-full px-4 py-2 pr-10 border border-blue-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                         autocomplete="off">
                     <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
                         <i class="fas fa-search text-blue-400"></i>
                     </div>
-                    <!-- Skills dropdown for autocomplete -->
-                    <div id="skills-autocomplete-list"
-                        class="absolute z-50 bg-white border border-gray-300 rounded-md mt-1 w-full shadow-lg"
-                        style="display:none;"></div>
-                    <!-- Hidden input for selected skills -->
-                    <input type="hidden" name="skills" id="skills-hidden-input"
-                        value="{{ selected_skills|tojson|safe }}">
                 </div>
 
-                <div class="relative">
-                    <select id="grade" name="grade"
-                        class="block px-4 py-2 border border-blue-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-white text-gray-900 text-sm"
-                        onchange="this.form.submit();">
-                        <option value="">All Grades</option>
-                        <option value="9th Grade" {% if selected_grade=='9th Grade' %}selected{% endif %}>9th Grade
-                        </option>
-                        <option value="10th Grade" {% if selected_grade=='10th Grade' %}selected{% endif %}>10th Grade
-                        </option>
-                        <option value="11th Grade" {% if selected_grade=='11th Grade' %}selected{% endif %}>11th Grade
-                        </option>
-                        <option value="12th Grade" {% if selected_grade=='12th Grade' %}selected{% endif %}>12th Grade
-                        </option>
-                    </select>
-                </div>
+                <select id="grade" name="grade"
+                    class="block px-4 py-2 border border-blue-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-white text-gray-900 text-sm">
+                    <option value="">All Grades</option>
+                    <option value="9th Grade" {% if selected_grade=='9th Grade' %}selected{% endif %}>9th Grade</option>
+                    <option value="10th Grade" {% if selected_grade=='10th Grade' %}selected{% endif %}>10th Grade
+                    </option>
+                    <option value="11th Grade" {% if selected_grade=='11th Grade' %}selected{% endif %}>11th Grade
+                    </option>
+                    <option value="12th Grade" {% if selected_grade=='12th Grade' %}selected{% endif %}>12th Grade
+                    </option>
+                </select>
 
-                <div class="relative">
-                    <select id="profile-type" name="type" onchange="this.form.submit();"
-                        class="block px-4 py-2 border border-blue-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-white text-gray-900 text-sm">
-                        <option value="student" {% if profile_type !='organization' %}selected{% endif %}>Students
-                        </option>
-                        <option value="organization" {% if profile_type=='organization' %}selected{% endif %}>
-                            Organizations</option>
-                    </select>
-                </div>
+                <select id="profile-type" name="type"
+                    class="block px-4 py-2 border border-blue-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-white text-gray-900 text-sm">
+                    <option value="student" {% if profile_type !='organization' %}selected{% endif %}>Students</option>
+                    <option value="organization" {% if profile_type=='organization' %}selected{% endif %}>Organizations
+                    </option>
+                </select>
 
-                <div class="relative">
-                    <input type="text" id="location" name="location" placeholder="Location..."
-                        value="{{ selected_location or '' }}"
-                        class="block px-4 py-2 border border-blue-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-sm">
-                </div>
+                <input type="text" id="location" name="location" placeholder="Location..."
+                    value="{{ selected_location or '' }}"
+                    class="block px-4 py-2 border border-blue-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-sm">
 
                 <div class="flex items-center gap-2">
                     <button type="submit"
@@ -72,279 +55,72 @@
                         Search
                     </button>
                     <a href="{{ url_for('talent_search') }}"
-                        class="bg-gray-100 text-gray-700 px-3 py-2 rounded-lg hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors font-medium inline-flex items-center border border-gray-300 text-sm">
+                        class="bg-gray-100 text-gray-700 px-3 py-2 rounded-lg hover:bg-gray-200 transition-colors font-medium inline-flex items-center border border-gray-300 text-sm">
                         <i class="fas fa-times mr-1"></i>
                         Clear
                     </a>
                 </div>
             </div>
-
-            <!-- Skills bubbles row - only show when skills are selected -->
-            <div id="skills-bubble-container" class="flex flex-wrap gap-2" style="display:none;"></div>
-
-            <!-- Search hint -->
-            <div class="text-xs text-gray-500 mt-2">
-                <i class="fas fa-lightbulb mr-1"></i>
-                <span>Tip: Type to search for anything or select existing skills from the dropdown.
-                    Use location and grade filters to narrow results.</span>
-            </div>
         </form>
     </div>
 
-    <!-- Results header with sort dropdown -->
-    {% if students %}
-    <div class="flex items-center justify-between mb-6">
-        <div class="text-sm text-gray-600">
-            <span class="font-medium">{{ total_students }}</span> result{{ 's' if total_students != 1 else '' }} found
-        </div>
-        <div class="flex items-center gap-2">
-            <label for="sort-select" class="text-sm text-gray-700 font-medium">Sort by:</label>
-            <select id="sort-select"
-                class="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white">
-                <option value="relevance" {% if sort_by=='relevance' %}selected{% endif %}>Relevance</option>
-                <option value="recent" {% if sort_by=='recent' %}selected{% endif %}>Most Recent</option>
-                <option value="name" {% if sort_by=='name' %}selected{% endif %}>Name (A-Z)</option>
-            </select>
-        </div>
-    </div>
-    {% endif %}
+    <!-- Discovery Feed Container -->
+    <div id="discovery-feed">
+        <!-- Category rows will be loaded here dynamically -->
+        <div id="category-rows-container"></div>
 
-    <!-- Students Grid -->
-    {% if students %}
-    <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {% for student in students %}
-        <div
-            class="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow border border-blue-100">
-            <div class="p-6">
-                <!-- Profile Picture and Basic Info -->
-                <div class="flex items-center mb-4">
-                    {% if student.profile_image %}
-                    <img src="{{ student.profile_image }}" alt="{{ student.name or student.organization_name }}"
-                        class="h-16 w-16 rounded-full object-cover mr-4">
-                    {% else %}
-                    <div class="h-16 w-16 rounded-full bg-blue-100 flex items-center justify-center mr-4">
-                        {% if student.user_type == 'organization' %}
-                        <i class="fas fa-building text-blue-600 text-xl"></i>
-                        {% else %}
-                        <i class="fas fa-user text-blue-600 text-xl"></i>
-                        {% endif %}
-                    </div>
-                    {% endif %}
-                    <div class="flex-1">
-                        {% if student.user_type == 'organization' %}
-                        <h3 class="text-lg font-semibold text-gray-900">{{ student.organization_name or student.name }}
-                        </h3>
-                        <p class="text-sm text-gray-600">{{ student.location or '' }}</p>
-                        {% else %}
-                        <h3 class="text-lg font-semibold text-gray-900">{{ student.name }}</h3>
-                        {% if student.school %}
-                        <p class="text-sm text-gray-600">{{ student.school }}</p>
-                        {% endif %}
-                        {% if student.grade %}
-                        <p class="text-xs text-gray-500">{{ student.grade }}</p>
-                        {% endif %}
-                        {% endif %}
-
-                        <!-- Match indicator badge -->
-                        {% if student.relevance_score is defined and student.relevance_score > 0.7 %}
-                        <div class="mt-1">
-                            <span
-                                class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                <i class="fas fa-star mr-1"></i>Great match
-                            </span>
-                        </div>
-                        {% elif student.relevance_score is defined and student.relevance_score > 0.5 %}
-                        <div class="mt-1">
-                            <span
-                                class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                                <i class="fas fa-check mr-1"></i>Good match
-                            </span>
-                        </div>
-                        {% endif %}
-                    </div>
-                </div>
-
-
-
-                <!-- For organizations, show a short description; for students show skills -->
-                {% if student.user_type == 'organization' %}
-                {% if student.description %}
-                <p class="text-gray-700 text-sm mb-4 line-clamp-3">{{ student.description[:180] }}{% if
-                    student.description|length > 180 %}...{% endif %}</p>
-                {% endif %}
-                {% else %}
-                <!-- Skills (first 3 as bubbles, robust for string or list) -->
-                {% if student.skills %}
-                {% if student.skills is iterable and student.skills is not string %}
-                {% set skills_list = student.skills %}
-                {% else %}
-                {% set skills_str = student.skills | replace('[','') | replace(']','') | replace('"','') |
-                replace("'",'') %}
-                {% set skills_list = [] %}
-                {% for skill in skills_str.split(',') %}
-                {% if skill.strip() %}
-                {% set _ = skills_list.append(skill.strip()) %}
-                {% endif %}
-                {% endfor %}
-                {% endif %}
-                {% if skills_list and skills_list|length > 0 %}
-                <div class="mb-2 flex flex-wrap gap-1">
-                    {% for skill in skills_list[:3] %}
-                    <span
-                        class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">{{
-                        skill }}</span>
-                    {% endfor %}
-                    {% if skills_list|length > 3 %}
-                    <span class="text-xs text-gray-500">+{{ skills_list|length - 3 }} more</span>
-                    {% endif %}
-                </div>
-                {% endif %}
-                {% endif %}
-                {% endif %}
-
-                <!-- Location -->
-                {% if student.location %}
-                <div class="flex items-center mb-3 text-sm text-gray-600">
-                    <i class="fas fa-map-marker-alt mr-2 text-blue-500"></i>
-                    <span>{{ student.location }}</span>
-                </div>
-                {% endif %}
-
-                <!-- Bio -->
-                {% if student.bio %}
-                <p class="text-gray-700 text-sm mb-4 line-clamp-3">
-                    {{ student.bio[:150] }}{% if student.bio|length > 150 %}...{% endif %}
-                </p>
-                {% endif %}
-
-                <!-- Interests -->
-                {% if student.interests %}
-                <div class="mb-4">
-                    <h4 class="text-sm font-medium text-gray-900 mb-2">Interests</h4>
-                    <div class="flex flex-wrap gap-1">
-                        {% for interest in student.interests.split(',')[:4] %}
-                        <span
-                            class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                            {{ interest.strip() }}
-                        </span>
-                        {% endfor %}
-                        {% if student.interests.split(',')|length > 4 %}
-                        <span class="text-xs text-gray-500">+{{ student.interests.split(',')|length - 4 }} more</span>
-                        {% endif %}
-                    </div>
-                </div>
-                {% endif %}
-
-                <!-- Contact Actions -->
-                <div class="flex space-x-2">
-                    {% if session.user_id %}
-                    <!-- Contact button for both organizations and students -->
-                    <a href="mailto:{{ student.email }}?subject={{ 'Hello ' + (student.name|urlencode) + ', from InterSpark' }}"
-                        class="flex-1 inline-flex items-center justify-center px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-md shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
-                        <i class="fas fa-envelope mr-2"></i>
-                        Contact
-                    </a>
-                    <a href="{{ url_for('view_profile', user_id=student.id, search=search_query, skills=selected_skills|tojson|safe, school=selected_school, grade=selected_grade) }}"
-                        class="flex-1 inline-flex items-center justify-center px-4 py-2.5 border border-blue-300 rounded-md text-blue-700 text-sm font-medium bg-white hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors shadow-sm">
-                        <i class="fas fa-eye mr-2"></i>
-                        View
-                    </a>
-                    <button onclick="toggleSaveProfile('{{ student.id }}', this)"
-                        class="inline-flex items-center justify-center px-3 py-2.5 border rounded-md text-sm font-medium hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors shadow-sm {% if student.is_saved %}bg-blue-50 border-blue-300 text-blue-700{% else %}bg-white border-blue-300 text-blue-700{% endif %}"
-                        title="Save Profile">
-                        <i class="{% if student.is_saved %}fas fa-bookmark{% else %}far fa-bookmark{% endif %}"></i>
-                    </button>
-                    {% else %}
-                    <div class="flex-1 text-center py-2 text-sm text-gray-600">
-                        <i class="fas fa-lock mr-1"></i>
-                        <a href="{{ url_for('login') }}" class="text-blue-600 hover:text-blue-800">Login</a> to view
-                        profiles
-                    </div>
-                    {% endif %}
-                </div>
+        <!-- All Profiles Section -->
+        <div id="all-profiles-section" class="mt-8">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-semibold text-gray-900">
+                    <i class="fas fa-users text-blue-500 mr-2"></i>
+                    All Profiles
+                </h2>
+            </div>
+            <div id="all-profiles-grid" class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                <!-- Profiles will be loaded here -->
             </div>
         </div>
-        {% endfor %}
+
+        <!-- Loading indicator for vertical scroll -->
+        <div id="vertical-loading" class="py-8 text-center hidden">
+            <div class="inline-flex items-center px-4 py-2 text-blue-600">
+                <svg class="animate-spin -ml-1 mr-3 h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none"
+                    viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                    </path>
+                </svg>
+                Loading more profiles...
+            </div>
+        </div>
+
+        <!-- End of content indicator -->
+        <div id="end-of-content" class="py-8 text-center hidden">
+            <div class="inline-flex items-center px-4 py-2 bg-gray-100 rounded-full text-gray-600">
+                <i class="fas fa-check-circle mr-2 text-green-500"></i>
+                You've seen all available profiles!
+            </div>
+        </div>
     </div>
 
-    <!-- Pagination -->
-    {% if total_pages > 1 %}
-    <div class="mt-8 flex justify-center">
-        <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-            <!-- Previous Page -->
-            {% if current_page > 1 %}
-            <a href="{{ url_for('talent_search', search=search_query, skills=selected_skills|tojson|safe, school=selected_school, grade=selected_grade, location=selected_location, page=current_page-1) }}"
-                class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-blue-300 bg-white text-sm font-medium text-blue-500 hover:bg-blue-50">
-                <i class="fas fa-chevron-left"></i>
-            </a>
-            {% else %}
-            <span
-                class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-gray-100 text-sm font-medium text-gray-400 cursor-not-allowed">
-                <i class="fas fa-chevron-left"></i>
-            </span>
-            {% endif %}
-
-            <!-- Page Numbers -->
-            {% for page_num in range(1, total_pages + 1) %}
-            {% if page_num == current_page %}
-            <span
-                class="relative inline-flex items-center px-4 py-2 border border-blue-300 bg-blue-50 text-sm font-medium text-blue-600">
-                {{ page_num }}
-            </span>
-            {% elif page_num <= 3 or page_num> total_pages - 3 or (page_num >= current_page - 1 and page_num <=
-                    current_page + 1) %} <a
-                    href="{{ url_for('talent_search', search=search_query, skills=selected_skills|tojson|safe, school=selected_school, grade=selected_grade, location=selected_location, page=page_num) }}"
-                    class="relative inline-flex items-center px-4 py-2 border border-blue-300 bg-white text-sm font-medium text-blue-700 hover:bg-blue-50">
-                    {{ page_num }}
-                    </a>
-                    {% elif page_num == 4 and current_page > 5 %}
-                    <span
-                        class="relative inline-flex items-center px-4 py-2 border border-blue-300 bg-white text-sm font-medium text-gray-500">...</span>
-                    {% elif page_num == total_pages - 3 and current_page < total_pages - 4 %} <span
-                        class="relative inline-flex items-center px-4 py-2 border border-blue-300 bg-white text-sm font-medium text-gray-500">
-                        ...</span>
-                        {% endif %}
-                        {% endfor %}
-
-                        <!-- Next Page -->
-                        {% if current_page < total_pages %} <a
-                            href="{{ url_for('talent_search', search=search_query, skills=selected_skills|tojson|safe, school=selected_school, grade=selected_grade, location=selected_location, page=current_page+1) }}"
-                            class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-blue-300 bg-white text-sm font-medium text-blue-500 hover:bg-blue-50">
-                            <i class="fas fa-chevron-right"></i>
-                            </a>
-                            {% else %}
-                            <span
-                                class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-gray-100 text-sm font-medium text-gray-400 cursor-not-allowed">
-                                <i class="fas fa-chevron-right"></i>
-                            </span>
-                            {% endif %}
-        </nav>
-    </div>
-
-    <!-- Results info -->
-    <div class="mt-4 text-center text-sm text-gray-600">
-        Showing {{ ((current_page - 1) * 9) + 1 }} to {{ [current_page * 9, total_students]|min }} of {{ total_students
-        }} students
-    </div>
-    {% endif %}
-    {% else %}
-    <div class="text-center py-12">
+    <!-- Initial empty state -->
+    <div id="empty-state" class="text-center py-12 hidden">
         <div class="mx-auto h-24 w-24 text-blue-400">
             <i class="fas fa-users text-6xl"></i>
         </div>
-        <h3 class="mt-4 text-lg font-medium text-gray-900">No students found</h3>
+        <h3 class="mt-4 text-lg font-medium text-gray-900">No profiles found</h3>
         <p class="mt-2 text-gray-600">
-            Try adjusting your search criteria or check back later as more students join the platform.
+            Try adjusting your search criteria or check back later as more people join.
         </p>
     </div>
-    {% endif %}
 
     <!-- Call to Action for Non-Organizations -->
     {% if not session.user_id or session.user_type != 'organization' %}
     <div class="mt-12 bg-blue-50 rounded-lg p-8 text-center border border-blue-200">
         <h3 class="text-lg font-medium text-gray-900 mb-2">Are you an organization?</h3>
-        <p class="text-gray-600 mb-4">Create an organization account to contact students and post opportunities.
-        </p>
+        <p class="text-gray-600 mb-4">Create an organization account to contact students and post opportunities.</p>
         {% if not session.user_id %}
         <a href="{{ url_for('signup') }}"
             class="inline-flex items-center px-4 py-2 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
@@ -355,228 +131,597 @@
     {% endif %}
 </div>
 
-<script>
-    // --- Unified Search with Skills Integration ---
-    const allowedSkills = JSON.parse('{{ skills_master|tojson|safe }}');
-    let selectedSkills = [];
+<style>
+    /* Discovery Feed Styles */
+    .category-row {
+        margin-bottom: 2rem;
+    }
 
-    function renderSkillBubbles(skills, container) {
-        container.innerHTML = '';
-        const hasSkills = skills && skills.length > 0;
-        container.style.display = hasSkills ? 'flex' : 'none';
+    .category-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+        padding: 0 0.5rem;
+    }
 
-        if (hasSkills) {
-            skills.forEach(skill => {
-                if (!allowedSkills.includes(skill)) return;
-                const bubble = document.createElement('span');
-                bubble.className = 'skill-bubble inline-flex items-center px-2 py-1 rounded-full bg-blue-100 text-blue-800 text-xs font-medium';
+    .category-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #1f2937;
+    }
 
-                // Create skill text with "Skills: " prefix for clarity
-                const skillText = document.createElement('span');
-                skillText.className = 'mr-1';
-                skillText.innerHTML = `<i class="fas fa-tag mr-1"></i>${skill}`;
-                bubble.appendChild(skillText);
+    /* Horizontal scroll container */
+    .horizontal-scroll-container {
+        position: relative;
+        overflow: hidden;
+    }
 
-                const removeBtn = document.createElement('button');
-                removeBtn.type = 'button';
-                removeBtn.className = 'ml-1 text-blue-500 hover:text-red-600 focus:outline-none';
-                removeBtn.innerHTML = '<i class="fas fa-times text-xs"></i>';
-                removeBtn.onclick = (e) => {
-                    e.preventDefault();
-                    container.removeChild(bubble);
-                    updateHiddenInput(container);
-                };
-                bubble.appendChild(removeBtn);
-                container.appendChild(bubble);
-            });
+    .horizontal-scroll-wrapper {
+        display: flex;
+        overflow-x: auto;
+        scroll-behavior: smooth;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+        padding: 0.5rem 0;
+        gap: 1rem;
+    }
+
+    .horizontal-scroll-wrapper::-webkit-scrollbar {
+        display: none;
+    }
+
+    /* Scroll buttons */
+    .scroll-btn {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        z-index: 10;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: white;
+        border: 1px solid #e5e7eb;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.2s;
+        opacity: 0;
+    }
+
+    .horizontal-scroll-container:hover .scroll-btn {
+        opacity: 1;
+    }
+
+    .scroll-btn:hover {
+        background: #f3f4f6;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+
+    .scroll-btn-left {
+        left: 0;
+    }
+
+    .scroll-btn-right {
+        right: 0;
+    }
+
+    /* Profile card in horizontal scroll - matches original card style */
+    .profile-card-horizontal {
+        flex: 0 0 340px;
+        max-width: 340px;
+        background: white;
+        border-radius: 0.5rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+        transition: all 0.2s;
+        border: 1px solid #dbeafe;
+    }
+
+    .profile-card-horizontal:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    /* Loading skeleton */
+    .skeleton-card {
+        flex: 0 0 340px;
+        max-width: 340px;
+        background: #f3f4f6;
+        border-radius: 0.5rem;
+        overflow: hidden;
+        padding: 1.5rem;
+    }
+
+    .skeleton-avatar {
+        width: 64px;
+        height: 64px;
+        border-radius: 50%;
+        background: linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 50%, #e5e7eb 75%);
+        background-size: 200% 100%;
+        animation: shimmer 1.5s infinite;
+    }
+
+    .skeleton-line {
+        height: 0.75rem;
+        background: linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 50%, #e5e7eb 75%);
+        background-size: 200% 100%;
+        animation: shimmer 1.5s infinite;
+        border-radius: 0.25rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .skeleton-line.short {
+        width: 60%;
+    }
+
+    @keyframes shimmer {
+        0% {
+            background-position: 200% 0;
+        }
+
+        100% {
+            background-position: -200% 0;
         }
     }
 
-    function setupUnifiedSearch(input, container) {
-        let debounceTimeout;
+    .line-clamp-3 {
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+</style>
 
-        input.addEventListener('input', function () {
-            clearTimeout(debounceTimeout);
-            debounceTimeout = setTimeout(() => {
-                const val = input.value.trim().toLowerCase();
-                const autocompleteList = document.getElementById('skills-autocomplete-list');
+<script>
+    // Discovery Feed State
+    const discoveryState = {
+        rowOffset: 0,
+        rowsToLoad: 4,
+        itemsPerRow: 10,
+        isLoadingRows: false,
+        hasMoreRows: true,
+        loadedCategories: new Set(),
+        // All profiles section
+        allProfilesOffset: 0,
+        allProfilesLimit: 12,
+        isLoadingAll: false,
+        hasMoreAll: true,
+        allProfilesLoaded: false
+    };
 
-                if (val.length < 2) {
-                    autocompleteList.style.display = 'none';
-                    return;
-                }
+    // Get current profile type from URL
+    function getProfileType() {
+        const urlParams = new URLSearchParams(window.location.search);
+        return urlParams.get('type') || 'student';
+    }
 
-                // Filter skills that match and aren't already selected
-                let matches = allowedSkills.filter(s =>
-                    s.toLowerCase().includes(val) &&
-                    !getCurrentSkills(container).includes(s)
-                );
-                matches = matches.slice(0, 8);
+    // Create profile card HTML - keeping the EXACT same structure as original
+    function createProfileCard(student) {
+        const isOrg = student.user_type === 'organization';
+        const name = isOrg ? (student.organization_name || student.name) : student.name;
 
-                autocompleteList.innerHTML = '';
+        // Parse skills
+        let skillsList = student.skills || [];
+        if (typeof skillsList === 'string') {
+            try {
+                skillsList = JSON.parse(skillsList);
+            } catch {
+                skillsList = skillsList.replace(/[\[\]"']/g, '').split(',').map(s => s.trim()).filter(s => s);
+            }
+        }
 
-                if (matches.length > 0 || val.length >= 2) {
-                    // Add a header to clarify these are skill filters
-                    const header = document.createElement('div');
-                    header.className = 'px-3 py-2 text-xs font-medium text-gray-500 bg-gray-50 border-b border-gray-200';
-                    header.innerHTML = '<i class="fas fa-tag mr-2"></i>Click to filter by skills:';
-                    autocompleteList.appendChild(header);
+        // Match badge
+        let matchBadge = '';
+        if (student.relevance_score !== undefined) {
+            if (student.relevance_score > 0.7) {
+                matchBadge = `<div class="mt-1"><span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800"><i class="fas fa-star mr-1"></i>Great match</span></div>`;
+            } else if (student.relevance_score > 0.5) {
+                matchBadge = `<div class="mt-1"><span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800"><i class="fas fa-check mr-1"></i>Good match</span></div>`;
+            }
+        }
 
-                    matches.forEach(skill => {
-                        const item = document.createElement('div');
-                        item.className = 'px-3 py-2 cursor-pointer hover:bg-blue-50 text-sm border-b border-gray-100 last:border-b-0 flex items-center';
-                        item.innerHTML = `<i class="fas fa-plus-circle mr-2 text-blue-500"></i>${skill}`;
-                        item.onclick = () => {
-                            addSkillFilter(skill, container);
-                            autocompleteList.style.display = 'none';
-                            // Don't clear the input completely, just remove the skill part
-                            const currentVal = input.value.trim();
-                            const skillIndex = currentVal.toLowerCase().indexOf(skill.toLowerCase());
-                            if (skillIndex !== -1) {
-                                const beforeSkill = currentVal.substring(0, skillIndex).trim();
-                                const afterSkill = currentVal.substring(skillIndex + skill.length).trim();
-                                input.value = (beforeSkill + ' ' + afterSkill).trim();
-                            }
-                        };
-                        autocompleteList.appendChild(item);
+        // Skills HTML
+        let skillsHtml = '';
+        if (!isOrg && skillsList.length > 0) {
+            const displaySkills = skillsList.slice(0, 3);
+            const moreCount = skillsList.length - 3;
+            skillsHtml = `
+            <div class="mb-2 flex flex-wrap gap-1">
+                ${displaySkills.map(s => `<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">${escapeHtml(s)}</span>`).join('')}
+                ${moreCount > 0 ? `<span class="text-xs text-gray-500">+${moreCount} more</span>` : ''}
+            </div>
+        `;
+        }
+
+        // Interests HTML
+        let interestsHtml = '';
+        if (student.interests) {
+            const interestsList = student.interests.split(',').map(i => i.trim()).filter(i => i);
+            if (interestsList.length > 0) {
+                const displayInterests = interestsList.slice(0, 4);
+                const moreCount = interestsList.length - 4;
+                interestsHtml = `
+                <div class="mb-4">
+                    <h4 class="text-sm font-medium text-gray-900 mb-2">Interests</h4>
+                    <div class="flex flex-wrap gap-1">
+                        ${displayInterests.map(i => `<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">${escapeHtml(i)}</span>`).join('')}
+                        ${moreCount > 0 ? `<span class="text-xs text-gray-500">+${moreCount} more</span>` : ''}
+                    </div>
+                </div>
+            `;
+            }
+        }
+
+        const bookmarkClass = student.is_saved ? 'bg-blue-50 border-blue-300 text-blue-700' : 'bg-white border-blue-300 text-blue-700';
+        const bookmarkIcon = student.is_saved ? 'fas fa-bookmark' : 'far fa-bookmark';
+
+        return `
+        <div class="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow border border-blue-100">
+            <div class="p-6">
+                <!-- Profile Picture and Basic Info -->
+                <div class="flex items-center mb-4">
+                    ${student.profile_image
+                ? `<img src="${escapeHtml(student.profile_image)}" alt="${escapeHtml(name)}" class="h-16 w-16 rounded-full object-cover mr-4">`
+                : `<div class="h-16 w-16 rounded-full bg-blue-100 flex items-center justify-center mr-4">
+                             <i class="fas ${isOrg ? 'fa-building' : 'fa-user'} text-blue-600 text-xl"></i>
+                           </div>`
+            }
+                    <div class="flex-1">
+                        ${isOrg
+                ? `<h3 class="text-lg font-semibold text-gray-900">${escapeHtml(name)}</h3>
+                               <p class="text-sm text-gray-600">${escapeHtml(student.location || '')}</p>`
+                : `<h3 class="text-lg font-semibold text-gray-900">${escapeHtml(name)}</h3>
+                               ${student.school ? `<p class="text-sm text-gray-600">${escapeHtml(student.school)}</p>` : ''}
+                               ${student.grade ? `<p class="text-xs text-gray-500">${escapeHtml(student.grade)}</p>` : ''}`
+            }
+                        ${matchBadge}
+                    </div>
+                </div>
+
+                ${isOrg && student.description
+                ? `<p class="text-gray-700 text-sm mb-4 line-clamp-3">${escapeHtml(student.description.substring(0, 180))}${student.description.length > 180 ? '...' : ''}</p>`
+                : skillsHtml
+            }
+
+                ${student.location && !isOrg
+                ? `<div class="flex items-center mb-3 text-sm text-gray-600">
+                         <i class="fas fa-map-marker-alt mr-2 text-blue-500"></i>
+                         <span>${escapeHtml(student.location)}</span>
+                       </div>`
+                : ''
+            }
+
+                ${student.bio
+                ? `<p class="text-gray-700 text-sm mb-4 line-clamp-3">${escapeHtml(student.bio.substring(0, 150))}${student.bio.length > 150 ? '...' : ''}</p>`
+                : ''
+            }
+
+                ${interestsHtml}
+
+                <!-- Contact Actions -->
+                <div class="flex space-x-2">
+                    <a href="mailto:${escapeHtml(student.email)}?subject=Hello ${encodeURIComponent(name)}, from InterSpark"
+                        class="flex-1 inline-flex items-center justify-center px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-md shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
+                        <i class="fas fa-envelope mr-2"></i>
+                        Contact
+                    </a>
+                    <a href="/profile/${student.id}"
+                        class="flex-1 inline-flex items-center justify-center px-4 py-2.5 border border-blue-300 rounded-md text-blue-700 text-sm font-medium bg-white hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors shadow-sm">
+                        <i class="fas fa-eye mr-2"></i>
+                        View
+                    </a>
+                    <button onclick="toggleSaveProfile('${student.id}', this)"
+                        class="inline-flex items-center justify-center px-3 py-2.5 border rounded-md text-sm font-medium hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors shadow-sm ${bookmarkClass}"
+                        title="Save Profile">
+                        <i class="${bookmarkIcon}"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    }
+
+    // Escape HTML to prevent XSS
+    function escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    // Create category row HTML for horizontal scrolling
+    function createCategoryRow(row) {
+        const category = row.category;
+        const categoryType = row.category_type || 'semantic';
+        const categoryQuery = row.category_query || '';
+        const rowId = `row-${category.replace(/\s+/g, '-').toLowerCase().replace(/[^a-z0-9-]/g, '')}`;
+
+        // Determine icon based on category type
+        let icon = '';
+        if (category.toLowerCase().includes('match') || category.toLowerCase().includes('recommend')) {
+            icon = '<i class="fas fa-star text-yellow-500 mr-2"></i>';
+        } else if (categoryType === 'all') {
+            icon = '<i class="fas fa-users text-indigo-500 mr-2"></i>';
+        } else if (categoryType === 'similar_skills') {
+            icon = '<i class="fas fa-link text-green-500 mr-2"></i>';
+        } else if (categoryType === 'filter_school') {
+            icon = '<i class="fas fa-school text-blue-500 mr-2"></i>';
+        } else if (categoryType === 'filter_grade') {
+            icon = '<i class="fas fa-graduation-cap text-purple-500 mr-2"></i>';
+        } else if (categoryType === 'semantic') {
+            icon = '<i class="fas fa-search text-indigo-500 mr-2"></i>';
+        }
+
+        return `
+        <div class="category-row" data-category="${escapeHtml(category)}" data-category-type="${escapeHtml(categoryType)}" data-category-query="${escapeHtml(categoryQuery)}">
+            <div class="category-header">
+                <h2 class="category-title">
+                    ${icon}
+                    ${escapeHtml(category)}
+                </h2>
+            </div>
+            <div class="horizontal-scroll-container">
+                <button class="scroll-btn scroll-btn-left" onclick="scrollRow('${rowId}', 'left')">
+                    <i class="fas fa-chevron-left text-gray-600"></i>
+                </button>
+                <div class="horizontal-scroll-wrapper" id="${rowId}">
+                    ${row.profiles.map(p => `<div class="profile-card-horizontal">${createProfileCard(p)}</div>`).join('')}
+                </div>
+                <button class="scroll-btn scroll-btn-right" onclick="scrollRow('${rowId}', 'right')">
+                    <i class="fas fa-chevron-right text-gray-600"></i>
+                </button>
+            </div>
+        </div>
+    `;
+    }
+
+    // Scroll row horizontally
+    function scrollRow(rowId, direction) {
+        const container = document.getElementById(rowId);
+        if (!container) return;
+
+        const scrollAmount = 360; // Card width + gap
+        const currentScroll = container.scrollLeft;
+        const newScroll = direction === 'left'
+            ? currentScroll - scrollAmount
+            : currentScroll + scrollAmount;
+
+        container.scrollTo({
+            left: newScroll,
+            behavior: 'smooth'
+        });
+    }
+
+    // Load discovery rows
+    async function loadDiscoveryRows() {
+        if (discoveryState.isLoadingRows || !discoveryState.hasMoreRows) return;
+
+        discoveryState.isLoadingRows = true;
+
+        try {
+            const profileType = getProfileType();
+            const response = await fetch(`/api/talent/discovery?row_offset=${discoveryState.rowOffset}&rows_to_load=${discoveryState.rowsToLoad}&items_per_row=${discoveryState.itemsPerRow}&type=${profileType}`);
+            const data = await response.json();
+
+            if (data.success) {
+                const container = document.getElementById('category-rows-container');
+
+                if (data.rows.length === 0 && discoveryState.rowOffset === 0) {
+                    // No category rows, but we still have all profiles section
+                    discoveryState.hasMoreRows = false;
+                } else {
+                    data.rows.forEach(row => {
+                        if (!discoveryState.loadedCategories.has(row.category)) {
+                            container.insertAdjacentHTML('beforeend', createCategoryRow(row));
+                            discoveryState.loadedCategories.add(row.category);
+                        }
                     });
 
-                    // Only show existing skills in autocomplete - no new skill creation in search
-
-                    autocompleteList.style.display = 'block';
-                } else {
-                    autocompleteList.style.display = 'none';
+                    discoveryState.rowOffset = data.next_offset;
+                    discoveryState.hasMoreRows = data.has_more;
                 }
 
-                // Limit dropdown height for compactness
-                autocompleteList.style.maxHeight = '160px';
-                autocompleteList.style.overflowY = 'auto';
-            }, 300);
-        });
-
-        input.addEventListener('keydown', function (e) {
-            const autocompleteList = document.getElementById('skills-autocomplete-list');
-
-            if (e.key === 'Enter') {
-                // Check if the current input is a skill that should be added
-                const val = input.value.trim();
-                if (val.length >= 2) {
-                    const exactMatch = allowedSkills.find(s => s.toLowerCase() === val.toLowerCase());
-                    const alreadySelected = getCurrentSkills(container).some(s => s.toLowerCase() === val.toLowerCase());
-
-                    if (exactMatch && !alreadySelected) {
-                        // Add existing skill
-                        addSkillFilter(exactMatch, container);
-                        input.value = '';
-                        autocompleteList.style.display = 'none';
-                        e.preventDefault();
-                        return false;
-                    }
-                    // Removed the ability to add new skills - only allow existing skills
+                // Load all profiles section after category rows
+                if (!discoveryState.allProfilesLoaded) {
+                    discoveryState.allProfilesLoaded = true;
+                    loadAllProfiles();
                 }
-                // Allow normal form submission for general search
-                autocompleteList.style.display = 'none';
-                return true;
             }
-
-            if (e.key === 'Escape') {
-                autocompleteList.style.display = 'none';
-                e.preventDefault();
-            }
-        });
-
-        // Hide dropdown when clicking outside
-        document.addEventListener('click', function (e) {
-            const autocompleteList = document.getElementById('skills-autocomplete-list');
-            if (!input.contains(e.target) && !autocompleteList.contains(e.target)) {
-                autocompleteList.style.display = 'none';
-            }
-        });
+        } catch (error) {
+            console.error('Error loading discovery rows:', error);
+        } finally {
+            discoveryState.isLoadingRows = false;
+        }
     }
 
-    function addSkillFilter(skill, container) {
-        if (!allowedSkills.includes(skill)) return;
-        if (getCurrentSkills(container).includes(skill)) return;
+    // Load all profiles for the bottom section
+    async function loadAllProfiles() {
+        if (discoveryState.isLoadingAll || !discoveryState.hasMoreAll) return;
 
-        const bubble = document.createElement('span');
-        bubble.className = 'skill-bubble inline-flex items-center px-2 py-1 rounded-full bg-blue-100 text-blue-800 text-xs font-medium';
+        discoveryState.isLoadingAll = true;
+        document.getElementById('vertical-loading').classList.remove('hidden');
 
-        const skillText = document.createElement('span');
-        skillText.className = 'mr-1';
-        skillText.innerHTML = `<i class="fas fa-tag mr-1"></i>${skill}`;
-        bubble.appendChild(skillText);
-
-        const removeBtn = document.createElement('button');
-        removeBtn.type = 'button';
-        removeBtn.className = 'ml-1 text-blue-500 hover:text-red-600 focus:outline-none';
-        removeBtn.innerHTML = '<i class="fas fa-times text-xs"></i>';
-        removeBtn.onclick = (e) => {
-            e.preventDefault();
-            container.removeChild(bubble);
-            updateHiddenInput(container);
-        };
-        bubble.appendChild(removeBtn);
-        container.appendChild(bubble);
-        updateHiddenInput(container);
-    }
-
-    function getCurrentSkills(container) {
-        return Array.from(container.children).map(bubble => {
-            const skillSpan = bubble.querySelector('span');
-            if (skillSpan) {
-                // Get text content and remove any icon characters
-                const skillText = skillSpan.textContent || skillSpan.innerText;
-                return skillText.replace(/^\s*[\uf02b\uf02c\uf005]?\s*/, '').trim();
-            }
-            return '';
-        }).filter(skill => skill.length > 0);
-    }
-
-    function updateHiddenInput(container) {
-        const skills = getCurrentSkills(container);
-        document.getElementById('skills-hidden-input').value = JSON.stringify(skills);
-        // Show/hide the container based on whether there are skills
-        container.style.display = skills.length > 0 ? 'flex' : 'none';
-    }
-
-    document.addEventListener('DOMContentLoaded', function () {
-        const skillsContainer = document.getElementById('skills-bubble-container');
-        const unifiedInput = document.getElementById('unified-search');
-
-        // Initialize with any existing selected skills
-        let initialSkills = [];
         try {
-            initialSkills = JSON.parse('{{ selected_skills|tojson|safe }}');
-        } catch (e) {
-            try {
-                initialSkills = JSON.parse(document.getElementById('skills-hidden-input').value || '[]');
-            } catch (e2) { }
-        }
+            const profileType = getProfileType();
+            const response = await fetch(`/api/talent/all?offset=${discoveryState.allProfilesOffset}&limit=${discoveryState.allProfilesLimit}&type=${profileType}`);
+            const data = await response.json();
 
-        renderSkillBubbles(initialSkills, skillsContainer);
-        setupUnifiedSearch(unifiedInput, skillsContainer);
-        updateHiddenInput(skillsContainer);
+            if (data.success) {
+                const container = document.getElementById('all-profiles-grid');
 
-        // Update placeholder based on whether skills are selected
-        function updatePlaceholder() {
-            const hasSkills = getCurrentSkills(skillsContainer).length > 0;
-            if (hasSkills) {
-                unifiedInput.placeholder = "Search by name, school, bio... (skill filters active below)";
-            } else {
-                unifiedInput.placeholder = "Search by name, school, bio, or skills... (type skill names to filter)";
+                if (data.profiles.length === 0 && discoveryState.allProfilesOffset === 0) {
+                    // Check if we have any category rows, if not show empty state
+                    if (discoveryState.loadedCategories.size === 0) {
+                        document.getElementById('empty-state').classList.remove('hidden');
+                        document.getElementById('all-profiles-section').classList.add('hidden');
+                    }
+                    discoveryState.hasMoreAll = false;
+                } else {
+                    data.profiles.forEach(profile => {
+                        container.insertAdjacentHTML('beforeend', createProfileCard(profile));
+                    });
+
+                    discoveryState.allProfilesOffset = data.next_offset;
+                    discoveryState.hasMoreAll = data.has_more;
+                }
+
+                if (!discoveryState.hasMoreAll && !discoveryState.hasMoreRows) {
+                    document.getElementById('end-of-content').classList.remove('hidden');
+                }
             }
+        } catch (error) {
+            console.error('Error loading all profiles:', error);
+        } finally {
+            discoveryState.isLoadingAll = false;
+            document.getElementById('vertical-loading').classList.add('hidden');
+        }
+    }
+
+    // Infinite scroll handler
+    function setupInfiniteScroll() {
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    if (discoveryState.hasMoreRows && !discoveryState.isLoadingRows) {
+                        loadDiscoveryRows();
+                    } else if (discoveryState.hasMoreAll && !discoveryState.isLoadingAll) {
+                        loadAllProfiles();
+                    }
+                }
+            });
+        }, {
+            rootMargin: '300px'
+        });
+
+        observer.observe(document.getElementById('vertical-loading'));
+    }
+
+    // Toggle save profile
+    window.toggleSaveProfile = function (profileId, button) {
+        const icon = button.querySelector('i');
+        const isSaved = icon.classList.contains('fas');
+        const action = isSaved ? 'unsave' : 'save';
+        const url = `/${action}_profile/${profileId}`;
+
+        button.disabled = true;
+
+        fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    if (isSaved) {
+                        button.classList.remove('bg-blue-50');
+                        button.classList.add('bg-white');
+                        icon.classList.remove('fas');
+                        icon.classList.add('far');
+                    } else {
+                        button.classList.remove('bg-white');
+                        button.classList.add('bg-blue-50');
+                        icon.classList.remove('far');
+                        icon.classList.add('fas');
+                    }
+                } else {
+                    console.error('Error toggling profile save:', data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            })
+            .finally(() => {
+                button.disabled = false;
+            });
+    };
+
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', function () {
+        // Check if we have search filters active
+        const urlParams = new URLSearchParams(window.location.search);
+        const hasFilters = urlParams.get('search') || urlParams.get('grade') || urlParams.get('location');
+
+        if (hasFilters) {
+            // If filters are active, show filtered results
+            loadFilteredResults();
+        } else {
+            // Load discovery feed
+            loadDiscoveryRows();
+            setupInfiniteScroll();
         }
 
-        // Call initially and whenever skills change
-        updatePlaceholder();
-
-        // Override the updateHiddenInput to also update placeholder
-        const originalUpdate = updateHiddenInput;
-        updateHiddenInput = function (container) {
-            originalUpdate(container);
-            updatePlaceholder();
-        };
+        // Handle profile type change
+        document.getElementById('profile-type').addEventListener('change', function () {
+            this.form.submit();
+        });
     });
+
+    // Load filtered results
+    async function loadFilteredResults() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const searchQuery = urlParams.get('search') || '';
+        const grade = urlParams.get('grade') || '';
+        const location = urlParams.get('location') || '';
+        const profileType = urlParams.get('type') || 'student';
+
+        document.getElementById('vertical-loading').classList.remove('hidden');
+        document.getElementById('category-rows-container').innerHTML = '';
+        document.getElementById('all-profiles-section').classList.add('hidden');
+
+        try {
+            const response = await fetch(`/api/talent/all?offset=0&limit=50&type=${profileType}`);
+            const data = await response.json();
+
+            if (data.success && data.profiles) {
+                let filtered = data.profiles;
+
+                if (searchQuery) {
+                    const query = searchQuery.toLowerCase();
+                    filtered = filtered.filter(p =>
+                        (p.name || '').toLowerCase().includes(query) ||
+                        (p.school || '').toLowerCase().includes(query) ||
+                        (p.bio || '').toLowerCase().includes(query)
+                    );
+                }
+                if (grade) {
+                    filtered = filtered.filter(p => (p.grade || '').includes(grade));
+                }
+                if (location) {
+                    const loc = location.toLowerCase();
+                    filtered = filtered.filter(p => (p.location || '').toLowerCase().includes(loc));
+                }
+
+                const container = document.getElementById('category-rows-container');
+
+                if (filtered.length > 0) {
+                    container.innerHTML = `
+                    <div class="mb-4 text-sm text-gray-600">
+                        <span class="font-medium">${filtered.length}</span> results found
+                        <a href="{{ url_for('talent_search') }}" class="ml-2 text-blue-600 hover:underline">
+                            <i class="fas fa-arrow-left mr-1"></i>Back to discovery
+                        </a>
+                    </div>
+                    <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                        ${filtered.map(p => createProfileCard(p)).join('')}
+                    </div>
+                `;
+                } else {
+                    document.getElementById('empty-state').classList.remove('hidden');
+                }
+            }
+        } catch (error) {
+            console.error('Error loading filtered results:', error);
+            loadDiscoveryRows();
+            setupInfiniteScroll();
+        } finally {
+            document.getElementById('vertical-loading').classList.add('hidden');
+        }
+    }
 </script>
 <script src="{{ url_for('static', filename='js/talent_search.js') }}"></script>
 {% endblock %}

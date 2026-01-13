@@ -1723,126 +1723,22 @@ def opportunities():
     if "user_id" not in session:
         return redirect(url_for("login"))
 
-    user_id = session.get("user_id")
+    # Get filters from query parameters for template display
+    search_query = request.args.get("search", "")
+    opportunity_type = request.args.get("type", "")
+    category = request.args.get("category", "")
 
-    try:
-        # Get filters from query parameters
-        search_query = request.args.get("search", "")
-        opportunity_type = request.args.get("type", "")
-        category = request.args.get("category", "")
-        location = request.args.get("location", "")
-        skills_needed = request.args.get("skills_needed", "")
-        sort_by = request.args.get("sort", "relevance")  # Default to relevance sorting
-
-        # Get pagination parameters
-        page = int(request.args.get("page", 1))
-        per_page = 6  # 6 opportunities per page
-
-        # Fetch all opportunities with filters first
-        all_opportunities = supabase_service.search_opportunities(
-            search_query=search_query,
-            opportunity_type=opportunity_type,
-            category=category,
-            location=location,
-            skills_needed=skills_needed,
-        )
-
-        # Apply FAISS-based semantic search if search query provided
-        if search_query and all_opportunities:
-            try:
-                filters = {}
-                if opportunity_type:
-                    filters["type"] = opportunity_type
-                if category:
-                    filters["category"] = category
-                if location:
-                    filters["location"] = location
-
-                # Use lightweight FAISS to re-rank results by semantic similarity
-                faiss_search = get_faiss_search()
-                all_opportunities = faiss_search.search_opportunities(
-                    query=search_query,
-                    opportunities=all_opportunities,
-                    top_k=100,  # Get top 100, then paginate
-                    filters=filters,
-                )
-                logger.info(
-                    f"FAISS returned {len(all_opportunities)} results for opportunity search: {search_query}"
-                )
-            except Exception as e:
-                logger.error(f"FAISS search failed, using database results: {e}")
-
-        # Apply relevance-based sorting if requested (default behavior)
-        if sort_by == "relevance" and not search_query:
-            # Use FAISS semantic similarity to recommend relevant opportunities
-            try:
-                user_profile = supabase_service.get_profile(user_id)
-                if user_profile and all_opportunities:
-                    # Use FAISS to rank opportunities by semantic similarity to user profile
-                    faiss_search = get_faiss_search()
-                    all_opportunities = faiss_search.recommend_opportunities_for_user(
-                        user_profile=user_profile,
-                        opportunities=all_opportunities,
-                        top_k=100,
-                    )
-                    logger.info(
-                        f"FAISS recommended {len(all_opportunities)} opportunities for user {user_id}"
-                    )
-            except Exception as e:
-                logger.warning(f"FAISS recommendation failed, using default order: {e}")
-                # Fall back to recency-based sorting (already default from DB)
-        elif sort_by == "recent":
-            # Already sorted by recency from DB query
-            pass
-        elif sort_by == "deadline":
-            # Sort by application deadline
-            all_opportunities = sorted(
-                all_opportunities,
-                key=lambda x: x.get("application_deadline") or "9999-12-31",
-            )
-
-        # Calculate pagination
-        total_opportunities = len(all_opportunities)
-        total_pages = (total_opportunities + per_page - 1) // per_page
-        start_idx = (page - 1) * per_page
-        end_idx = start_idx + per_page
-        opportunities = all_opportunities[start_idx:end_idx]
-
-        # Parse skills_needed (comma-separated or JSON)
-        def parse_skills(val):
-            if not val:
-                return []
-            if isinstance(val, list):
-                return val
-            try:
-                loaded = json.loads(val)
-                if isinstance(loaded, list):
-                    return loaded
-            except Exception:
-                pass
-            if "," in val:
-                return [s.strip() for s in val.split(",") if s.strip()]
-            return [val.strip()] if val.strip() else []
-
-        selected_skills_needed = parse_skills(skills_needed)
-
-        return render_template(
-            "opportunities.html",
-            opportunities=opportunities,
-            search_query=search_query,
-            selected_type=opportunity_type,
-            selected_category=category,
-            selected_location=location,
-            selected_skills_needed=selected_skills_needed,
-            selected_sort=sort_by,
-            skills_master=get_all_available_skills(),
-            current_page=page,
-            total_pages=total_pages,
-            total_opportunities=total_opportunities,
-        )
-    except Exception as e:
-        flash(f"Error loading opportunities: {str(e)}", "error")
-        return render_template("opportunities.html", opportunities=[])
+    # The discovery feed is now handled by JavaScript calling the API endpoints
+    # This route just renders the template with initial filter values
+    return render_template(
+        "opportunities.html",
+        search_query=search_query,
+        selected_type=opportunity_type,
+        selected_category=category,
+        selected_location="",
+        selected_skills_needed=[],
+        skills_master=get_all_available_skills(),
+    )
 
 
 @app.route("/opportunity/<int:id>")
@@ -1879,180 +1775,25 @@ def opportunity_details(id):
 def talent_search():
     if "user_id" not in session:
         return redirect(url_for("login"))
-    try:
-        user_id = session.get("user_id")
 
-        # Get search parameters from request
-        search_query = request.args.get("search", "")
-        skills = request.args.get("skills", "")
-        school = request.args.get("school", "")
-        grade = request.args.get("grade", "")
-        location = request.args.get("location", "")
-        # Optional type filter: 'student' or 'organization'
-        profile_type = request.args.get("type", "student")
-        # Sort parameter: relevance, recent, or name
-        sort_by = request.args.get("sort_by", "relevance")
+    # Get search parameters from request for template display
+    search_query = request.args.get("search", "")
+    grade = request.args.get("grade", "")
+    location = request.args.get("location", "")
+    profile_type = request.args.get("type", "student")
 
-        # Get pagination parameters
-        page = int(request.args.get("page", 1))
-        per_page = 9  # 9 profiles per page
-
-        # Get viewer's profile for relevance scoring
-        viewer_profile = None
-        if sort_by == "relevance":
-            try:
-                viewer_profile = supabase_service.get_profile(user_id)
-            except Exception as e:
-                logger.warning(f"Could not load viewer profile for relevance: {e}")
-
-        # Build filters for FAISS search
-        filters = {}
-        if school:
-            filters["school"] = school
-        if grade:
-            filters["grade"] = grade
-        if location:
-            filters["location"] = location
-
-        # Get FAISS search service
-        faiss_search = get_faiss_search()
-
-        # Use FAISS search if available, otherwise fall back to database
-        if profile_type == "organization":
-            # Organizations search - use database search
-            all_results = supabase_service.search_organizations(
-                search_query=search_query,
-                location=location,
-            )
-        else:
-            # Student search - use FAISS for fast semantic search
-            if search_query or skills:
-                # First, get all students from database
-                all_students = supabase_service.search_students(
-                    search_query=search_query if search_query else "",
-                    skills=skills,
-                    school=school,
-                    grade=grade,
-                    location=location,
-                )
-
-                # If we have a search query, use FAISS for better semantic matching
-                if search_query and all_students:
-                    try:
-                        # Use lightweight FAISS to re-rank results by semantic similarity
-                        faiss_filters = {k: v for k, v in filters.items() if v}
-                        all_results = faiss_search.search_students(
-                            query=search_query,
-                            students=all_students,
-                            top_k=100,  # Get top 100, then paginate
-                            filters=faiss_filters,
-                        )
-                        logger.info(
-                            f"FAISS returned {len(all_results)} results for search: {search_query}"
-                        )
-                    except Exception as e:
-                        logger.error(
-                            f"FAISS search failed, using database results: {e}"
-                        )
-                        all_results = all_students
-                else:
-                    all_results = all_students
-            else:
-                # No search query, get all students ordered by creation date
-                all_results = supabase_service.search_students(
-                    search_query="",
-                    skills=skills,
-                    school=school,
-                    grade=grade,
-                    location=location,
-                )
-
-        # Apply relevance ranking if requested and viewer profile available
-        if sort_by == "relevance" and viewer_profile and all_results:
-            try:
-                # Use FAISS semantic similarity to recommend relevant people
-                faiss_search = get_faiss_search()
-                all_results = faiss_search.recommend_people_for_user(
-                    user_profile=viewer_profile,
-                    candidates=all_results,
-                    top_k=100,
-                )
-                logger.info(
-                    f"FAISS recommended {len(all_results)} profiles by relevance"
-                )
-            except Exception as e:
-                logger.error(f"FAISS recommendation failed: {e}")
-                # Fall back to default order
-        elif sort_by == "name":
-            # Sort alphabetically by name (student.name or organization_name)
-            all_results = sorted(
-                all_results,
-                key=lambda x: (
-                    x.get("name", "") or x.get("organization_name", "")
-                ).lower(),
-            )
-        # Default/recent: keep database order (most recent first)
-
-        # Pagination
-        total_students = len(all_results)
-        total_pages = (total_students + per_page - 1) // per_page
-        start_idx = (page - 1) * per_page
-        end_idx = start_idx + per_page
-        students = all_results[start_idx:end_idx]
-
-        # Get saved profiles to determine which ones are bookmarked
-        saved_profiles = supabase_service.get_saved_profiles(user_id)
-        saved_profile_ids = set()
-        if saved_profiles:
-            for saved_profile in saved_profiles:
-                if "profiles" in saved_profile and saved_profile["profiles"]:
-                    saved_profile_ids.add(saved_profile["profiles"]["id"])
-                elif "profile_id" in saved_profile:
-                    saved_profile_ids.add(saved_profile["profile_id"])
-
-        # Add is_saved flag to each student/org
-        for student in students:
-            student["is_saved"] = student.get("id") in saved_profile_ids
-
-        # Parse selected_skills robustly (list or string)
-        def parse_skills(val):
-            import json
-
-            if not val:
-                return []
-            if isinstance(val, list):
-                return val
-            try:
-                loaded = json.loads(val)
-                if isinstance(loaded, list):
-                    return loaded
-            except Exception:
-                pass
-            if "," in val:
-                return [s.strip() for s in val.split(",") if s.strip()]
-            return [val.strip()] if val.strip() else []
-
-        selected_skills_list = parse_skills(skills)
-
-        return render_template(
-            "talent_search.html",
-            students=students,
-            search_query=search_query,
-            selected_skills=selected_skills_list,
-            selected_school=school,
-            selected_grade=grade,
-            selected_location=location,
-            saved_profile_ids=list(saved_profile_ids),
-            skills_master=get_all_available_skills(),
-            current_page=page,
-            total_pages=total_pages,
-            total_students=total_students,
-            profile_type=profile_type,
-            sort_by=sort_by,
-        )
-    except Exception as e:
-        flash(f"Error searching talent: {str(e)}", "error")
-        return render_template("talent_search.html", students=[])
+    # The discovery feed is now handled by JavaScript calling the API endpoints
+    # This route just renders the template with initial filter values
+    return render_template(
+        "talent_search.html",
+        search_query=search_query,
+        selected_skills=[],
+        selected_school="",
+        selected_grade=grade,
+        selected_location=location,
+        skills_master=get_all_available_skills(),
+        profile_type=profile_type,
+    )
 
 
 @app.route("/preview_opportunity", methods=["POST"])
@@ -2820,6 +2561,544 @@ def chat_clear():
     except Exception as e:
         logger.error(f"Error clearing chat history: {str(e)}")
         return jsonify({"success": False, "error": "Failed to clear chat history"}), 500
+
+
+# ============================================================================
+# DISCOVERY FEED API ENDPOINTS
+# YouTube-style personalized category rows for opportunities and talent
+# All categories are dynamically generated using FAISS - no hardcoding
+# ============================================================================
+
+
+@app.route("/api/opportunities/discovery")
+def api_opportunities_discovery():
+    """
+    API endpoint for YouTube-style opportunity discovery feed.
+    Returns personalized category rows with opportunities.
+    Categories are dynamically generated based on user profile and available data.
+    """
+    if "user_id" not in session:
+        return jsonify({"success": False, "error": "Not authenticated"}), 401
+
+    user_id = session.get("user_id")
+
+    try:
+        # Get pagination parameters
+        row_offset = int(request.args.get("row_offset", 0))
+        rows_to_load = int(request.args.get("rows_to_load", 4))
+        items_per_row = int(request.args.get("items_per_row", 10))
+
+        # Get user profile for personalization
+        user_profile = supabase_service.get_profile(user_id)
+        if not user_profile:
+            user_profile = {"skills": [], "interests": ""}
+
+        # Get all opportunities once
+        all_opportunities = supabase_service.search_opportunities(
+            search_query="",
+            opportunity_type="",
+            category="",
+            location="",
+            skills_needed="",
+        )
+
+        # Ensure we have a list (Supabase can return None)
+        if all_opportunities is None:
+            all_opportunities = []
+
+        if not all_opportunities:
+            return jsonify(
+                {"success": True, "rows": [], "has_more": False, "total_categories": 0}
+            )
+
+        # Use FAISS to dynamically generate categories
+        faiss_search = get_faiss_search()
+        all_categories = faiss_search.generate_dynamic_categories_for_opportunities(
+            user_profile=user_profile,
+            opportunities=all_opportunities,
+            max_categories=20,
+        )
+
+        # Get the categories for this batch
+        categories_to_load = all_categories[row_offset : row_offset + rows_to_load]
+
+        if not categories_to_load:
+            return jsonify(
+                {
+                    "success": True,
+                    "rows": [],
+                    "has_more": False,
+                    "total_categories": len(all_categories),
+                }
+            )
+
+        rows = []
+        for category_info in categories_to_load:
+            # Use FAISS to get opportunities for this category
+            category_opportunities = faiss_search.get_opportunities_for_category(
+                category_info=category_info,
+                user_profile=user_profile,
+                opportunities=all_opportunities,
+                limit=items_per_row,
+                offset=0,
+            )
+
+            # Only add row if it has opportunities
+            if category_opportunities:
+                rows.append(
+                    {
+                        "category": category_info["name"],
+                        "category_type": category_info["type"],
+                        "category_query": category_info.get("query", ""),
+                        "opportunities": category_opportunities,
+                        "total_available": len(category_opportunities),
+                        "has_more": len(category_opportunities) >= items_per_row,
+                    }
+                )
+
+        has_more = row_offset + rows_to_load < len(all_categories)
+
+        return jsonify(
+            {
+                "success": True,
+                "rows": rows,
+                "has_more": has_more,
+                "next_offset": row_offset + rows_to_load,
+                "total_categories": len(all_categories),
+            }
+        )
+
+    except Exception as e:
+        logger.error(f"Error in opportunities discovery API: {str(e)}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route("/api/opportunities/category/<path:category_name>")
+def api_opportunities_by_category(category_name):
+    """
+    API endpoint to load more opportunities for a specific category.
+    Used for horizontal infinite scroll within a row.
+    """
+    if "user_id" not in session:
+        return jsonify({"success": False, "error": "Not authenticated"}), 401
+
+    user_id = session.get("user_id")
+
+    try:
+        offset = int(request.args.get("offset", 0))
+        limit = int(request.args.get("limit", 10))
+        category_type = request.args.get("category_type", "semantic")
+        category_query = request.args.get("category_query", category_name)
+
+        user_profile = supabase_service.get_profile(user_id)
+        if not user_profile:
+            user_profile = {"skills": [], "interests": ""}
+
+        all_opportunities = supabase_service.search_opportunities(
+            search_query="",
+            opportunity_type="",
+            category="",
+            location="",
+            skills_needed="",
+        )
+
+        # Ensure we have a list (Supabase can return None)
+        if all_opportunities is None:
+            all_opportunities = []
+
+        faiss_search = get_faiss_search()
+
+        # Build category info for FAISS
+        category_info = {
+            "name": category_name,
+            "type": category_type,
+            "query": category_query,
+        }
+
+        # Get all opportunities for this category
+        all_category_opps = faiss_search.get_opportunities_for_category(
+            category_info=category_info,
+            user_profile=user_profile,
+            opportunities=all_opportunities,
+            limit=100,
+            offset=0,
+        )
+
+        # Apply pagination
+        paginated = all_category_opps[offset : offset + limit]
+        has_more = offset + limit < len(all_category_opps)
+
+        return jsonify(
+            {
+                "success": True,
+                "opportunities": paginated,
+                "has_more": has_more,
+                "next_offset": offset + limit,
+                "total": len(all_category_opps),
+            }
+        )
+
+    except Exception as e:
+        logger.error(f"Error loading category opportunities: {str(e)}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route("/api/opportunities/all")
+def api_opportunities_all():
+    """
+    API endpoint to get all opportunities with pagination.
+    Used for the "All Opportunities" section at the bottom.
+    """
+    if "user_id" not in session:
+        return jsonify({"success": False, "error": "Not authenticated"}), 401
+
+    user_id = session.get("user_id")
+
+    try:
+        offset = int(request.args.get("offset", 0))
+        limit = int(request.args.get("limit", 12))
+
+        # Get user profile for ranking
+        user_profile = supabase_service.get_profile(user_id)
+        if not user_profile:
+            user_profile = {"skills": [], "interests": ""}
+
+        # Get all opportunities
+        all_opportunities = supabase_service.search_opportunities(
+            search_query="",
+            opportunity_type="",
+            category="",
+            location="",
+            skills_needed="",
+        )
+
+        # Ensure we have a list (Supabase can return None)
+        if all_opportunities is None:
+            all_opportunities = []
+
+        # Use FAISS to rank by relevance to user
+        faiss_search = get_faiss_search()
+        ranked_opportunities = faiss_search.recommend_opportunities_for_user(
+            user_profile=user_profile,
+            opportunities=all_opportunities,
+            top_k=len(all_opportunities),
+        )
+
+        # Paginate
+        paginated = ranked_opportunities[offset : offset + limit]
+        has_more = offset + limit < len(ranked_opportunities)
+
+        return jsonify(
+            {
+                "success": True,
+                "opportunities": paginated,
+                "has_more": has_more,
+                "next_offset": offset + limit,
+                "total": len(ranked_opportunities),
+            }
+        )
+
+    except Exception as e:
+        logger.error(f"Error loading all opportunities: {str(e)}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route("/api/talent/discovery")
+def api_talent_discovery():
+    """
+    API endpoint for YouTube-style talent discovery feed.
+    Returns personalized category rows with profiles.
+    Categories are dynamically generated based on user profile and available data.
+    """
+    if "user_id" not in session:
+        return jsonify({"success": False, "error": "Not authenticated"}), 401
+
+    user_id = session.get("user_id")
+
+    try:
+        # Get pagination parameters
+        row_offset = int(request.args.get("row_offset", 0))
+        rows_to_load = int(request.args.get("rows_to_load", 4))
+        items_per_row = int(request.args.get("items_per_row", 10))
+        profile_type = request.args.get("type", "student")
+
+        # Get user profile for personalization
+        user_profile = supabase_service.get_profile(user_id)
+        if not user_profile:
+            user_profile = {"skills": [], "interests": "", "school": ""}
+
+        # Get all profiles
+        if profile_type == "organization":
+            all_profiles = supabase_service.search_organizations(
+                search_query="", location=""
+            )
+        else:
+            all_profiles = supabase_service.search_students(
+                search_query="",
+                skills="",
+                school="",
+                grade="",
+                location="",
+            )
+
+        # Handle None return
+        if all_profiles is None:
+            all_profiles = []
+
+        # Filter out current user
+        all_profiles = [p for p in all_profiles if p.get("id") != user_id]
+
+        if not all_profiles:
+            return jsonify(
+                {"success": True, "rows": [], "has_more": False, "total_categories": 0}
+            )
+
+        # Get saved profiles
+        saved_profiles = supabase_service.get_saved_profiles(user_id)
+        saved_profile_ids = set()
+        if saved_profiles:
+            for saved_profile in saved_profiles:
+                if "profiles" in saved_profile and saved_profile["profiles"]:
+                    saved_profile_ids.add(saved_profile["profiles"]["id"])
+                elif "profile_id" in saved_profile:
+                    saved_profile_ids.add(saved_profile["profile_id"])
+
+        # Mark saved profiles
+        for profile in all_profiles:
+            profile["is_saved"] = profile.get("id") in saved_profile_ids
+
+        # Use FAISS to dynamically generate categories
+        faiss_search = get_faiss_search()
+        all_categories = faiss_search.generate_dynamic_categories_for_talent(
+            user_profile=user_profile, profiles=all_profiles, max_categories=20
+        )
+
+        # Ensure categories is not None
+        if all_categories is None:
+            all_categories = []
+
+        # Get the categories for this batch
+        categories_to_load = all_categories[row_offset : row_offset + rows_to_load]
+
+        if not categories_to_load:
+            return jsonify(
+                {
+                    "success": True,
+                    "rows": [],
+                    "has_more": False,
+                    "total_categories": len(all_categories),
+                }
+            )
+
+        rows = []
+        for category_info in categories_to_load:
+            # Use FAISS to get profiles for this category
+            category_profiles = faiss_search.get_profiles_for_category(
+                category_info=category_info,
+                user_profile=user_profile,
+                profiles=all_profiles,
+                limit=items_per_row,
+                offset=0,
+            )
+
+            # Only add row if it has profiles
+            if category_profiles:
+                rows.append(
+                    {
+                        "category": category_info["name"],
+                        "category_type": category_info["type"],
+                        "category_query": category_info.get("query", ""),
+                        "profiles": category_profiles,
+                        "total_available": len(category_profiles),
+                    }
+                )
+
+        has_more = row_offset + rows_to_load < len(all_categories)
+
+        return jsonify(
+            {
+                "success": True,
+                "rows": rows,
+                "has_more": has_more,
+                "next_offset": row_offset + rows_to_load,
+                "total_categories": len(all_categories),
+            }
+        )
+
+    except Exception as e:
+        logger.error(f"Error in talent discovery API: {str(e)}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route("/api/talent/all")
+def api_talent_all():
+    """
+    API endpoint to get all profiles with pagination.
+    Used for the "All Profiles" section at the bottom.
+    """
+    if "user_id" not in session:
+        return jsonify({"success": False, "error": "Not authenticated"}), 401
+
+    user_id = session.get("user_id")
+
+    try:
+        offset = int(request.args.get("offset", 0))
+        limit = int(request.args.get("limit", 12))
+        profile_type = request.args.get("type", "student")
+
+        # Get user profile for ranking
+        user_profile = supabase_service.get_profile(user_id)
+        if not user_profile:
+            user_profile = {"skills": [], "interests": "", "school": ""}
+
+        # Get profiles
+        if profile_type == "organization":
+            all_profiles = supabase_service.search_organizations(
+                search_query="", location=""
+            )
+        else:
+            all_profiles = supabase_service.search_students(
+                search_query="",
+                skills="",
+                school="",
+                grade="",
+                location="",
+            )
+
+        # Handle None return
+        if all_profiles is None:
+            all_profiles = []
+
+        # Filter out current user
+        all_profiles = [p for p in all_profiles if p.get("id") != user_id]
+
+        # Get saved profiles
+        saved_profiles = supabase_service.get_saved_profiles(user_id)
+        saved_profile_ids = set()
+        if saved_profiles:
+            for saved_profile in saved_profiles:
+                if "profiles" in saved_profile and saved_profile["profiles"]:
+                    saved_profile_ids.add(saved_profile["profiles"]["id"])
+                elif "profile_id" in saved_profile:
+                    saved_profile_ids.add(saved_profile["profile_id"])
+
+        # Use FAISS to rank by relevance
+        faiss_search = get_faiss_search()
+        ranked_profiles = faiss_search.recommend_people_for_user(
+            user_profile=user_profile, candidates=all_profiles, top_k=len(all_profiles)
+        )
+
+        # Mark saved and paginate
+        paginated = ranked_profiles[offset : offset + limit]
+        for profile in paginated:
+            profile["is_saved"] = profile.get("id") in saved_profile_ids
+
+        has_more = offset + limit < len(ranked_profiles)
+
+        return jsonify(
+            {
+                "success": True,
+                "profiles": paginated,
+                "has_more": has_more,
+                "next_offset": offset + limit,
+                "total": len(ranked_profiles),
+            }
+        )
+
+    except Exception as e:
+        logger.error(f"Error loading all talent: {str(e)}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route("/api/talent/category/<path:category_name>")
+def api_talent_by_category(category_name):
+    """
+    API endpoint to load more profiles for a specific category.
+    """
+    if "user_id" not in session:
+        return jsonify({"success": False, "error": "Not authenticated"}), 401
+
+    user_id = session.get("user_id")
+
+    try:
+        offset = int(request.args.get("offset", 0))
+        limit = int(request.args.get("limit", 10))
+        profile_type = request.args.get("type", "student")
+        category_type = request.args.get("category_type", "semantic")
+        category_query = request.args.get("category_query", category_name)
+
+        user_profile = supabase_service.get_profile(user_id)
+        if not user_profile:
+            user_profile = {"skills": [], "interests": "", "school": ""}
+
+        # Get all profiles
+        if profile_type == "organization":
+            all_profiles = supabase_service.search_organizations(
+                search_query="", location=""
+            )
+        else:
+            all_profiles = supabase_service.search_students(
+                search_query="",
+                skills="",
+                school="",
+                grade="",
+                location="",
+            )
+
+        # Handle None return
+        if all_profiles is None:
+            all_profiles = []
+
+        all_profiles = [p for p in all_profiles if p.get("id") != user_id]
+
+        # Get saved profiles
+        saved_profiles = supabase_service.get_saved_profiles(user_id)
+        saved_profile_ids = set()
+        if saved_profiles:
+            for saved_profile in saved_profiles:
+                if "profiles" in saved_profile and saved_profile["profiles"]:
+                    saved_profile_ids.add(saved_profile["profiles"]["id"])
+                elif "profile_id" in saved_profile:
+                    saved_profile_ids.add(saved_profile["profile_id"])
+
+        for profile in all_profiles:
+            profile["is_saved"] = profile.get("id") in saved_profile_ids
+
+        faiss_search = get_faiss_search()
+
+        # Build category info for FAISS
+        category_info = {
+            "name": category_name,
+            "type": category_type,
+            "query": category_query,
+        }
+
+        # Get all profiles for this category
+        all_category_profiles = faiss_search.get_profiles_for_category(
+            category_info=category_info,
+            user_profile=user_profile,
+            profiles=all_profiles,
+            limit=100,
+            offset=0,
+        )
+
+        # Apply pagination
+        paginated = all_category_profiles[offset : offset + limit]
+        has_more = offset + limit < len(all_category_profiles)
+
+        return jsonify(
+            {
+                "success": True,
+                "profiles": paginated,
+                "has_more": has_more,
+                "next_offset": offset + limit,
+                "total": len(all_category_profiles),
+            }
+        )
+
+    except Exception as e:
+        logger.error(f"Error loading talent category: {str(e)}")
+        return jsonify({"success": False, "error": str(e)}), 500
 
 
 if __name__ == "__main__":
