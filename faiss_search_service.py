@@ -632,6 +632,238 @@ class LightweightFAISSSearch:
             logger.error(f"Error in FAISS people recommendation: {e}")
             return candidates
 
+    def _extract_semantic_themes(
+        self, text: str, max_themes: int = 5
+    ) -> List[Dict[str, str]]:
+        """
+        Extract semantic themes from text using keyword analysis and clustering.
+
+        This creates organic category names based on what the user has written,
+        not just repeating their skills verbatim.
+
+        Returns list of dicts with 'theme' (display name) and 'query' (search query)
+        """
+        if not text or not text.strip():
+            return []
+
+        themes = []
+        text_lower = text.lower()
+
+        # Theme mappings: keywords to descriptive category names
+        # Maps what users write about to organic category names
+        theme_patterns = {
+            # Technology & Engineering
+            "ai": {
+                "theme": "Artificial Intelligence & ML",
+                "query": "artificial intelligence machine learning",
+            },
+            "machine learning": {
+                "theme": "Machine Learning Projects",
+                "query": "machine learning data science",
+            },
+            "data science": {
+                "theme": "Data Science & Analytics",
+                "query": "data analytics statistics",
+            },
+            "web": {
+                "theme": "Web Development",
+                "query": "web development frontend backend",
+            },
+            "app": {"theme": "App Development", "query": "mobile app development"},
+            "mobile": {
+                "theme": "Mobile Development",
+                "query": "mobile app ios android",
+            },
+            "software": {
+                "theme": "Software Engineering",
+                "query": "software development engineering",
+            },
+            "programming": {
+                "theme": "Programming Projects",
+                "query": "coding programming development",
+            },
+            "coding": {
+                "theme": "Coding Opportunities",
+                "query": "programming coding software",
+            },
+            "python": {
+                "theme": "Python Projects",
+                "query": "python programming development",
+            },
+            "javascript": {
+                "theme": "JavaScript Development",
+                "query": "javascript web frontend",
+            },
+            "robotics": {
+                "theme": "Robotics & Automation",
+                "query": "robotics engineering automation",
+            },
+            "hardware": {
+                "theme": "Hardware Engineering",
+                "query": "hardware electronics engineering",
+            },
+            "cybersecurity": {
+                "theme": "Cybersecurity",
+                "query": "security cybersecurity hacking",
+            },
+            "blockchain": {
+                "theme": "Blockchain & Web3",
+                "query": "blockchain cryptocurrency web3",
+            },
+            "game": {"theme": "Game Development", "query": "game development design"},
+            # Science & Research
+            "research": {
+                "theme": "Research Opportunities",
+                "query": "research science academic",
+            },
+            "science": {"theme": "Science Projects", "query": "science research lab"},
+            "biology": {
+                "theme": "Biology & Life Sciences",
+                "query": "biology biotech life science",
+            },
+            "chemistry": {
+                "theme": "Chemistry & Lab Work",
+                "query": "chemistry lab science",
+            },
+            "physics": {
+                "theme": "Physics & Engineering",
+                "query": "physics engineering science",
+            },
+            "medicine": {
+                "theme": "Medical & Healthcare",
+                "query": "medical healthcare health",
+            },
+            "health": {
+                "theme": "Healthcare & Wellness",
+                "query": "health medical wellness",
+            },
+            "environment": {
+                "theme": "Environmental Science",
+                "query": "environment sustainability climate",
+            },
+            "sustainability": {
+                "theme": "Sustainability & Climate",
+                "query": "sustainability environment green",
+            },
+            # Business & Entrepreneurship
+            "business": {
+                "theme": "Business & Strategy",
+                "query": "business strategy management",
+            },
+            "startup": {
+                "theme": "Startups & Entrepreneurship",
+                "query": "startup founder entrepreneur",
+            },
+            "entrepreneur": {
+                "theme": "Entrepreneurship",
+                "query": "entrepreneur startup business",
+            },
+            "marketing": {
+                "theme": "Marketing & Growth",
+                "query": "marketing digital growth",
+            },
+            "finance": {
+                "theme": "Finance & Investing",
+                "query": "finance investment banking",
+            },
+            "consulting": {
+                "theme": "Consulting",
+                "query": "consulting strategy business",
+            },
+            "product": {
+                "theme": "Product Management",
+                "query": "product management development",
+            },
+            "social media": {
+                "theme": "Social Media & Content",
+                "query": "social media content creator",
+            },
+            # Creative & Arts
+            "design": {"theme": "Design & Creative", "query": "design creative visual"},
+            "art": {
+                "theme": "Art & Creative Projects",
+                "query": "art creative visual design",
+            },
+            "graphic": {"theme": "Graphic Design", "query": "graphic design visual"},
+            "music": {"theme": "Music & Audio", "query": "music audio production"},
+            "film": {"theme": "Film & Video", "query": "film video production"},
+            "video": {"theme": "Video Production", "query": "video film content"},
+            "photography": {
+                "theme": "Photography",
+                "query": "photography photo visual",
+            },
+            "writing": {
+                "theme": "Writing & Content",
+                "query": "writing content journalism",
+            },
+            "content": {
+                "theme": "Content Creation",
+                "query": "content creator writing",
+            },
+            # Social Impact
+            "nonprofit": {
+                "theme": "Nonprofit & Social Good",
+                "query": "nonprofit volunteer charity",
+            },
+            "volunteer": {
+                "theme": "Volunteer Opportunities",
+                "query": "volunteer community service",
+            },
+            "community": {
+                "theme": "Community Service",
+                "query": "community volunteer social",
+            },
+            "social": {"theme": "Social Impact", "query": "social impact community"},
+            "education": {
+                "theme": "Education & Teaching",
+                "query": "education teaching tutoring",
+            },
+            "teaching": {
+                "theme": "Teaching & Mentoring",
+                "query": "teaching tutoring mentor",
+            },
+            "tutoring": {"theme": "Tutoring", "query": "tutoring teaching education"},
+            # Leadership & Skills
+            "leadership": {
+                "theme": "Leadership Roles",
+                "query": "leadership management team",
+            },
+            "public speaking": {
+                "theme": "Public Speaking",
+                "query": "public speaking presentation",
+            },
+            "communication": {
+                "theme": "Communication",
+                "query": "communication writing speaking",
+            },
+            "teamwork": {"theme": "Team Projects", "query": "team collaboration group"},
+            # Specific Areas
+            "internship": {
+                "theme": "Internship Programs",
+                "query": "internship work experience",
+            },
+            "competition": {
+                "theme": "Competitions & Contests",
+                "query": "competition contest hackathon",
+            },
+            "hackathon": {
+                "theme": "Hackathons",
+                "query": "hackathon coding competition",
+            },
+        }
+
+        seen_themes = set()
+
+        # First pass: find direct keyword matches in text
+        for keyword, theme_info in theme_patterns.items():
+            if keyword in text_lower and theme_info["theme"].lower() not in seen_themes:
+                themes.append(theme_info)
+                seen_themes.add(theme_info["theme"].lower())
+                if len(themes) >= max_themes:
+                    break
+
+        return themes[:max_themes]
+
     def generate_dynamic_categories_for_opportunities(
         self,
         user_profile: Dict[str, Any],
@@ -641,16 +873,21 @@ class LightweightFAISSSearch:
         """
         Dynamically generate personalized category suggestions for opportunities.
 
-        Categories are generated from:
-        1. User's skills/interests (highest priority - semantic search)
-        2. Unique opportunity types in the database
-        3. Unique categories from opportunities
-        4. Skills needed across opportunities
+        Categories are organically generated from:
+        1. Semantic analysis of user's bio (extracts themes and interests)
+        2. User's skills and interests (semantic search)
+        3. Unique opportunity types in the database
+        4. Unique categories from opportunities
+        5. Common skills needed across opportunities
 
         Returns list of category dicts with 'name' and 'query' for FAISS search.
         """
         categories = []
         seen_names = set()
+
+        # Ensure user_profile is not None
+        if user_profile is None:
+            user_profile = {}
 
         # Always start with personalized recommendations
         categories.append(
@@ -662,7 +899,43 @@ class LightweightFAISSSearch:
         )
         seen_names.add("recommended for you")
 
-        # Extract user's skills and interests for semantic categories
+        # --- ORGANIC CATEGORY GENERATION FROM BIO ---
+        # Extract themes from user's bio for organic, context-aware categories
+        user_bio = user_profile.get("bio") or user_profile.get("description", "")
+        if user_bio and isinstance(user_bio, str):
+            bio_themes = self._extract_semantic_themes(user_bio, max_themes=4)
+            for theme_info in bio_themes:
+                theme_name = theme_info["theme"]
+                if theme_name.lower() not in seen_names:
+                    categories.append(
+                        {
+                            "name": theme_name,
+                            "type": "semantic",
+                            "query": theme_info["query"],
+                        }
+                    )
+                    seen_names.add(theme_name.lower())
+
+        # Extract themes from interests as well
+        user_interests = user_profile.get("interests", "")
+        if user_interests and isinstance(user_interests, str):
+            interest_themes = self._extract_semantic_themes(
+                user_interests, max_themes=3
+            )
+            for theme_info in interest_themes:
+                theme_name = theme_info["theme"]
+                if theme_name.lower() not in seen_names:
+                    categories.append(
+                        {
+                            "name": theme_name,
+                            "type": "semantic",
+                            "query": theme_info["query"],
+                        }
+                    )
+                    seen_names.add(theme_name.lower())
+
+        # --- SKILLS-BASED CATEGORIES ---
+        # Add categories based on user's skills (but with better naming)
         user_skills = user_profile.get("skills", [])
         if isinstance(user_skills, str):
             try:
@@ -670,39 +943,39 @@ class LightweightFAISSSearch:
             except:
                 user_skills = [s.strip() for s in user_skills.split(",") if s.strip()]
 
-        user_interests = user_profile.get("interests", "")
-        if isinstance(user_interests, str):
-            interest_list = [i.strip() for i in user_interests.split(",") if i.strip()]
-        else:
-            interest_list = user_interests if isinstance(user_interests, list) else []
+        if user_skills is None:
+            user_skills = []
 
-        # Add categories based on user's skills (semantic search)
-        for skill in (user_skills or [])[:5]:  # Top 5 skills
-            if isinstance(skill, str) and skill.strip():
-                skill_name = skill.strip()
-                if skill_name.lower() not in seen_names:
+        # Use semantic themes from skills text instead of raw skill names
+        skills_text = " ".join(str(s) for s in user_skills if s)
+        if skills_text:
+            skill_themes = self._extract_semantic_themes(skills_text, max_themes=3)
+            for theme_info in skill_themes:
+                theme_name = theme_info["theme"]
+                if theme_name.lower() not in seen_names:
                     categories.append(
                         {
-                            "name": f"{skill_name} Opportunities",
+                            "name": theme_name,
                             "type": "semantic",
-                            "query": skill_name,
+                            "query": theme_info["query"],
                         }
                     )
-                    seen_names.add(skill_name.lower())
+                    seen_names.add(theme_name.lower())
 
-        # Add categories based on user's interests
-        for interest in (interest_list or [])[:3]:  # Top 3 interests
-            if isinstance(interest, str) and interest.strip():
-                interest_name = interest.strip()
-                if interest_name.lower() not in seen_names:
-                    categories.append(
-                        {
-                            "name": f"{interest_name} Opportunities",
-                            "type": "semantic",
-                            "query": interest_name,
-                        }
-                    )
-                    seen_names.add(interest_name.lower())
+        # Fallback: if no themes extracted, use top skills directly but with better naming
+        if len(categories) < 4:
+            for skill in (user_skills or [])[:3]:
+                if isinstance(skill, str) and skill.strip():
+                    skill_name = skill.strip().title()
+                    if skill_name.lower() not in seen_names:
+                        categories.append(
+                            {
+                                "name": f"{skill_name} Opportunities",
+                                "type": "semantic",
+                                "query": skill_name,
+                            }
+                        )
+                        seen_names.add(skill_name.lower())
 
         # Extract unique opportunity types from actual data
         opp_types = set()
@@ -809,6 +1082,27 @@ class LightweightFAISSSearch:
         )
         seen_names.add("best matches for you")
 
+        # --- ORGANIC CATEGORY GENERATION FROM BIO ---
+        # Extract themes from user's bio for organic, context-aware categories
+        user_bio = user_profile.get("bio") or user_profile.get("description", "")
+        if user_bio and isinstance(user_bio, str):
+            bio_themes = self._extract_semantic_themes(user_bio, max_themes=3)
+            for theme_info in bio_themes:
+                theme_name = theme_info["theme"]
+                # Create people-focused category names
+                people_category = theme_name.replace(" Projects", " Experts").replace(
+                    " Opportunities", " Talent"
+                )
+                if people_category.lower() not in seen_names:
+                    categories.append(
+                        {
+                            "name": people_category,
+                            "type": "semantic",
+                            "query": theme_info["query"],
+                        }
+                    )
+                    seen_names.add(people_category.lower())
+
         # Extract user's skills for finding similar people
         user_skills = user_profile.get("skills", [])
         if isinstance(user_skills, str):
@@ -834,6 +1128,25 @@ class LightweightFAISSSearch:
             )
             seen_names.add("people with similar skills")
 
+        # Use semantic themes from skills instead of raw skill names
+        skills_text = " ".join(str(s) for s in user_skills if s)
+        if skills_text:
+            skill_themes = self._extract_semantic_themes(skills_text, max_themes=3)
+            for theme_info in skill_themes:
+                theme_name = theme_info["theme"]
+                people_category = theme_name.replace(" Projects", " Experts").replace(
+                    " Opportunities", " Professionals"
+                )
+                if people_category.lower() not in seen_names:
+                    categories.append(
+                        {
+                            "name": people_category,
+                            "type": "semantic",
+                            "query": theme_info["query"],
+                        }
+                    )
+                    seen_names.add(people_category.lower())
+
         # Add user's school as a category if they have one
         user_school = user_profile.get("school", "")
         if user_school and isinstance(user_school, str) and user_school.strip():
@@ -845,20 +1158,6 @@ class LightweightFAISSSearch:
                 }
             )
             seen_names.add(user_school.strip().lower())
-
-        # Add categories based on user's skills (find experts)
-        for skill in (user_skills or [])[:4]:
-            if isinstance(skill, str) and skill.strip():
-                skill_name = skill.strip()
-                if skill_name.lower() not in seen_names:
-                    categories.append(
-                        {
-                            "name": f"{skill_name.title()} Experts",
-                            "type": "semantic",
-                            "query": skill_name,
-                        }
-                    )
-                    seen_names.add(skill_name.lower())
 
         # Extract unique grades from profiles
         grades = set()
