@@ -1692,6 +1692,7 @@ def view_profile(user_id):
         or "skills" in request.args
         or "school" in request.args
         or "grade" in request.args
+        or request.args.get("from_talent") == "1"
     ) or any([bool(search_query), bool(skills), bool(school), bool(grade)])
 
     return render_template(
